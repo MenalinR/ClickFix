@@ -119,51 +119,67 @@ export default function BookingsScreen() {
                 contentContainerStyle={{ padding: 24 }}
                 ListEmptyComponent={<Text style={styles.emptyText}>No bookings in this category.</Text>}
                 renderItem={({ item }) => (
-                    <View style={styles.card}>
-                        {/* Service & Status Row */}
-                        <View style={styles.row}>
-                            <Text style={styles.service}>{item.service}</Text>
-                            <Text style={[styles.status, { color: getStatusColor(item.status) }]}>{item.status}</Text>
-                        </View>
-                        {/* Booking ID & Date/Time */}
-                        <View style={styles.row}>
-                            <Text style={styles.bookingId}>ID: {item.id}</Text>
-                            <Text style={styles.date}>{item.date}</Text>
-                        </View>
-                        {/* Worker Details */}
-                        <View style={styles.workerRow}>
-                            <Image
-                                source={item.workerAvatar ? { uri: item.workerAvatar } : require('../../assets/images/default-avatar.png')}
-                                style={styles.avatar}
-                            />
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.workerName}>{item.workerName}</Text>
-                                <View style={styles.ratingRow}>
-                                    <Text style={styles.ratingStar}>⭐</Text>
-                                    <Text style={styles.ratingText}>{item.workerRating || 'N/A'}</Text>
-                                </View>
+                    selectedTab === 'Upcoming' ? (
+                        <View style={styles.upcomingCard}>
+                            <Text style={styles.upcomingLabel}>Upcoming Booking</Text>
+                            <View style={styles.row}>
+                                <Text style={styles.service}>{item.service}</Text>
+                                <Text style={styles.date}>{item.date}</Text>
                             </View>
-                            <TouchableOpacity style={styles.contactBtn}>
-                                <Text style={styles.contactBtnText}>Call</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.contactBtn}>
-                                <Text style={styles.contactBtnText}>Chat</Text>
-                            </TouchableOpacity>
-                        </View>
-                        {/* Location */}
-                        <View style={styles.locationRow}>
+                            <Text style={styles.bookingId}>ID: {item.id}</Text>
                             <Text style={styles.locationLabel}>📍 {item.address || 'No address'}</Text>
-                            {item.distance && <Text style={styles.distance}>{item.distance} km</Text>}
+                            <View style={styles.upcomingActionsRow}>
+                                <TouchableOpacity style={styles.upcomingActionBtn}>
+                                    <Text style={styles.upcomingActionText}>Reschedule</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.upcomingActionBtn, { backgroundColor: '#DC3545' }] }>
+                                    <Text style={[styles.upcomingActionText, { color: '#fff' }]}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                        {/* Description */}
-                        <Text style={styles.desc}>{item.description}</Text>
-                        {/* Job Status Timeline */}
-                        <JobStatusTimeline status={item.status} />
-                        {/* Actions Placeholder */}
-                        {/* <View style={styles.actionsRow}>
-                            <Text style={styles.actionsText}>[Action Buttons Here]</Text>
-                        </View> */}
-                    </View>
+                    ) : (
+                        <View style={styles.card}>
+                            {/* Service & Status Row */}
+                            <View style={styles.row}>
+                                <Text style={styles.service}>{item.service}</Text>
+                                <Text style={[styles.status, { color: getStatusColor(item.status) }]}>{item.status}</Text>
+                            </View>
+                            {/* Booking ID & Date/Time */}
+                            <View style={styles.row}>
+                                <Text style={styles.bookingId}>ID: {item.id}</Text>
+                                <Text style={styles.date}>{item.date}</Text>
+                            </View>
+                            {/* Worker Details */}
+                            <View style={styles.workerRow}>
+                                <Image
+                                    source={item.workerAvatar ? { uri: item.workerAvatar } : require('../../assets/images/default-avatar.png')}
+                                    style={styles.avatar}
+                                />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.workerName}>{item.workerName}</Text>
+                                    <View style={styles.ratingRow}>
+                                        <Text style={styles.ratingStar}>⭐</Text>
+                                        <Text style={styles.ratingText}>{item.workerRating || 'N/A'}</Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity style={styles.contactBtn}>
+                                    <Text style={styles.contactBtnText}>Call</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.contactBtn}>
+                                    <Text style={styles.contactBtnText}>Chat</Text>
+                                </TouchableOpacity>
+                            </View>
+                            {/* Location */}
+                            <View style={styles.locationRow}>
+                                <Text style={styles.locationLabel}>📍 {item.address || 'No address'}</Text>
+                                {item.distance && <Text style={styles.distance}>{item.distance} km</Text>}
+                            </View>
+                            {/* Description */}
+                            <Text style={styles.desc}>{item.description}</Text>
+                            {/* Job Status Timeline */}
+                            <JobStatusTimeline status={item.status} />
+                        </View>
+                    )
                 )}
             />
         </SafeAreaView>
@@ -236,5 +252,36 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginTop: 40,
         fontSize: 16,
+    },
+    upcomingCard: {
+        backgroundColor: '#E8F0FE',
+        borderRadius: 12,
+        padding: 18,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#B0C4DE',
+    },
+    upcomingLabel: {
+        color: Colors.accent,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 16,
+        marginBottom: 8,
+    },
+    upcomingActionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 12,
+        gap: 10,
+    },
+    upcomingActionBtn: {
+        backgroundColor: Colors.accent,
+        borderRadius: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    upcomingActionText: {
+        color: '#fff',
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
     },
 });
