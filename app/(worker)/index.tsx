@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,10 +10,19 @@ import { useStore } from '../../constants/Store';
 export default function WorkerDashboard() {
     const router = useRouter();
     const { jobs, updateJobStatus } = useStore();
-    // In a real app, we'd filter by logged-in worker ID
-    const pendingJobs = jobs.filter(j => j.status === 'Pending');
-    const earnings = jobs.filter(j => j.status === 'Completed').reduce((acc, j) => acc + j.price, 0);
-    const completedCount = jobs.filter(j => j.status === 'Completed').length;
+    const workerId = '1'; // TODO: Replace with real logged-in worker's id
+    const pendingJobs = jobs.filter(j => j.status === 'Pending' && j.workerId === workerId);
+    const earnings = jobs.filter(j => j.status === 'Completed' && j.workerId === workerId).reduce((acc, j) => acc + j.price, 0);
+    const completedCount = jobs.filter(j => j.status === 'Completed' && j.workerId === workerId).length;
+
+    // Notification for new job requests
+    const prevPendingCount = useRef(pendingJobs.length);
+    useEffect(() => {
+        if (pendingJobs.length > prevPendingCount.current) {
+            Alert.alert('New Booking', 'You have a new job request!');
+        }
+        prevPendingCount.current = pendingJobs.length;
+    }, [pendingJobs.length]);
 
     return (
         <SafeAreaView style={styles.container}>

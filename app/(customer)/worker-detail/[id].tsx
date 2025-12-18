@@ -18,11 +18,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { Colors } from "../../../constants/Colors";
 import { Button } from "../../../components/Button";
 import { useStore } from "../../../constants/Store";
+import uuid from 'react-native-uuid';
 
 export default function WorkerProfile() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { workers } = useStore();
+  const { workers, addJob } = useStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [description, setDescription] = useState("");
@@ -39,13 +40,55 @@ export default function WorkerProfile() {
   }
 
   const handleBook = () => {
+    console.log('Description on confirm:', description);
+    if (!description.trim()) {
+      Alert.alert("Description required", "Please describe your issue.");
+      return;
+    }
+    // Add job to store
+    addJob({
+      id: uuid.v4(),
+      customerId: 'c1', // Replace with real customer id if available
+      workerId: worker.id,
+      workerName: worker.name,
+      service: worker.category,
+      description,
+      status: 'Pending',
+      date: new Date().toISOString(),
+      price: worker.hourlyRate,
+      attachedMedia: media,
+    });
     Alert.alert("Booking Confirmed", "Your booking has been confirmed.", [
-      { text: "OK", onPress: () => router.push("/(customer)/bookings") },
+      {
+        text: "OK",
+        onPress: () => {
+          setModalVisible(false);
+          setDescription("");
+          setMedia([]);
+          router.push("/(customer)/bookings");
+        },
+      },
     ]);
   };
 
   const pickMedia = async () => {
-    // Implement media picking logic here
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Please allow access to your media library.");
+      return;
+    }
+    // Pick image or video
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsMultipleSelection: true,
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      // For multiple selection, result.assets is an array
+      const uris = result.assets ? result.assets.map((a) => a.uri) : [result.uri];
+      setMedia([...media, ...uris]);
+    }
   };
 
   const resetForm = () => {
@@ -114,7 +157,10 @@ export default function WorkerProfile() {
               style={styles.input}
               placeholder="e.g., Leaking pipe in kitchen..."
               value={description}
-              onChangeText={setDescription}
+              onChangeText={text => {
+                setDescription(text);
+                console.log('Description input:', text);
+              }}
               multiline
             />
 
