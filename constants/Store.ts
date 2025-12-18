@@ -30,7 +30,7 @@ export interface Job {
 const MOCK_WORKERS: Worker[] = [
     {
         id: '1',
-        name: 'Nimal Perera',
+        name: 'Nimal ',
         category: 'Plumber',
         rating: 4.8,
         hourlyRate: 1500,
@@ -44,7 +44,7 @@ const MOCK_WORKERS: Worker[] = [
     },
     {
         id: '2',
-        name: 'Saman Kumara',
+        name: 'Saman ',
         category: 'Electrician',
         rating: 4.9,
         hourlyRate: 2000,
@@ -57,7 +57,7 @@ const MOCK_WORKERS: Worker[] = [
     },
     {
         id: '3',
-        name: 'Chithra Devi',
+        name: ' Devi',
         category: 'Cleaner',
         rating: 4.7,
         hourlyRate: 1000,
@@ -84,7 +84,7 @@ const MOCK_JOBS: Job[] = [
         id: 'j1',
         customerId: 'c1',
         workerId: '1',
-        workerName: 'Nimal Perera',
+        workerName: 'Nimal ',
         service: 'Plumber',
         description: 'Kitchen sink request',
         status: 'Completed',
