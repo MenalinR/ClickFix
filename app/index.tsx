@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ImageBase, Dimensions, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ImageBase, Dimensions, ImageBackground, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Colors } from '../constants/Colors';
@@ -19,6 +19,11 @@ export default function LandingPage() {
 
     const handleWorkerPress = () => {
         router.push({ pathname: '/(auth)/login', params: { role: 'worker' } });
+    };
+
+    const handleAdminPress = () => {
+        // Updated the onPress function for "I am an Admin" to prevent navigation
+        Alert.alert("Admin Login", "Admin login successful.");
     };
 
     return (
@@ -58,6 +63,14 @@ export default function LandingPage() {
                         variant="outline"
                         style={styles.workerBtn}
                         textStyle={styles.workerBtnText}
+                    />
+
+                    <Button
+                        title="I am an Admin"
+                        onPress={handleAdminPress}
+                        variant="outline"
+                        style={{ borderColor: '#B0C4DE', borderWidth: 1.5 }}
+                        textStyle={{ color: '#DEE2E6' }}
                     />
 
                     <View style={styles.loginContainer}>
