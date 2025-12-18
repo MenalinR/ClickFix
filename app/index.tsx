@@ -32,8 +32,8 @@ export default function LandingPage() {
             <StatusBar style="light" />
 
             {/* Decorative Background Elements */}
-            <View style={styles.circle1} />
-            <View style={styles.circle2} />
+            {/* <View style={styles.circle1} />
+            <View style={styles.circle2} /> */}
 
             <SafeAreaView style={styles.content}>
                 <View style={styles.header}>

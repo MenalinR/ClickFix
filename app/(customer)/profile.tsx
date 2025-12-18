@@ -12,8 +12,8 @@ export default function ProfileScreen() {
 
     // State for user data
     const [user, setUser] = useState({
-        name: "John Doe",
-        email: "john.doe@example.com",
+        name: "John ",
+        email: "john.@example.com",
         mobile: "+94 77 123 4567",
         address: "123, Galle Road, Colombo 03",
         image: "https://randomuser.me/api/portraits/men/1.jpg"

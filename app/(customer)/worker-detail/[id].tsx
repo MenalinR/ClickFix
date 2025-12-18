@@ -17,28 +17,26 @@ import * as ImagePicker from "expo-image-picker";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Colors } from "../../../constants/Colors";
 import { Button } from "../../../components/Button";
+import { useStore } from "../../../constants/Store";
 
 export default function WorkerProfile() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { workers } = useStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState([]);
 
-  const worker = {
-    id: 1,
-    name: "John Doe",
-    category: "Plumber",
-    rating: 4.9,
-    hourlyRate: 1500,
-    about: "Experienced plumber with over 10 years in the field.",
-    reviews: [
-      { id: 1, user: "Alice", text: "Great service!" },
-      { id: 2, user: "Bob", text: "Very professional." },
-    ],
-    image: "https://via.placeholder.com/400x250",
-  };
+  // Find the worker by id from the store
+  const worker = workers.find((w) => String(w.id) === String(id));
+  if (!worker) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Worker not found.</Text>
+      </View>
+    );
+  }
 
   const handleBook = () => {
     Alert.alert("Booking Confirmed", "Your booking has been confirmed.", [
