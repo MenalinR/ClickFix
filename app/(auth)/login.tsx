@@ -18,6 +18,8 @@ export default function LoginScreen() {
         // Determine route based on role
         if (role === 'worker') {
             router.replace('/(worker)' as any);
+        } else if (role === 'admin') {
+            router.replace('/(admin)' as any);
         } else {
             router.replace('/(customer)' as any);
         }
@@ -31,7 +33,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
                 <Text style={styles.title}>Welcome Back</Text>
                 <Text style={styles.subtitle}>
-                    Login as {role === 'worker' ? 'Service Professional' : 'Customer'}
+                    Login as {role === 'worker' ? 'Service Professional' : role === 'admin' ? 'Admin' : 'Customer'}
                 </Text>
 
                 <View style={styles.form}>

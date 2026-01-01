@@ -22,8 +22,7 @@ export default function LandingPage() {
     };
 
     const handleAdminPress = () => {
-        // Updated the onPress function for "I am an Admin" to prevent navigation
-        Alert.alert("Admin Login", "Admin login successful.");
+        router.push({ pathname: '/(auth)/login', params: { role: 'admin' } });
     };
 
     return (
