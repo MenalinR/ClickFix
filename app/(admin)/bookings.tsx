@@ -13,15 +13,15 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 
 export default function AdminBookings() {
-  const { bookings = [] } = useStore();
+  const { jobs = [] } = useStore();
   const [filterStatus, setFilterStatus] = useState<
     "all" | "pending" | "confirmed" | "completed" | "cancelled"
   >("all");
 
   const filteredBookings =
     filterStatus === "all"
-      ? bookings
-      : bookings.filter((b: any) => b.status === filterStatus);
+      ? jobs
+      : jobs.filter((b: any) => b.status === filterStatus);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,26 +63,26 @@ export default function AdminBookings() {
         contentContainerStyle={styles.filterContent}
       >
         {[
-          { key: "all", label: "All", count: bookings.length },
+          { key: "all", label: "All", count: jobs.length },
           {
             key: "pending",
             label: "Pending",
-            count: bookings.filter((b: any) => b.status === "pending").length,
+            count: jobs.filter((b: any) => b.status === "pending").length,
           },
           {
             key: "confirmed",
             label: "Confirmed",
-            count: bookings.filter((b: any) => b.status === "confirmed").length,
+            count: jobs.filter((b: any) => b.status === "confirmed").length,
           },
           {
             key: "completed",
             label: "Completed",
-            count: bookings.filter((b: any) => b.status === "completed").length,
+            count: jobs.filter((b: any) => b.status === "completed").length,
           },
           {
             key: "cancelled",
             label: "Cancelled",
-            count: bookings.filter((b: any) => b.status === "cancelled").length,
+            count: jobs.filter((b: any) => b.status === "cancelled").length,
           },
         ].map((filter) => (
           <TouchableOpacity
