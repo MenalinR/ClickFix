@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
     FlatList,
     Image,
@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "../../constants/Colors";
+import { Colors } from "../../../constants/Colors";
 
 type BookingFilter = "All" | "Completed" | "Cancelled";
 
@@ -163,6 +163,17 @@ export default function BookingsScreen() {
             <Text style={styles.rateButtonText}>Rate</Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={() => router.push("../chat")}
+        >
+          <Ionicons
+            name="chatbubble-outline"
+            size={14}
+            color={Colors.primary}
+          />
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.detailsButton}>
           <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
@@ -429,6 +440,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
     fontWeight: "600",
+  },
+  chatButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: Colors.lightBackground,
   },
   detailsButton: {
     paddingVertical: 6,

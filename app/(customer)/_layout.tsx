@@ -1,49 +1,63 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { Stack } from "expo-router";
 
 export default function CustomerLayout() {
-    return (
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: Colors.accent,
-                tabBarInactiveTintColor: Colors.textSecondary,
-                tabBarStyle: {
-                    borderTopColor: Colors.border,
-                    height: 60,
-                    paddingBottom: 8,
-                    paddingTop: 8,
-                },
-            }}
-        >
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home-outline" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="bookings"
-                options={{
-                    title: 'Bookings',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="calendar-outline" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Profile',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person-outline" size={size} color={color} />
-                    ),
-                }}
-            />
-        </Tabs>
-    );
+  return (
+    <Stack>
+      <Stack.Screen
+        name="(tabs)"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="book-service"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="worker-selection"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="booking-confirmation"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="job-tracking"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="payment"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="rating-review"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
+        name="chat"
+        options={{
+          headerShown: false,
+          presentation: "modal",
+        }}
+      />
+    </Stack>
+  );
 }

@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
+    FlatList,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -21,11 +23,21 @@ interface Message {
   text: string;
   timestamp: string;
   type: "text" | "image";
+  status?: "sending" | "sent" | "delivered" | "read";
 }
+
+const autoResponses = [
+  "Okay, got it!",
+  "Thanks for letting me know",
+  "I understand, will do",
+  "That would be helpful, thank you!",
+  "Perfect timing!",
+];
 
 export default function ChatPage() {
   const router = useRouter();
   const { jobId, customerId } = useLocalSearchParams();
+  const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -33,6 +45,7 @@ export default function ChatPage() {
       text: "Hi, can you help fix my water pipe?",
       timestamp: "10:30 AM",
       type: "text",
+      status: "read",
     },
     {
       id: "2",
@@ -40,6 +53,7 @@ export default function ChatPage() {
       text: "Yes, of course! I can come by this evening.",
       timestamp: "10:32 AM",
       type: "text",
+      status: "read",
     },
     {
       id: "3",
@@ -47,9 +61,12 @@ export default function ChatPage() {
       text: "Great! What time would be good?",
       timestamp: "10:35 AM",
       type: "text",
+      status: "read",
     },
   ]);
   const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [customerOnline, setCustomerOnline] = useState(true);
 
   const handleSendMessage = () => {
     if (inputText.trim()) {
@@ -62,11 +79,81 @@ export default function ChatPage() {
           minute: "2-digit",
         }),
         type: "text",
+        status: "sending",
       };
+
       setMessages([...messages, newMessage]);
       setInputText("");
+
+      // Simulate message delivery
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newMessage.id ? { ...msg, status: "sent" } : msg,
+          ),
+        );
+      }, 500);
+
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newMessage.id ? { ...msg, status: "delivered" } : msg,
+          ),
+        );
+      }, 1000);
+
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newMessage.id ? { ...msg, status: "read" } : msg,
+          ),
+        );
+      }, 1500);
+
+      // Simulate customer auto-response
+      if (Math.random() > 0.3) {
+        setTimeout(() => {
+          setIsTyping(true);
+        }, 2000);
+
+        setTimeout(
+          () => {
+            setIsTyping(false);
+            const response =
+              autoResponses[Math.floor(Math.random() * autoResponses.length)];
+            const customerMessage: Message = {
+              id: Date.now().toString(),
+              sender: "customer",
+              text: response,
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              type: "text",
+              status: "read",
+            };
+            setMessages((prev) => [...prev, customerMessage]);
+          },
+          2000 + Math.random() * 2000,
+        );
+      }
     }
   };
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages]);
+
+  // Simulate customer online/offline status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCustomerOnline(Math.random() > 0.1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSendImage = () => {
     // TODO: Implement image picker
@@ -99,7 +186,14 @@ export default function ChatPage() {
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.customerName}>Customer Name</Text>
-            <Text style={styles.jobTitle}>Plumbing Service</Text>
+            <View style={styles.statusRow}>
+              <View
+                style={[styles.onlineDot, !customerOnline && styles.offlineDot]}
+              />
+              <Text style={styles.jobTitle}>
+                {customerOnline ? "Online" : "Offline"}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.callButton}>
             <Ionicons name="call-outline" size={20} color={Colors.primary} />
@@ -107,12 +201,14 @@ export default function ChatPage() {
         </View>
 
         {/* Messages */}
-        <ScrollView
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
-        >
-          {messages.map((message) => (
+          renderItem={({ item: message }) => (
             <View
               key={message.id}
               style={[
@@ -150,14 +246,47 @@ export default function ChatPage() {
                     style={styles.messageImage}
                   />
                 )}
-                <Text
-                  style={[
-                    styles.timestamp,
-                    message.sender === "worker" && styles.workerTimestamp,
-                  ]}
-                >
-                  {message.timestamp}
-                </Text>
+                <View style={styles.messageFooter}>
+                  <Text
+                    style={[
+                      styles.timestamp,
+                      message.sender === "worker" && styles.workerTimestamp,
+                    ]}
+                  >
+                    {message.timestamp}
+                  </Text>
+                  {message.sender === "worker" && (
+                    <View style={styles.statusIcon}>
+                      {message.status === "sending" && (
+                        <ActivityIndicator
+                          size="small"
+                          color="rgba(255,255,255,0.7)"
+                        />
+                      )}
+                      {message.status === "sent" && (
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="rgba(255,255,255,0.7)"
+                        />
+                      )}
+                      {message.status === "delivered" && (
+                        <Ionicons
+                          name="checkmark-done"
+                          size={12}
+                          color="rgba(255,255,255,0.7)"
+                        />
+                      )}
+                      {message.status === "read" && (
+                        <Ionicons
+                          name="checkmark-done"
+                          size={12}
+                          color="#4FC3F7"
+                        />
+                      )}
+                    </View>
+                  )}
+                </View>
               </View>
               {message.sender === "worker" && (
                 <View style={styles.avatarPlaceholder}>
@@ -165,8 +294,21 @@ export default function ChatPage() {
                 </View>
               )}
             </View>
-          ))}
-        </ScrollView>
+          )}
+        />
+
+        {/* Typing Indicator */}
+        {isTyping && (
+          <View style={styles.typingContainer}>
+            <View style={styles.typingBubble}>
+              <View style={styles.typingDots}>
+                <View style={styles.typingDot} />
+                <View style={styles.typingDot} />
+                <View style={styles.typingDot} />
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActionsContainer}>
@@ -247,9 +389,25 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#4CAF50",
+  },
+  offlineDot: {
+    backgroundColor: Colors.textSecondary,
+  },
   callButton: {
     padding: 8,
     borderRadius: 8,
+    backgroundColor: Colors.lightBackground,
   },
   messagesContainer: {
     flex: 1,
@@ -309,15 +467,47 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
   },
+  messageFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
   timestamp: {
     fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 4,
     textAlign: "left",
   },
   workerTimestamp: {
     color: "rgba(255, 255, 255, 0.7)",
     textAlign: "right",
+  },
+  statusIcon: {
+    marginLeft: 2,
+  },
+  typingContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  typingBubble: {
+    backgroundColor: "white",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignSelf: "flex-start",
+    borderBottomLeftRadius: 4,
+  },
+  typingDots: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.textSecondary,
   },
   quickActionsContainer: {
     borderTopWidth: 1,
