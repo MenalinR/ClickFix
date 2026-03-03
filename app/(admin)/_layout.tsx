@@ -45,6 +45,15 @@ export default function AdminLayout() {
                 }}
             />
             <Tabs.Screen
+                name="hardware"
+                options={{
+                    title: 'Hardware',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="cube-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="settings"
                 options={{
                     title: 'Settings',

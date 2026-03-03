@@ -28,7 +28,11 @@ export default function LandingPage() {
   };
 
   const handleAdminPress = () => {
-    router.push({ pathname: "/(auth)/login", params: { role: "admin" } });
+    router.push("/(auth)/admin-login");
+  };
+
+  const handleHardwareShopPress = () => {
+    router.push("/(auth)/admin-login");
   };
 
   return (
@@ -79,6 +83,14 @@ export default function LandingPage() {
             variant="outline"
             style={{ borderColor: "#B0C4DE", borderWidth: 1.5 }}
             textStyle={{ color: "#DEE2E6" }}
+          />
+
+          <Button
+            title="Hardware Shop"
+            onPress={handleHardwareShopPress}
+            variant="outline"
+            style={styles.hardwareBtn}
+            textStyle={styles.hardwareBtnText}
           />
 
           <View style={styles.loginContainer}>
@@ -154,6 +166,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 16,
+  },
+  hardwareBtn: {
+    borderColor: Colors.accent,
+    borderWidth: 1.5,
+  },
+  hardwareBtnText: {
+    color: Colors.accent,
   },
   roleLabel: {
     fontSize: 14,

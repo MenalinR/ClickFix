@@ -66,9 +66,9 @@ export default function AdminDashboard() {
                         <Ionicons name="calendar-outline" size={32} color={Colors.accent} />
                         <Text style={styles.actionText}>View Bookings</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionCard}>
-                        <Ionicons name="document-text-outline" size={32} color="#4CAF50" />
-                        <Text style={styles.actionText}>Reports</Text>
+                    <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(admin)/hardware')}>
+                        <Ionicons name="cube-outline" size={32} color="#FF9800" />
+                        <Text style={styles.actionText}>Hardware Shop</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(admin)/settings')}>
                         <Ionicons name="settings-outline" size={32} color="#FF6B6B" />

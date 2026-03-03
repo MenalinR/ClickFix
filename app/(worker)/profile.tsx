@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Alert,
     Image,
@@ -15,31 +15,55 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/Button";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
 
 export default function WorkerProfileScreen() {
   const router = useRouter();
-  // State for worker data
+  const storeUser = useStore((state) => state.user);
+  const logout = useStore((state) => state.logout);
+
+  // State for worker data - initialize from store
   const [user, setUser] = useState({
-    name: "Ravi Raj",
-    email: "ravi.raj@example.com",
-    mobile: "+94 77 987 6543",
-    address: "456, Main Street, Wattala",
-    image: "https://randomuser.me/api/portraits/men/22.jpg",
-    category: "Carpenter",
-    experience: "8 years",
-    rating: 4.5,
-    reviews: 127,
-    nicStatus: "Verified",
-    certificates: [
-      {
-        id: "1",
-        name: "Carpentry Certification",
-        issuer: "National Board",
-        year: 2019,
-      },
-      { id: "2", name: "Safety Training", issuer: "OSHA", year: 2021 },
-    ],
+    id: storeUser?.id || "",
+    name: storeUser?.name || "Professional Worker",
+    email: storeUser?.email || "email@example.com",
+    phone: storeUser?.phone || "+1 (000) 000-0000",
+    address: storeUser?.location?.address || "Not provided",
+    image: storeUser?.image || "https://via.placeholder.com/150",
+    category: storeUser?.category || "Service Professional",
+    experience: storeUser?.experience?.toString() || "0",
+    hourlyRate: storeUser?.hourlyRate || 0,
+    rating: storeUser?.rating || 0,
+    reviewCount: storeUser?.reviewCount || 0,
+    verified: storeUser?.verified || false,
+    nicVerified: storeUser?.nicVerified || false,
+    certificates: storeUser?.certificates || [],
   });
+
+  // Update user state when store user changes
+  useEffect(() => {
+    if (storeUser) {
+      console.log("✅ Worker Profile - Store user loaded:", storeUser);
+      setUser({
+        id: storeUser.id || "",
+        name: storeUser.name || "Professional Worker",
+        email: storeUser.email || "email@example.com",
+        phone: storeUser.phone || "+1 (000) 000-0000",
+        address: storeUser.location?.address || "Not provided",
+        image: storeUser.image || "https://via.placeholder.com/150",
+        category: storeUser.category || "Service Professional",
+        experience: storeUser.experience?.toString() || "0",
+        hourlyRate: storeUser.hourlyRate || 0,
+        rating: storeUser.rating || 0,
+        reviewCount: storeUser.reviewCount || 0,
+        verified: storeUser.verified || false,
+        nicVerified: storeUser.nicVerified || false,
+        certificates: storeUser.certificates || [],
+      });
+    } else {
+      console.log("⚠️  Worker Profile - No user data in store");
+    }
+  }, [storeUser]);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
 
@@ -154,7 +178,10 @@ export default function WorkerProfileScreen() {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => router.replace("/"),
+        onPress: () => {
+          logout();
+          router.replace("/");
+        },
       },
     ]);
   };
@@ -209,7 +236,7 @@ export default function WorkerProfileScreen() {
           <Text style={styles.profileRole}>{user.category}</Text>
         </View>
         <View style={styles.infoSection}>
-          {renderEditableField("Mobile Number", "mobile", user.mobile)}
+          {renderEditableField("Mobile Number", "phone", user.phone)}
           {renderEditableField("Email Address", "email", user.email)}
           {renderEditableField("Address", "address", user.address)}
         </View>
@@ -240,8 +267,22 @@ export default function WorkerProfileScreen() {
               />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Experience</Text>
+              <Text style={styles.infoLabel}>Experience (Years)</Text>
               <Text style={styles.infoValue}>{user.experience}</Text>
+            </View>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <View style={styles.iconContainer}>
+              <Ionicons
+                name="cash-outline"
+                size={20}
+                color={Colors.primary}
+              />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Hourly Rate</Text>
+              <Text style={styles.infoValue}>Rs. {user.hourlyRate}</Text>
             </View>
           </View>
         </View>
@@ -261,7 +302,7 @@ export default function WorkerProfileScreen() {
                 />
               ))}
             </View>
-            <Text style={styles.reviewCount}>({user.reviews} reviews)</Text>
+            <Text style={styles.reviewCount}>({user.reviewCount} reviews)</Text>
           </View>
           <View style={styles.ratingRight}>
             <TouchableOpacity style={styles.viewReviewsButton}>
@@ -287,8 +328,8 @@ export default function WorkerProfileScreen() {
                 NIC / ID Verification
               </Text>
               <Text style={styles.verificationStatus}>
-                <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />{" "}
-                {user.nicStatus}
+                <Ionicons name={user.nicVerified ? "checkmark-circle" : "close-circle"} size={14} color={user.nicVerified ? "#4CAF50" : "#F44336"} />{" "}
+                {user.nicVerified ? "Verified" : "Pending Verification"}
               </Text>
             </View>
           </View>
