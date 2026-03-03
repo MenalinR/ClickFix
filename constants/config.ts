@@ -51,7 +51,8 @@ export const config = {
     debug: {
       localIP: LOCAL_IP,
       port: API_PORT,
-      fullURL: process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:${API_PORT}/api`,
+      fullURL:
+        process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:${API_PORT}/api`,
     },
   },
 

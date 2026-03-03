@@ -453,7 +453,7 @@ exports.updateHardwareStock = async (req, res) => {
     const item = await HardwareItem.findByIdAndUpdate(
       req.params.id,
       { inStock },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!item) {

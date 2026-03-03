@@ -12,7 +12,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 
 // Mock admin store
@@ -23,9 +23,16 @@ export const useAdminStore = (() => {
   return () => ({
     adminToken,
     adminUser,
-    setAdminToken: (token: string) => { adminToken = token; },
-    setAdminUser: (user: any) => { adminUser = user; },
-    clearAdmin: () => { adminToken = null; adminUser = null; },
+    setAdminToken: (token: string) => {
+      adminToken = token;
+    },
+    setAdminUser: (user: any) => {
+      adminUser = user;
+    },
+    clearAdmin: () => {
+      adminToken = null;
+      adminUser = null;
+    },
   });
 })();
 

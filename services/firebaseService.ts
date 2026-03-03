@@ -1,32 +1,25 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  User as FirebaseUser,
-  updateProfile,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
+    createUserWithEmailAndPassword,
+    sendPasswordResetEmail,
+    signInWithEmailAndPassword,
+    signOut,
+    updateProfile
+} from "firebase/auth";
 import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  Query,
-  DocumentData,
-  CollectionReference,
-  Timestamp,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { auth, db } from './firebase';
-import { User, Worker, Customer, Job } from './Store';
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    limit,
+    orderBy,
+    query,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+    where
+} from "firebase/firestore";
+import { auth, db } from "./firebase";
+import { Job, User } from "./Store";
 
 // ============================================
 // Authentication Services
@@ -37,10 +30,14 @@ export const authService = {
   async register(
     email: string,
     password: string,
-    userData: Partial<User> & { userType: 'worker' | 'customer' }
+    userData: Partial<User> & { userType: "worker" | "customer" },
   ) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       const firebaseUser = userCredential.user;
 
       // Update Firebase Auth profile
@@ -49,7 +46,8 @@ export const authService = {
       });
 
       // Create user document in Firestore
-      const userCollection = userData.userType === 'worker' ? 'workers' : 'customers';
+      const userCollection =
+        userData.userType === "worker" ? "workers" : "customers";
       await setDoc(doc(db, userCollection, firebaseUser.uid), {
         id: firebaseUser.uid,
         email: firebaseUser.email,
@@ -67,19 +65,23 @@ export const authService = {
         ...userData,
       };
     } catch (error: any) {
-      throw new Error(error.message || 'Registration failed');
+      throw new Error(error.message || "Registration failed");
     }
   },
 
   // Login user
   async login(email: string, password: string) {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       const firebaseUser = userCredential.user;
 
       // Get user data from Firestore
-      const customerDoc = await getDoc(doc(db, 'customers', firebaseUser.uid));
-      const workerDoc = await getDoc(doc(db, 'workers', firebaseUser.uid));
+      const customerDoc = await getDoc(doc(db, "customers", firebaseUser.uid));
+      const workerDoc = await getDoc(doc(db, "workers", firebaseUser.uid));
 
       if (customerDoc.exists()) {
         return customerDoc.data();
@@ -87,9 +89,9 @@ export const authService = {
         return workerDoc.data();
       }
 
-      throw new Error('User profile not found');
+      throw new Error("User profile not found");
     } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
+      throw new Error(error.message || "Login failed");
     }
   },
 
@@ -98,8 +100,10 @@ export const authService = {
     if (!auth.currentUser) return null;
 
     try {
-      const customerDoc = await getDoc(doc(db, 'customers', auth.currentUser.uid));
-      const workerDoc = await getDoc(doc(db, 'workers', auth.currentUser.uid));
+      const customerDoc = await getDoc(
+        doc(db, "customers", auth.currentUser.uid),
+      );
+      const workerDoc = await getDoc(doc(db, "workers", auth.currentUser.uid));
 
       if (customerDoc.exists()) {
         return customerDoc.data();
@@ -109,7 +113,7 @@ export const authService = {
 
       return null;
     } catch (error) {
-      console.error('Error fetching current user:', error);
+      console.error("Error fetching current user:", error);
       return null;
     }
   },
@@ -119,7 +123,7 @@ export const authService = {
     try {
       await signOut(auth);
     } catch (error: any) {
-      throw new Error(error.message || 'Logout failed');
+      throw new Error(error.message || "Logout failed");
     }
   },
 
@@ -128,7 +132,7 @@ export const authService = {
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error: any) {
-      throw new Error(error.message || 'Password reset failed');
+      throw new Error(error.message || "Password reset failed");
     }
   },
 };
@@ -144,14 +148,14 @@ export const firestoreService = {
       let constraints: any[] = [];
 
       if (filters?.category) {
-        constraints.push(where('category', '==', filters.category));
+        constraints.push(where("category", "==", filters.category));
       }
 
       if (filters?.rating) {
-        constraints.push(where('rating', '>=', filters.rating));
+        constraints.push(where("rating", ">=", filters.rating));
       }
 
-      const q = query(collection(db, 'workers'), ...constraints);
+      const q = query(collection(db, "workers"), ...constraints);
       const snapshot = await getDocs(q);
 
       return snapshot.docs.map((doc) => ({
@@ -159,7 +163,7 @@ export const firestoreService = {
         ...doc.data(),
       }));
     } catch (error) {
-      console.error('Error fetching workers:', error);
+      console.error("Error fetching workers:", error);
       throw error;
     }
   },
@@ -167,13 +171,13 @@ export const firestoreService = {
   // Get single worker
   async getWorker(workerId: string) {
     try {
-      const doc = await getDoc(doc(db, 'workers', workerId));
+      const doc = await getDoc(doc(db, "workers", workerId));
       if (doc.exists()) {
         return { id: doc.id, ...doc.data() };
       }
       return null;
     } catch (error) {
-      console.error('Error fetching worker:', error);
+      console.error("Error fetching worker:", error);
       throw error;
     }
   },
@@ -181,11 +185,11 @@ export const firestoreService = {
   // Create job
   async createJob(jobData: Partial<Job>, userId: string) {
     try {
-      const jobRef = doc(collection(db, 'jobs'));
+      const jobRef = doc(collection(db, "jobs"));
       const jobWithTimestamp = {
         ...jobData,
         customerId: userId,
-        status: 'pending',
+        status: "pending",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -197,20 +201,20 @@ export const firestoreService = {
         ...jobWithTimestamp,
       };
     } catch (error) {
-      console.error('Error creating job:', error);
+      console.error("Error creating job:", error);
       throw error;
     }
   },
 
   // Get jobs by user
-  async getJobsByUser(userId: string, userType: 'customer' | 'worker') {
+  async getJobsByUser(userId: string, userType: "customer" | "worker") {
     try {
-      const fieldName = userType === 'customer' ? 'customerId' : 'workerId';
+      const fieldName = userType === "customer" ? "customerId" : "workerId";
       const q = query(
-        collection(db, 'jobs'),
-        where(fieldName, '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(50)
+        collection(db, "jobs"),
+        where(fieldName, "==", userId),
+        orderBy("createdAt", "desc"),
+        limit(50),
       );
 
       const snapshot = await getDocs(q);
@@ -219,7 +223,7 @@ export const firestoreService = {
         ...doc.data(),
       }));
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error("Error fetching jobs:", error);
       throw error;
     }
   },
@@ -227,13 +231,13 @@ export const firestoreService = {
   // Get single job
   async getJob(jobId: string) {
     try {
-      const jobDoc = await getDoc(doc(db, 'jobs', jobId));
+      const jobDoc = await getDoc(doc(db, "jobs", jobId));
       if (jobDoc.exists()) {
         return { id: jobDoc.id, ...jobDoc.data() };
       }
       return null;
     } catch (error) {
-      console.error('Error fetching job:', error);
+      console.error("Error fetching job:", error);
       throw error;
     }
   },
@@ -241,12 +245,12 @@ export const firestoreService = {
   // Update job
   async updateJob(jobId: string, jobData: Partial<Job>) {
     try {
-      await updateDoc(doc(db, 'jobs', jobId), {
+      await updateDoc(doc(db, "jobs", jobId), {
         ...jobData,
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error updating job:', error);
+      console.error("Error updating job:", error);
       throw error;
     }
   },
@@ -254,13 +258,13 @@ export const firestoreService = {
   // Accept job (worker)
   async acceptJob(jobId: string, workerId: string) {
     try {
-      await updateDoc(doc(db, 'jobs', jobId), {
+      await updateDoc(doc(db, "jobs", jobId), {
         workerId: workerId,
-        status: 'accepted',
+        status: "accepted",
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error accepting job:', error);
+      console.error("Error accepting job:", error);
       throw error;
     }
   },
@@ -268,21 +272,21 @@ export const firestoreService = {
   // Get available jobs
   async getAvailableJobs(filters?: any) {
     try {
-      let constraints = [where('status', '==', 'pending')];
+      let constraints = [where("status", "==", "pending")];
 
       if (filters?.serviceType) {
-        constraints.push(where('serviceType', '==', filters.serviceType));
+        constraints.push(where("serviceType", "==", filters.serviceType));
       }
 
       if (filters?.category) {
-        constraints.push(where('category', '==', filters.category));
+        constraints.push(where("category", "==", filters.category));
       }
 
       const q = query(
-        collection(db, 'jobs'),
+        collection(db, "jobs"),
         ...constraints,
-        orderBy('createdAt', 'desc'),
-        limit(50)
+        orderBy("createdAt", "desc"),
+        limit(50),
       );
 
       const snapshot = await getDocs(q);
@@ -291,7 +295,7 @@ export const firestoreService = {
         ...doc.data(),
       }));
     } catch (error) {
-      console.error('Error fetching available jobs:', error);
+      console.error("Error fetching available jobs:", error);
       throw error;
     }
   },
@@ -299,16 +303,16 @@ export const firestoreService = {
   // Create hardware request
   async createHardwareRequest(requestData: any) {
     try {
-      const ref = doc(collection(db, 'hardwareRequests'));
+      const ref = doc(collection(db, "hardwareRequests"));
       await setDoc(ref, {
         ...requestData,
-        status: 'pending',
+        status: "pending",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       return { id: ref.id, ...requestData };
     } catch (error) {
-      console.error('Error creating hardware request:', error);
+      console.error("Error creating hardware request:", error);
       throw error;
     }
   },
@@ -319,22 +323,22 @@ export const firestoreService = {
       let constraints: any[] = [];
 
       if (filters?.workerId) {
-        constraints.push(where('workerId', '==', filters.workerId));
+        constraints.push(where("workerId", "==", filters.workerId));
       }
 
       if (filters?.customerId) {
-        constraints.push(where('customerId', '==', filters.customerId));
+        constraints.push(where("customerId", "==", filters.customerId));
       }
 
       if (filters?.status) {
-        constraints.push(where('status', '==', filters.status));
+        constraints.push(where("status", "==", filters.status));
       }
 
       const q = query(
-        collection(db, 'hardwareRequests'),
+        collection(db, "hardwareRequests"),
         ...constraints,
-        orderBy('createdAt', 'desc'),
-        limit(50)
+        orderBy("createdAt", "desc"),
+        limit(50),
       );
 
       const snapshot = await getDocs(q);
@@ -343,21 +347,25 @@ export const firestoreService = {
         ...doc.data(),
       }));
     } catch (error) {
-      console.error('Error fetching hardware requests:', error);
+      console.error("Error fetching hardware requests:", error);
       throw error;
     }
   },
 
   // Update user profile
-  async updateUserProfile(userId: string, userType: 'worker' | 'customer', data: any) {
+  async updateUserProfile(
+    userId: string,
+    userType: "worker" | "customer",
+    data: any,
+  ) {
     try {
-      const collection_name = userType === 'worker' ? 'workers' : 'customers';
+      const collection_name = userType === "worker" ? "workers" : "customers";
       await updateDoc(doc(db, collection_name, userId), {
         ...data,
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
       throw error;
     }
   },
@@ -369,10 +377,12 @@ export const firestoreService = {
 
 export const realtimeService = {
   // Listen to job updates
-  onJobUpdate(jobId: string, callback: (job: any) => void, errorCallback?: (error: any) => void) {
-    const unsubscribe = auth.currentUser
-      ? null
-      : () => {}; // Placeholder, implement actual listener
+  onJobUpdate(
+    jobId: string,
+    callback: (job: any) => void,
+    errorCallback?: (error: any) => void,
+  ) {
+    const unsubscribe = auth.currentUser ? null : () => {}; // Placeholder, implement actual listener
 
     // For real-time updates, use Firestore onSnapshot
     // This would require wrapping with onSnapshot in the component or custom hook
@@ -383,7 +393,7 @@ export const realtimeService = {
   onMessagesUpdate(
     chatId: string,
     callback: (messages: any[]) => void,
-    errorCallback?: (error: any) => void
+    errorCallback?: (error: any) => void,
   ) {
     // Implement with onSnapshot from Firestore
     return () => {}; // Unsubscribe function

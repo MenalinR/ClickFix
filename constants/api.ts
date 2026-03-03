@@ -119,7 +119,7 @@ export const apiCall = async (
     console.error(`❌ Network Error: ${error.message}`, { url, method });
     if (error.message === "Network request failed") {
       throw new Error(
-        `Cannot reach server at ${url.split("/api")[0]}. Check: 1) Backend running? 2) Correct IP? 3) Same WiFi?`
+        `Cannot reach server at ${url.split("/api")[0]}. Check: 1) Backend running? 2) Correct IP? 3) Same WiFi?`,
       );
     }
     throw new Error(error.message || "Network Error");

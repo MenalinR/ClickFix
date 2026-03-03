@@ -274,11 +274,7 @@ export default function WorkerProfileScreen() {
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <View style={styles.iconContainer}>
-              <Ionicons
-                name="cash-outline"
-                size={20}
-                color={Colors.primary}
-              />
+              <Ionicons name="cash-outline" size={20} color={Colors.primary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Hourly Rate</Text>
@@ -328,7 +324,11 @@ export default function WorkerProfileScreen() {
                 NIC / ID Verification
               </Text>
               <Text style={styles.verificationStatus}>
-                <Ionicons name={user.nicVerified ? "checkmark-circle" : "close-circle"} size={14} color={user.nicVerified ? "#4CAF50" : "#F44336"} />{" "}
+                <Ionicons
+                  name={user.nicVerified ? "checkmark-circle" : "close-circle"}
+                  size={14}
+                  color={user.nicVerified ? "#4CAF50" : "#F44336"}
+                />{" "}
                 {user.nicVerified ? "Verified" : "Pending Verification"}
               </Text>
             </View>

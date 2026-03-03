@@ -1,12 +1,15 @@
 # Firebase Setup Guide for ClickFix
 
 ## Overview
+
 This guide explains how to set up and use Firebase in the ClickFix application. Firebase provides backend services including authentication, real-time database, cloud storage, and push notifications.
 
 ## What's Been Added
 
 ### 1. **Dependencies**
+
 The following packages have been added to `package.json`:
+
 - `firebase` - Core Firebase SDK
 - `@react-native-firebase/app` - React Native Firebase wrapper
 - `@react-native-firebase/auth` - Authentication
@@ -18,16 +21,19 @@ The following packages have been added to `package.json`:
 ### 2. **Files Created**
 
 #### `constants/firebase.ts`
+
 - Firebase app initialization
 - Auth, Firestore, and Storage setup
 - Configuration loading from environment variables
 
 #### `services/firebaseService.ts`
+
 - **Authentication Service**: register, login, logout, password reset
 - **Firestore Service**: CRUD operations for users, jobs, hardware requests
 - **Real-time Service**: Setup for listening to data changes
 
 #### `.env.example`
+
 - Template for Firebase configuration variables
 
 ## Setup Steps
@@ -49,6 +55,7 @@ The following packages have been added to `package.json`:
 5. Copy the Firebase config object
 
 **Your config will look like:**
+
 ```javascript
 const firebaseConfig = {
   apiKey: "AIza...",
@@ -57,7 +64,7 @@ const firebaseConfig = {
   storageBucket: "clickfix-xxxxx.appspot.com",
   messagingSenderId: "234567890123",
   appId: "1:234567890123:web:abcdef123456",
-  databaseURL: "https://clickfix-xxxxx.firebaseio.com"
+  databaseURL: "https://clickfix-xxxxx.firebaseio.com",
 };
 ```
 
@@ -79,12 +86,14 @@ EXPO_PUBLIC_FIREBASE_DATABASE_URL=https://clickfix-xxxxx.firebaseio.com
 ### Step 4: Enable Firebase Services
 
 #### Authentication
+
 1. In Firebase Console, go to **Authentication**
 2. Click **"Get Started"**
 3. Enable **Email/Password** provider
 4. Enable **Google** provider (optional, for social login)
 
 #### Firestore Database
+
 1. Go to **Firestore Database**
 2. Click **"Create Database"**
 3. Start in **Test Mode** (for development)
@@ -92,6 +101,7 @@ EXPO_PUBLIC_FIREBASE_DATABASE_URL=https://clickfix-xxxxx.firebaseio.com
 5. Click **"Enable"**
 
 #### Storage
+
 1. Go to **Storage**
 2. Click **"Get Started"**
 3. Start in **Test Mode**
@@ -103,6 +113,7 @@ EXPO_PUBLIC_FIREBASE_DATABASE_URL=https://clickfix-xxxxx.firebaseio.com
 Create these collections in your Firestore database:
 
 #### `customers` Collection
+
 ```
 - Document ID: [user-uid]
 - Fields:
@@ -119,6 +130,7 @@ Create these collections in your Firestore database:
 ```
 
 #### `workers` Collection
+
 ```
 - Document ID: [user-uid]
 - Fields:
@@ -138,6 +150,7 @@ Create these collections in your Firestore database:
 ```
 
 #### `jobs` Collection
+
 ```
 - Document ID: [auto-generated]
 - Fields:
@@ -155,6 +168,7 @@ Create these collections in your Firestore database:
 ```
 
 #### `hardwareRequests` Collection
+
 ```
 - Document ID: [auto-generated]
 - Fields:
@@ -170,6 +184,7 @@ Create these collections in your Firestore database:
 ```
 
 #### `messages` Collection
+
 ```
 - Document ID: [auto-generated]
 - Fields:
@@ -183,6 +198,7 @@ Create these collections in your Firestore database:
 ```
 
 #### `hardwareItems` Collection
+
 ```
 - Document ID: [auto-generated]
 - Fields:
@@ -203,47 +219,50 @@ Create these collections in your Firestore database:
 ### Authentication
 
 #### Register a new customer:
+
 ```typescript
-import { authService } from '@/services/firebaseService';
+import { authService } from "@/services/firebaseService";
 
 const handleRegister = async () => {
   try {
     const user = await authService.register(
-      'customer@example.com',
-      'password123',
+      "customer@example.com",
+      "password123",
       {
-        name: 'John Doe',
-        phone: '1234567890',
-        userType: 'customer'
-      }
+        name: "John Doe",
+        phone: "1234567890",
+        userType: "customer",
+      },
     );
-    console.log('User registered:', user);
+    console.log("User registered:", user);
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error("Registration error:", error);
   }
 };
 ```
 
 #### Login:
+
 ```typescript
 const handleLogin = async () => {
   try {
-    const user = await authService.login('customer@example.com', 'password123');
-    console.log('Logged in:', user);
+    const user = await authService.login("customer@example.com", "password123");
+    console.log("Logged in:", user);
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
   }
 };
 ```
 
 #### Logout:
+
 ```typescript
 const handleLogout = async () => {
   try {
     await authService.logout();
-    console.log('Logged out');
+    console.log("Logged out");
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error("Logout error:", error);
   }
 };
 ```
@@ -251,69 +270,73 @@ const handleLogout = async () => {
 ### Data Operations
 
 #### Get all workers:
+
 ```typescript
-import { firestoreService } from '@/services/firebaseService';
+import { firestoreService } from "@/services/firebaseService";
 
 const getWorkers = async () => {
   try {
     const workers = await firestoreService.getWorkers({
-      category: 'Plumbing',
-      rating: 4
+      category: "Plumbing",
+      rating: 4,
     });
-    console.log('Workers:', workers);
+    console.log("Workers:", workers);
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
   }
 };
 ```
 
 #### Create a job:
+
 ```typescript
 const createJob = async () => {
   try {
     const job = await firestoreService.createJob(
       {
-        serviceType: 'Plumbing Repair',
-        description: 'Fix leaky faucet',
+        serviceType: "Plumbing Repair",
+        description: "Fix leaky faucet",
         location: {
-          type: 'Point',
-          coordinates: [6.9271, 80.7789] // Colombo, Sri Lanka
+          type: "Point",
+          coordinates: [6.9271, 80.7789], // Colombo, Sri Lanka
         },
         pricing: {
           totalAmount: 5000,
           serviceCost: 3000,
-          labourCost: 2000
-        }
+          labourCost: 2000,
+        },
       },
-      userId
+      userId,
     );
-    console.log('Job created:', job);
+    console.log("Job created:", job);
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
   }
 };
 ```
 
 #### Accept a job (worker):
+
 ```typescript
 const acceptJob = async (jobId: string, workerId: string) => {
   try {
     await firestoreService.acceptJob(jobId, workerId);
-    console.log('Job accepted');
+    console.log("Job accepted");
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
   }
 };
 ```
 
 #### Get my jobs:
+
 ```typescript
-const getMyJobs = async (userId: string, userType: 'customer' | 'worker') => {
+const getMyJobs = async (userId: string, userType: "customer" | "worker") => {
   try {
     const jobs = await firestoreService.getJobsByUser(userId, userType);
-    console.log('My jobs:', jobs);
+    console.log("My jobs:", jobs);
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
   }
 };
 ```
@@ -323,7 +346,7 @@ const getMyJobs = async (userId: string, userType: 'customer' | 'worker') => {
 Update `constants/Store.ts` to use Firebase services:
 
 ```typescript
-import { authService, firestoreService } from '@/services/firebaseService';
+import { authService, firestoreService } from "@/services/firebaseService";
 
 export const useStore = create<StoreState>((set, get) => ({
   // ... initial state ...
@@ -366,7 +389,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
 ## Firestore Security Rules
 
-Add these rules for development (go to **Firestore** → **Rules"):
+Add these rules for development (go to **Firestore** → \*\*Rules"):
 
 ```
 rules_version = '2';
@@ -409,11 +432,13 @@ service cloud.firestore {
 ## Push Notifications Setup
 
 ### For iOS:
+
 1. Go to Firebase Console → Project Settings
 2. Download `GoogleService-Info.plist`
 3. Add to Xcode project
 
 ### For Android:
+
 1. Go to Firebase Console → Project Settings
 2. Download `google-services.json`
 3. Place in `android/app/` directory
@@ -441,16 +466,19 @@ This allows testing without connecting to live Firebase.
 ## Troubleshooting
 
 ### "Firebase is not initialized"
+
 - Make sure environment variables are set correctly
 - Check `.env` file is in the root directory
 - Restart the development server
 
 ### "Permission denied" errors
+
 - Check Firestore security rules
 - Verify user is authenticated
 - Check collection and document permissions
 
 ### Real-time data not updating
+
 - Make sure you're using `onSnapshot` for real-time listeners
 - Check Firestore rules allow read access
 - Verify network connectivity

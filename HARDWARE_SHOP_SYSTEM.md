@@ -1,12 +1,15 @@
 # Hardware Shop & Management System
 
 ## Overview
+
 The ClickFix Hardware Shop is a complete system for managing hardware items and orders throughout the service workflow. It involves multiple actors: Hardware Shop Admin, Workers, Customers, and the System itself.
 
 ## System Actors
 
 ### 1. Hardware Shop Admin
+
 **Responsibilities:**
+
 - Manage hardware inventory (add, edit, delete items)
 - Update item availability and stock status
 - View all hardware orders and their status
@@ -15,7 +18,9 @@ The ClickFix Hardware Shop is a complete system for managing hardware items and 
 **Access:** Admin Dashboard → Hardware Shop page
 
 ### 2. Worker
+
 **Responsibilities:**
+
 - Request hardware parts for approved jobs
 - View hardware requests they've made
 - Confirm when hardware is delivered
@@ -24,7 +29,9 @@ The ClickFix Hardware Shop is a complete system for managing hardware items and 
 **Access:** Worker → Hardware Request page
 
 ### 3. Customer
+
 **Responsibilities:**
+
 - Review hardware recommendations from workers
 - Approve or reject hardware requests
 - Confirm hardware orders
@@ -33,6 +40,7 @@ The ClickFix Hardware Shop is a complete system for managing hardware items and 
 **Access:** Customer → Job Details → Review Hardware Recommendations
 
 ### 4. System
+
 - Sends orders to hardware shop when approved
 - Tracks order status
 - Updates job pricing with hardware costs
@@ -43,17 +51,21 @@ The ClickFix Hardware Shop is a complete system for managing hardware items and 
 ## Hardware Workflow
 
 ### Step 1: Customer Books a Service
+
 - Customer searches and selects a service category
 - Books a worker for the job
 - Job is created with `status: 'pending'`
 
 ### Step 2: Worker Reviews the Request
+
 - Worker receives job notification
 - Reviews job details and requirements
 - Accepts the job
 
 ### Step 3: Worker Recommends Hardware (if needed)
+
 **Flow:**
+
 ```
 Worker opens Job Details
   ↓
@@ -72,6 +84,7 @@ Customer notified of hardware recommendation
 ```
 
 **Backend:**
+
 ```
 POST /api/hardware/requests
 - jobId: Job ID
@@ -81,6 +94,7 @@ POST /api/hardware/requests
 ```
 
 **Database Schema:**
+
 ```javascript
 HardwareRequest {
   jobId: ObjectId (ref: Job),
@@ -102,7 +116,9 @@ HardwareRequest {
 ```
 
 ### Step 4: Customer Confirms Hardware Order
+
 **Flow:**
+
 ```
 Customer views job details
   ↓
@@ -120,6 +136,7 @@ Worker receives approval notification
 ```
 
 **Backend:**
+
 ```
 PUT /api/hardware/requests/:id/status
 - status: 'approved' | 'rejected'
@@ -129,7 +146,9 @@ PUT /api/hardware/requests/:id/status
 ```
 
 ### Step 5: System Sends Order to Hardware Shop
+
 **Flow:**
+
 ```
 HardwareRequest approved
   ↓
@@ -147,13 +166,16 @@ Admin marks order as received/processing
 ```
 
 **Admin Hardware Shop Page - Orders Tab:**
+
 - Shows all hardware requests
 - Filters by status: pending, approved, rejected, delivered
 - Displays request details
 - Can track fulfillment
 
 ### Step 6: Worker Collects Parts and Completes Service
+
 **Flow:**
+
 ```
 Worker receives hardware items
   ↓
@@ -167,6 +189,7 @@ Job completion initiated
 ```
 
 **Backend:**
+
 ```
 PUT /api/hardware/requests/:id/delivered
 - status: 'delivered'
@@ -176,7 +199,9 @@ PUT /api/hardware/requests/:id/delivered
 ```
 
 ### Step 7: Payment Processing
+
 **Flow:**
+
 ```
 Service completed
   ↓
@@ -197,7 +222,9 @@ Payment distributed to worker and platform
 ## Hardware Shop Admin Page
 
 ### Inventory Tab
+
 **Features:**
+
 1. **View All Hardware Items**
    - Item name, category, price
    - Unit type (piece, meter, kg, liter, box)
@@ -232,6 +259,7 @@ Payment distributed to worker and platform
    - Real-time filtering
 
 **API Endpoints:**
+
 ```
 GET /api/hardware/admin/items - Get all items (including out of stock)
 POST /api/hardware/admin/items - Create new item
@@ -241,7 +269,9 @@ PUT /api/hardware/admin/items/:id/stock - Toggle stock status
 ```
 
 ### Orders Tab
+
 **Features:**
+
 1. **View All Hardware Requests**
    - Worker name and phone
    - Customer name and phone
@@ -263,6 +293,7 @@ PUT /api/hardware/admin/items/:id/stock - Toggle stock status
    - Monitor fulfillment status
 
 **API Endpoint:**
+
 ```
 GET /api/hardware/admin/requests - Get all hardware requests
 - Query filters: ?status=pending, ?workerId=..., ?customerId=...
@@ -294,6 +325,7 @@ GET /api/hardware/admin/requests - Get all hardware requests
 ## API Reference
 
 ### Worker Access
+
 ```
 POST /api/hardware/requests
 - Body: { jobId, items: [{ itemId, quantity }] }
@@ -315,6 +347,7 @@ GET /api/hardware/items
 ```
 
 ### Customer Access
+
 ```
 GET /api/hardware/requests
 - Response: All requests for current customer's jobs
@@ -328,6 +361,7 @@ PUT /api/hardware/requests/:id/status
 ```
 
 ### Admin Access
+
 ```
 GET /api/hardware/admin/items
 - Response: All items (in-stock and out-of-stock)
@@ -357,6 +391,7 @@ GET /api/hardware/admin/requests
 ## User Flow Diagrams
 
 ### Customer Journey
+
 ```
 Customer Books Service
     ↓
@@ -384,6 +419,7 @@ Customer Reviews Hardware Details
 ```
 
 ### Hardware Shop Admin Journey
+
 ```
 Admin Dashboard
     ↓
@@ -406,35 +442,38 @@ Navigate to Hardware Shop
 
 ## Key Features Summary
 
-| Feature | Admin | Worker | Customer |
-|---------|-------|--------|----------|
-| Add hardware items | ✓ | - | - |
-| Edit hardware items | ✓ | - | - |
-| Delete hardware items | ✓ | - | - |
-| Update stock status | ✓ | - | - |
-| View all hardware requests | ✓ | - | - |
-| Request hardware for job | - | ✓ | - |
-| View own hardware requests | - | ✓ | - |
-| Mark hardware delivered | - | ✓ | - |
-| Review hardware recommendation | - | - | ✓ |
-| Approve/reject hardware | - | - | ✓ |
-| See hardware cost estimate | - | - | ✓ |
+| Feature                        | Admin | Worker | Customer |
+| ------------------------------ | ----- | ------ | -------- |
+| Add hardware items             | ✓     | -      | -        |
+| Edit hardware items            | ✓     | -      | -        |
+| Delete hardware items          | ✓     | -      | -        |
+| Update stock status            | ✓     | -      | -        |
+| View all hardware requests     | ✓     | -      | -        |
+| Request hardware for job       | -     | ✓      | -        |
+| View own hardware requests     | -     | ✓      | -        |
+| Mark hardware delivered        | -     | ✓      | -        |
+| Review hardware recommendation | -     | -      | ✓        |
+| Approve/reject hardware        | -     | -      | ✓        |
+| See hardware cost estimate     | -     | -      | ✓        |
 
 ---
 
 ## Integration Points
 
 ### With Job Management
+
 - Hardware requests are linked to specific jobs
 - Hardware cost is added to job pricing
 - Job completion requires hardware delivery confirmation
 
 ### With Payment System
+
 - Hardware cost is included in total job cost
 - Hardware payments are separate line item in invoice
 - Payment processing includes hardware charges
 
 ### With Notifications
+
 - Worker notified when customer approves hardware
 - Customer notified when hardware is recommended
 - Admin can track all orders in one place
