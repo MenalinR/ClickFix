@@ -29,6 +29,15 @@ const getLocalIP = (): string => {
 
 const LOCAL_IP = getLocalIP();
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5001";
+const COMPUTED_LOCAL_API_URL = `http://${LOCAL_IP}:${API_PORT}/api`;
+const EXPLICIT_API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+const getApiBaseURL = (): string => {
+  if (IS_DEV) {
+    return COMPUTED_LOCAL_API_URL;
+  }
+  return EXPLICIT_API_URL || COMPUTED_LOCAL_API_URL;
+};
 
 /**
  * API Configuration
@@ -44,15 +53,14 @@ export const config = {
 
   // API URLs
   api: {
-    baseURL:
-      process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:${API_PORT}/api`,
+    baseURL: getApiBaseURL(),
 
     // For reference/debugging
     debug: {
       localIP: LOCAL_IP,
       port: API_PORT,
-      fullURL:
-        process.env.EXPO_PUBLIC_API_URL || `http://${LOCAL_IP}:${API_PORT}/api`,
+      fullURL: getApiBaseURL(),
+      explicitURL: EXPLICIT_API_URL || "",
     },
   },
 

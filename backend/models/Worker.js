@@ -86,6 +86,43 @@ const workerSchema = new mongoose.Schema(
       default: false,
     },
     nicNumber: String,
+    // Document Verification Fields
+    idProof: {
+      url: String, // Secure URL to ID document (Cloudinary or similar)
+      documentType: {
+        type: String,
+        enum: ["NIC", "Passport", "DrivingLicense", "Other"],
+      },
+      uploadedAt: Date,
+      verificationStatus: {
+        type: String,
+        enum: ["Pending", "Verified", "Rejected"],
+        default: "Pending",
+      },
+      verificationNotes: String, // Admin notes if rejected
+      verifiedAt: Date, // When admin verified/rejected
+    },
+    experienceDocuments: [
+      {
+        name: String, // Certificate name
+        description: String, // Worker-provided experience/proof description
+        url: String, // Secure URL
+        documentType: {
+          type: String,
+          enum: ["Certificate", "License", "Training", "Other"],
+        },
+        issueDate: Date,
+        expiryDate: Date,
+        uploadedAt: Date,
+        verificationStatus: {
+          type: String,
+          enum: ["Pending", "Verified", "Rejected"],
+          default: "Verified",
+        },
+        verificationNotes: String, // Admin notes if rejected
+        verifiedAt: Date, // When admin verified/rejected
+      },
+    ],
     certificates: [
       {
         name: String,

@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
 const socketIo = require("socket.io");
+const os = require("os");
 const { connectDB, initializeDatabase, checkDatabaseHealth } = require("./db");
 
 // Load environment variables
@@ -98,14 +99,27 @@ app.use("*", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+const getLocalIP = () => {
+  const interfaces = os.networkInterfaces();
+  for (const ifaceName of Object.keys(interfaces)) {
+    for (const iface of interfaces[ifaceName] || []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
+};
+
 // Start server
 startServer()
   .then(() => {
     server.listen(PORT, "0.0.0.0", () => {
+      const localIP = getLocalIP();
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV}`);
       console.log(`🌐 API URL: http://0.0.0.0:${PORT}/api`);
-      console.log(`📱 Mobile API URL: http://192.168.1.2:${PORT}/api`);
+      console.log(`📱 Mobile API URL: http://${localIP}:${PORT}/api`);
     });
   })
   .catch((err) => {

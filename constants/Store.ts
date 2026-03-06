@@ -6,6 +6,7 @@ import { api, apiCall } from "./api";
 // ============================================
 export interface User {
   id: string;
+  _id?: string;  // Added for API calls
   name: string;
   email: string;
   phone: string;
@@ -100,8 +101,9 @@ export const useStore = create<StoreState>((set, get) => ({
         email,
         password,
       });
+      const user = { ...response.user, _id: response.user.id };
       set({
-        user: response.user,
+        user,
         token: response.token,
         isLoggedIn: true,
       });
@@ -120,8 +122,9 @@ export const useStore = create<StoreState>((set, get) => ({
         email,
         password,
       });
+      const user = { ...response.user, _id: response.user.id };
       set({
-        user: response.user,
+        user,
         token: response.token,
         isLoggedIn: true,
       });
@@ -137,8 +140,9 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await apiCall(api.auth.workerRegister, "POST", data);
+      const user = { ...response.user, _id: response.user.id };
       set({
-        user: response.user,
+        user,
         token: response.token,
         isLoggedIn: true,
       });
@@ -154,8 +158,9 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await apiCall(api.auth.customerRegister, "POST", data);
+      const user = { ...response.user, _id: response.user.id };
       set({
-        user: response.user,
+        user,
         token: response.token,
         isLoggedIn: true,
       });

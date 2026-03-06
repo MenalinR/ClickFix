@@ -22,6 +22,17 @@ export const api = {
     update: (id: string) => `${API_URL}/workers/${id}`,
     addCertificate: (id: string) => `${API_URL}/workers/${id}/certificates`,
     updateAvailability: (id: string) => `${API_URL}/workers/${id}/availability`,
+    // Document Verification
+    uploadIDProof: (id: string) => `${API_URL}/workers/${id}/upload-id-proof`,
+    uploadExperience: (id: string) => `${API_URL}/workers/${id}/upload-experience`,
+    getVerificationStatus: (id: string) => `${API_URL}/workers/${id}/verification-status`,
+    verifyIDProof: (id: string) => `${API_URL}/workers/${id}/verify-id-proof`,
+    verifyExperience: (id: string, docId: string) => `${API_URL}/workers/${id}/verify-experience/${docId}`,
+  },
+
+  // Admin
+  admin: {
+    getPendingDocuments: `${API_URL}/workers/admin/pending`,
   },
 
   // Customers
