@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-  Image,
-} from "react-native";
+import { Button } from "@/components/Button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Button } from "@/components/Button";
 import { useStore } from "@/constants/Store";
 import { api, apiCall } from "@/constants/api";
-import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 type DocumentStatus = "Pending" | "Verified" | "Rejected";
 
@@ -144,7 +144,11 @@ export default function DocumentsScreen() {
       return;
     }
 
-    if (!expCertificateUrl.trim() || !expCertificateName.trim() || !expDescription.trim()) {
+    if (
+      !expCertificateUrl.trim() ||
+      !expCertificateName.trim() ||
+      !expDescription.trim()
+    ) {
       Alert.alert("Error", "Please fill all required fields");
       return;
     }
@@ -226,7 +230,8 @@ export default function DocumentsScreen() {
         <View style={styles.header}>
           <ThemedText style={styles.title}>Documents</ThemedText>
           <ThemedText style={styles.subtitle}>
-            Upload ID proof for verification and add experience proof to your profile
+            Upload ID proof for verification and add experience proof to your
+            profile
           </ThemedText>
         </View>
 
@@ -276,7 +281,9 @@ export default function DocumentsScreen() {
                   style={[
                     styles.statusBadge,
                     {
-                      backgroundColor: getStatusColor(idProof.verificationStatus),
+                      backgroundColor: getStatusColor(
+                        idProof.verificationStatus,
+                      ),
                     },
                   ]}
                 >
@@ -293,7 +300,9 @@ export default function DocumentsScreen() {
 
               {idProof.verificationNotes && (
                 <View style={styles.notesContainer}>
-                  <ThemedText style={styles.notesLabel}>Admin Notes:</ThemedText>
+                  <ThemedText style={styles.notesLabel}>
+                    Admin Notes:
+                  </ThemedText>
                   <ThemedText style={styles.notes}>
                     {idProof.verificationNotes}
                   </ThemedText>
@@ -311,27 +320,32 @@ export default function DocumentsScreen() {
 
           <View style={styles.formSection}>
             <ThemedText style={styles.label}>Document Type</ThemedText>
-              <TouchableOpacity
-                style={styles.dropdown}
-                onPress={() => setIdTypeModalVisible(true)}
-              >
-                <ThemedText style={styles.dropdownText}>{idDocumentType}</ThemedText>
-                <Ionicons name="chevron-down" size={20} color="#0066CC" />
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setIdTypeModalVisible(true)}
+            >
+              <ThemedText style={styles.dropdownText}>
+                {idDocumentType}
+              </ThemedText>
+              <Ionicons name="chevron-down" size={20} color="#0066CC" />
+            </TouchableOpacity>
 
-              <Modal
-                transparent
-                visible={idTypeModalVisible}
-                onRequestClose={() => setIdTypeModalVisible(false)}
+            <Modal
+              transparent
+              visible={idTypeModalVisible}
+              onRequestClose={() => setIdTypeModalVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setIdTypeModalVisible(false)}
               >
-                <TouchableOpacity
-                  style={styles.modalOverlay}
-                  activeOpacity={1}
-                  onPress={() => setIdTypeModalVisible(false)}
-                >
-                  <View style={styles.modalContent}>
-                    <ThemedText style={styles.modalTitle}>Select Document Type</ThemedText>
-                    {["NIC", "Passport", "DrivingLicense", "Other"].map((type) => (
+                <View style={styles.modalContent}>
+                  <ThemedText style={styles.modalTitle}>
+                    Select Document Type
+                  </ThemedText>
+                  {["NIC", "Passport", "DrivingLicense", "Other"].map(
+                    (type) => (
                       <TouchableOpacity
                         key={type}
                         style={styles.modalOption}
@@ -341,16 +355,23 @@ export default function DocumentsScreen() {
                         }}
                       >
                         <Ionicons
-                          name={idDocumentType === type ? "radio-button-on" : "radio-button-off"}
+                          name={
+                            idDocumentType === type
+                              ? "radio-button-on"
+                              : "radio-button-off"
+                          }
                           size={20}
                           color="#0066CC"
                         />
-                        <ThemedText style={styles.modalOptionText}>{type}</ThemedText>
+                        <ThemedText style={styles.modalOptionText}>
+                          {type}
+                        </ThemedText>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                </TouchableOpacity>
-              </Modal>
+                    ),
+                  )}
+                </View>
+              </TouchableOpacity>
+            </Modal>
 
             <Button
               title={idDocumentUrl ? "Document Selected ✓" : "Select Document"}
@@ -413,7 +434,9 @@ export default function DocumentsScreen() {
                     <Image
                       source={{ uri: doc.url }}
                       style={styles.certificateThumbnail}
-                      onError={() => console.log("Image loading error for:", doc.url)}
+                      onError={() =>
+                        console.log("Image loading error for:", doc.url)
+                      }
                     />
                   </View>
                 )}
@@ -489,7 +512,11 @@ export default function DocumentsScreen() {
                   </ThemedText>
                   {expCertificateUrl && (
                     <View style={styles.fileSelectedBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color="#10B981"
+                      />
                       <ThemedText style={styles.fileSelectedText}>
                         Document selected
                       </ThemedText>
@@ -501,7 +528,9 @@ export default function DocumentsScreen() {
                         ? "Document Selected ✓"
                         : "Select Certificate"
                     }
-                    onPress={() => handlePickDocument(setExpCertificateUrl, true)}
+                    onPress={() =>
+                      handlePickDocument(setExpCertificateUrl, true)
+                    }
                     variant="secondary"
                   />
                 </View>

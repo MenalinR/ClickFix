@@ -7,6 +7,7 @@ The worker document verification system allows workers to upload ID proof and ex
 ## Features
 
 ### For Workers
+
 - **Upload ID Proof**: Upload government-issued ID (NIC, Passport, Driving License, etc.)
 - **Upload Experience Documents**: Upload certificates, licenses, training documents
 - **Verification Status**: Real-time tracking of document verification status
@@ -14,6 +15,7 @@ The worker document verification system allows workers to upload ID proof and ex
 - **Resubmit**: Can resubmit rejected documents
 
 ### For Admins
+
 - **Document Review Queue**: See all pending documents needing verification
 - **Worker Details**: Access worker information and category
 - **Document Viewing**: Quick access to view uploaded documents
@@ -54,6 +56,7 @@ experienceDocuments: [{
 ### Worker Endpoints (Protected - Requires Worker Auth)
 
 #### 1. Upload ID Proof
+
 ```
 POST /api/workers/:id/upload-id-proof
 Authorization: Bearer {token}
@@ -73,6 +76,7 @@ Response:
 ```
 
 #### 2. Upload Experience Document
+
 ```
 POST /api/workers/:id/upload-experience
 Authorization: Bearer {token}
@@ -95,6 +99,7 @@ Response:
 ```
 
 #### 3. Get Verification Status
+
 ```
 GET /api/workers/:id/verification-status
 Authorization: Bearer {token}
@@ -113,6 +118,7 @@ Response:
 ### Admin Endpoints (Protected - Requires Admin Auth)
 
 #### 1. Get All Pending Documents
+
 ```
 GET /api/workers/admin/pending
 Authorization: Bearer {adminToken}
@@ -138,6 +144,7 @@ Response:
 ```
 
 #### 2. Verify ID Proof
+
 ```
 PUT /api/workers/:id/verify-id-proof
 Authorization: Bearer {adminToken}
@@ -157,6 +164,7 @@ Response:
 ```
 
 #### 3. Verify Experience Document
+
 ```
 PUT /api/workers/:id/verify-experience/:docId
 Authorization: Bearer {adminToken}
@@ -178,9 +186,11 @@ Response:
 ## Frontend Components
 
 ### Worker Document Upload Screen
+
 **File**: `app/(worker)/documents.tsx`
 
 Features:
+
 - Upload ID proof with type selection
 - Upload multiple experience documents
 - Real-time verification status display
@@ -188,14 +198,17 @@ Features:
 - Document type specific information fields
 
 Status indicators:
+
 - 🟢 **Verified**: Document approved
 - 🟡 **Pending**: Awaiting admin review
 - 🔴 **Rejected**: Resubmit with corrections
 
 ### Admin Document Verification Screen
+
 **File**: `app/(admin)/documents.tsx`
 
 Features:
+
 - List all pending documents
 - Expandable document details
 - Worker information display
@@ -206,6 +219,7 @@ Features:
 ## Workflow
 
 ### Worker Submission Workflow
+
 1. Worker logs in and goes to Documents section
 2. Selects document type (ID/Certificate)
 3. Picks document from device
@@ -214,6 +228,7 @@ Features:
 6. Receives notification when verified/rejected
 
 ### Admin Verification Workflow
+
 1. Admin logs in and goes to Document Verification
 2. Sees queue of pending documents
 3. Expands document to view details
@@ -226,12 +241,14 @@ Features:
 ## Security Considerations
 
 ### Current Implementation
+
 - JWT token authentication on all endpoints
 - Role-based access control (worker/admin)
 - Document URLs stored (ready for secure storage service)
 - Verification workflow with admin approval
 
 ### Recommended Enhancements
+
 1. **File Storage**
    - Use Cloudinary or AWS S3 for secure document hosting
    - Enable automatic scanning/virus detection
@@ -253,6 +270,7 @@ Features:
 ## Frontend Integration
 
 ### File Upload Implementation
+
 Currently using `expo-document-picker`. For production:
 
 ```typescript
@@ -288,7 +306,7 @@ All verification data flows through Zustand store:
 ```typescript
 const useStore = create((set) => ({
   user: null,  // Contains updated idProof and experienceDocuments
-  
+
   // API calls update user state
   loginWorker: async (credentials) => {
     // Response includes verification fields
@@ -303,18 +321,22 @@ const useStore = create((set) => ({
 ### Common Errors & Solutions
 
 **"Document not found"**
+
 - Ensure document ID is correct
 - Document may have been deleted
 
 **"Invalid document type"**
+
 - Use only: NIC, Passport, DrivingLicense, Other (for ID)
 - Use only: Certificate, License, Training, Other (for experience)
 
 **"Verification in progress"**
+
 - Admin is reviewing the document
 - Check status in a few hours
 
 **"Rejected - see admin notes"**
+
 - View rejection reason in document details
 - Address concerns and resubmit
 
@@ -374,6 +396,7 @@ admin: {
 ## Summary
 
 The document verification system provides:
+
 - ✅ Secure document upload for workers
 - ✅ Real-time verification status tracking
 - ✅ Admin review and approval workflow

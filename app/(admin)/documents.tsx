@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  TouchableOpacity,
-  FlatList,
-  Modal,
-} from "react-native";
+import { Button } from "@/components/Button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Button } from "@/components/Button";
 import { useStore } from "@/constants/Store";
 import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
-import { TextInput } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
 
 interface PendingDocument {
   workerId: string;
@@ -38,7 +37,9 @@ interface PendingDocument {
 export default function DocumentVerificationScreen() {
   const { token } = useStore();
   const [loading, setLoading] = useState(false);
-  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>(
+    [],
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState<{
     [key: string]: string;
@@ -134,7 +135,13 @@ export default function DocumentVerificationScreen() {
     Alert.alert("Document", "Opening document URL:\n" + url);
   };
 
-  const DocumentItem = ({ item, index }: { item: PendingDocument; index: number }) => {
+  const DocumentItem = ({
+    item,
+    index,
+  }: {
+    item: PendingDocument;
+    index: number;
+  }) => {
     const expandKey = `${item.workerId}-${item.documentType}`;
     const isExpanded = expandedId === expandKey;
     const isVerifying = verifyingIds.has(expandKey);
@@ -272,10 +279,7 @@ export default function DocumentVerificationScreen() {
                 title={isVerifying ? "Processing..." : "Reject"}
                 onPress={() => handleRejectDocument(item)}
                 variant="secondary"
-                disabled={
-                  isVerifying ||
-                  !rejectionNotes[expandKey]?.trim()
-                }
+                disabled={isVerifying || !rejectionNotes[expandKey]?.trim()}
               />
             </View>
           </View>

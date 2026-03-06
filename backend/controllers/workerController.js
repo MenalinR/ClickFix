@@ -252,7 +252,8 @@ exports.uploadIDProof = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "ID proof uploaded successfully. Waiting for admin verification.",
+      message:
+        "ID proof uploaded successfully. Waiting for admin verification.",
       data: worker,
     });
   } catch (error) {
@@ -360,7 +361,8 @@ exports.getVerificationStatus = async (req, res) => {
         idProof: worker.idProof,
         experienceDocuments: worker.experienceDocuments,
         isFullyVerified:
-          worker.nicVerified || worker.idProof?.verificationStatus === "Verified",
+          worker.nicVerified ||
+          worker.idProof?.verificationStatus === "Verified",
       },
     });
   } catch (error) {
@@ -503,7 +505,6 @@ exports.getPendingDocuments = async (req, res) => {
           uploadedAt: worker.idProof.uploadedAt,
         });
       }
-
     });
 
     res.status(200).json({
