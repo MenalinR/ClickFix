@@ -12,6 +12,7 @@ export const api = {
     customerRegister: `${API_URL}/auth/customer/register`,
     workerLogin: `${API_URL}/auth/worker/login`,
     customerLogin: `${API_URL}/auth/customer/login`,
+    adminLogin: `${API_URL}/auth/admin/login`,
     getMe: `${API_URL}/auth/me`,
   },
 
@@ -36,6 +37,15 @@ export const api = {
   // Admin
   admin: {
     getPendingDocuments: `${API_URL}/workers/admin/pending`,
+  },
+
+  // Notifications
+  notifications: {
+    getAll: `${API_URL}/notifications`,
+    getUnreadCount: `${API_URL}/notifications/unread-count`,
+    markAsRead: (id: string) => `${API_URL}/notifications/${id}/read`,
+    markAllAsRead: `${API_URL}/notifications/read-all`,
+    delete: (id: string) => `${API_URL}/notifications/${id}`,
   },
 
   // Customers
@@ -137,5 +147,47 @@ export const apiCall = async (
       );
     }
     throw new Error(error.message || "Network Error");
+  }
+};
+
+// API Helper for File Uploads (multipart/form-data)
+export const apiUpload = async (
+  url: string,
+  formData: FormData,
+  token?: string,
+) => {
+  const headers: any = {};
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Don't set Content-Type - let the browser set it automatically with boundary
+
+  try {
+    console.log(`🌐 API Upload: POST ${url}`);
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(`❌ API Error [${response.status}]:`, result.message);
+      throw new Error(result.message || "Upload Error");
+    }
+
+    console.log(`✅ Upload Success: ${url}`);
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Network Error: ${error.message}`, { url });
+    if (error.message === "Network request failed") {
+      throw new Error(
+        `Cannot reach server at ${url.split("/api")[0]}. Check: 1) Backend running? 2) Correct IP? 3) Same WiFi?`,
+      );
+    }
+    throw new Error(error.message || "Upload Error");
   }
 };

@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const http = require("http");
 const socketIo = require("socket.io");
 const os = require("os");
+const path = require("path");
 const { connectDB, initializeDatabase, checkDatabaseHealth } = require("./db");
 
 // Load environment variables
@@ -23,6 +24,19 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files as static files
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    // Set proper headers for images/PDFs
+    setHeaders: (res, filepath) => {
+      if (filepath.endsWith(".pdf")) {
+        res.set("Content-Type", "application/pdf");
+      }
+    },
+  }),
+);
 
 // Connect to Database
 const startServer = async () => {
@@ -74,6 +88,7 @@ app.use("/api/jobs", require("./routes/jobs"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/reviews", require("./routes/reviews"));
 app.use("/api/hardware", require("./routes/hardware"));
+app.use("/api/notifications", require("./routes/notifications"));
 
 const errorHandler = require("./middleware/error");
 

@@ -13,6 +13,7 @@ const {
   getPendingDocuments,
 } = require("../controllers/workerController");
 const { protect, authorize } = require("../middleware/auth");
+const { uploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
@@ -43,12 +44,25 @@ router.post(
   "/:id/upload-id-proof",
   protect,
   authorize("worker"),
+  (req, res, next) => {
+    console.log("🔍 Upload middleware - Before multer");
+    console.log("Content-Type:", req.headers["content-type"]);
+    next();
+  },
+  uploadDocument, // Multer middleware to handle file upload
+  (req, res, next) => {
+    console.log("🔍 Upload middleware - After multer");
+    console.log("File:", req.file);
+    console.log("Body:", req.body);
+    next();
+  },
   uploadIDProof,
 );
 router.post(
   "/:id/upload-experience",
   protect,
   authorize("worker"),
+  uploadDocument, // Multer middleware to handle file upload
   uploadExperienceDocument,
 );
 

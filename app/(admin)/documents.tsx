@@ -4,16 +4,21 @@ import { ThemedView } from "@/components/themed-view";
 import { useStore } from "@/constants/Store";
 import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Image,
+    Modal,
     ScrollView,
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    Dimensions
 } from "react-native";
 
 interface PendingDocument {
@@ -40,15 +45,62 @@ export default function DocumentVerificationScreen() {
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>(
     [],
   );
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState<{
     [key: string]: string;
   }>({});
   const [verifyingIds, setVerifyingIds] = useState<Set<string>>(new Set());
+  const [notificationsMarked, setNotificationsMarked] = useState(false);
 
   useEffect(() => {
     fetchPendingDocuments();
+    // Mark all document notifications as read when page opens
+    markAllDocumentNotificationsAsRead();
   }, []);
+
+  const markAllDocumentNotificationsAsRead = async () => {
+    try {
+      // Get all notifications
+      const notificationsResponse = await apiCall(
+        api.notifications.getAll,
+        "GET",
+        undefined,
+        token!,
+      );
+      
+      // Find all unread document upload notifications
+      const unreadDocNotifications = notificationsResponse.data?.filter(
+        (notif: any) => 
+          notif.type === "DOCUMENT_UPLOADED" && 
+          !notif.read
+      ) || [];
+
+      console.log(`📋 Found ${unreadDocNotifications.length} unread document notifications`);
+
+      // Mark each as read
+      for (const notif of unreadDocNotifications) {
+        try {
+          await apiCall(
+            api.notifications.markAsRead(notif._id),
+            "PUT",
+            undefined,
+            token!,
+          );
+          console.log(`✅ Marked notification ${notif._id} as read`);
+        } catch (err) {
+          console.error(`❌ Failed to mark notification ${notif._id}:`, err);
+        }
+      }
+
+      if (unreadDocNotifications.length > 0) {
+        console.log(`✅ Successfully marked ${unreadDocNotifications.length} notifications as read`);
+      }
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+    }
+  };
 
   const fetchPendingDocuments = async () => {
     try {
@@ -68,6 +120,67 @@ export default function DocumentVerificationScreen() {
     }
   };
 
+  const markRelatedNotificationsAsRead = async (workerId: string) => {
+    try {
+      // Get all notifications to find the ones related to this worker
+      const notificationsResponse = await apiCall(
+        api.notifications.getAll,
+        "GET",
+        undefined,
+        token!,
+      );
+      
+      // Find ALL notifications related to this worker (not just one)
+      const relatedNotifications = notificationsResponse.data?.filter(
+        (notif: any) => 
+          notif.type === "DOCUMENT_UPLOADED" && 
+          notif.data?.workerId === workerId &&
+          !notif.read
+      ) || [];
+
+      // Mark all of them as read
+      for (const notif of relatedNotifications) {
+        await apiCall(
+          api.notifications.markAsRead(notif._id),
+          "PUT",
+          undefined,
+          token!,
+        );
+      }
+      
+      if (relatedNotifications.length > 0) {
+        console.log(`✅ Marked ${relatedNotifications.length} notifications as read for worker ${workerId}`);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      // Don't show error to user, this is a background operation
+    }
+  };
+  const openDocument = async (url: string) => {
+    if (!url) {
+      Alert.alert("Error", "Document URL is not available");
+      return;
+    }
+
+    // Check if it's a PDF
+    if (url.toLowerCase().endsWith('.pdf')) {
+      try {
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          await WebBrowser.openBrowserAsync(url);
+        } else {
+          Alert.alert("Error", "Cannot open PDF viewer");
+        }
+      } catch (error) {
+        console.error("Error opening PDF:", error);
+        Alert.alert("Error", "Failed to open PDF");
+      }
+    } else {
+      // It's an image, show in modal
+      setSelectedImageUrl(url);
+      setImageModalVisible(true);
+    }
+  };
   const handleApproveDocument = async (doc: PendingDocument) => {
     try {
       const verifyingSet = new Set(verifyingIds);
@@ -80,6 +193,9 @@ export default function DocumentVerificationScreen() {
         { status: "Verified", notes: "" },
         token!,
       );
+
+      // Mark related notification as read
+      await markRelatedNotificationsAsRead(doc.workerId);
 
       Alert.alert("Success", `${doc.documentType} approved!`);
       fetchPendingDocuments();
@@ -112,6 +228,9 @@ export default function DocumentVerificationScreen() {
         token!,
       );
 
+      // Mark related notification as read
+      await markRelatedNotificationsAsRead(doc.workerId);
+
       Alert.alert("Success", `${doc.documentType} rejected with notes!`);
       const newNotes = { ...rejectionNotes };
       delete newNotes[`${doc.workerId}-${doc.documentType}`];
@@ -128,9 +247,25 @@ export default function DocumentVerificationScreen() {
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
-  };
-
-  const openDocument = (url: string) => {
+  };async (url: string) => {
+    console.log("📄 Opening document:", url);
+    
+    // Check if it's a PDF
+    if (url.toLowerCase().endsWith('.pdf')) {
+      try {
+        // Try to open PDF in browser
+        const result = await WebBrowser.openBrowserAsync(url);
+        console.log("PDF opened:", result);
+      } catch (error) {
+        console.error("Error opening PDF:", error);
+        // Fallback to system browser
+        Linking.openURL(url);
+      }
+    } else {
+      // It's an image - show in modal
+      setSelectedImageUrl(url);
+      setImageModalVisible(true);
+    }
     // In a real app, you would open the document URL in a viewer
     Alert.alert("Document", "Opening document URL:\n" + url);
   };
@@ -236,6 +371,20 @@ export default function DocumentVerificationScreen() {
                   </ThemedText>
                 </View>
               )}
+              
+              {/* Document Preview */}
+              {item.document.url && !item.document.url.toLowerCase().endsWith('.pdf') && (
+                <View style={styles.documentPreview}>
+                  <ThemedText style={styles.detailLabel}>Preview:</ThemedText>
+                  <Image
+                    source={{ uri: item.document.url }}
+                    style={styles.previewImage}
+                    resizeMode="contain"
+                    onError={(e) => console.error("Image load error:", e.nativeEvent.error)}
+                  />
+                </View>
+              )}
+              
               <TouchableOpacity
                 style={styles.viewDocButton}
                 onPress={() => openDocument(item.document.url)}
@@ -343,6 +492,33 @@ export default function DocumentVerificationScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setImageModalVisible(false)}
+            >
+              <Ionicons name="close-circle" size={32} color="#fff" />
+            </TouchableOpacity>
+            
+            {selectedImageUrl && (
+              <Image
+                source={{ uri: selectedImageUrl }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -495,5 +671,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
     marginTop: 8,
+  },
+  documentPreview: {
+    marginBottom: 12,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  fullImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.8,
   },
 });

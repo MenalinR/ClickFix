@@ -37,6 +37,11 @@ exports.sendTokenResponse = (user, statusCode, res, userType) => {
         wallet: user.wallet || { balance: 0 },
         addresses: user.addresses || [],
       }),
+      ...(userType === "admin" && {
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+      }),
     },
   });
 };

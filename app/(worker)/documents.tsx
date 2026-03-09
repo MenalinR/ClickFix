@@ -2,7 +2,7 @@ import { Button } from "@/components/Button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useStore } from "@/constants/Store";
-import { api, apiCall } from "@/constants/api";
+import { api, apiCall, apiUpload } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useEffect, useState } from "react";
@@ -118,13 +118,41 @@ export default function DocumentsScreen() {
 
     try {
       setIdUploading(true);
-      const response = await apiCall(
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Get filename and determine file type
+      const filename = idDocumentUrl.split('/').pop() || 'document.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const extension = match ? match[1] : 'jpg';
+      
+      // Determine proper MIME type
+      let mimeType = 'image/jpeg';
+      if (extension === 'pdf') {
+        mimeType = 'application/pdf';
+      } else if (extension === 'png') {
+        mimeType = 'image/png';
+      } else if (extension === 'jpg' || extension === 'jpeg') {
+        mimeType = 'image/jpeg';
+      }
+      
+      // Append the file - React Native FormData format
+      formData.append('document', {
+        uri: idDocumentUrl,
+        name: filename,
+        type: mimeType,
+      } as any);
+      
+      // Append other fields as strings
+      formData.append('documentType', idDocumentType);
+
+      console.log('📤 Uploading ID proof:', { filename, type: mimeType });
+
+      // Upload using apiUpload instead of apiCall
+      const response = await apiUpload(
         api.workers.uploadIDProof(user._id),
-        "POST",
-        {
-          documentUrl: idDocumentUrl,
-          documentType: idDocumentType,
-        },
+        formData,
         token!,
       );
 
@@ -132,6 +160,7 @@ export default function DocumentsScreen() {
       setIdDocumentUrl("");
       fetchVerificationStatus();
     } catch (error: any) {
+      console.error('Upload error:', error);
       Alert.alert("Error", error.message);
     } finally {
       setIdUploading(false);
@@ -155,15 +184,43 @@ export default function DocumentsScreen() {
 
     try {
       setExpUploading(true);
-      const response = await apiCall(
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Get filename and determine file type
+      const filename = expCertificateUrl.split('/').pop() || 'certificate.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const extension = match ? match[1] : 'jpg';
+      
+      // Determine proper MIME type
+      let mimeType = 'image/jpeg';
+      if (extension === 'pdf') {
+        mimeType = 'application/pdf';
+      } else if (extension === 'png') {
+        mimeType = 'image/png';
+      } else if (extension === 'jpg' || extension === 'jpeg') {
+        mimeType = 'image/jpeg';
+      }
+      
+      // Append the file - React Native FormData format
+      formData.append('document', {
+        uri: expCertificateUrl,
+        name: filename,
+        type: mimeType,
+      } as any);
+      
+      // Append other fields as strings
+      formData.append('documentName', expCertificateName);
+      formData.append('documentType', 'Certificate');
+      formData.append('description', expDescription);
+
+      console.log('📤 Uploading certificate:', { filename, type: mimeType });
+
+      // Upload using apiUpload instead of apiCall
+      const response = await apiUpload(
         api.workers.uploadExperience(user._id),
-        "POST",
-        {
-          documentUrl: expCertificateUrl,
-          documentName: expCertificateName,
-          documentType: "Certificate",
-          description: expDescription,
-        },
+        formData,
         token!,
       );
 
@@ -171,6 +228,7 @@ export default function DocumentsScreen() {
       resetExpForm();
       fetchVerificationStatus();
     } catch (error: any) {
+      console.error('Upload error:', error);
       Alert.alert("Error", error.message);
     } finally {
       setExpUploading(false);

@@ -1,4 +1,6 @@
 import { Colors } from "@/constants/Colors";
+import { api, apiCall } from "@/constants/api";
+import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -15,32 +17,9 @@ import {
     View,
 } from "react-native";
 
-// Mock admin store
-export const useAdminStore = (() => {
-  let adminToken: string | null = null;
-  let adminUser: any = null;
-
-  return () => ({
-    adminToken,
-    adminUser,
-    setAdminToken: (token: string) => {
-      adminToken = token;
-    },
-    setAdminUser: (user: any) => {
-      adminUser = user;
-    },
-    clearAdmin: () => {
-      adminToken = null;
-      adminUser = null;
-    },
-  });
-})();
-
-// Global admin token for API calls
-global.adminToken = null as string | null;
-
 export default function AdminLoginScreen() {
   const router = useRouter();
+  const { setToken, setUser, setUserType } = useStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,16 +38,21 @@ export default function AdminLoginScreen() {
 
     setLoading(true);
     try {
-      // Demo admin credentials
-      if (email === "admin@clickfix.com" && password === "admin123") {
-        // Create a mock admin token
-        const mockToken = "admin-token-" + Date.now();
-        global.adminToken = mockToken;
+      const response = await apiCall(api.auth.adminLogin, "POST", {
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (response.success && response.token) {
+        // Save token and user data
+        setToken(response.token);
+        setUser(response.user);
+        setUserType("admin");
 
         Alert.alert("Success", "Logged in as Admin!");
         router.replace("/(admin)/" as any);
       } else {
-        Alert.alert("Error", "Invalid admin credentials");
+        Alert.alert("Error", response.message || "Invalid credentials");
       }
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid credentials");

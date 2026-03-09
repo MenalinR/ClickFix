@@ -1,4 +1,7 @@
 const Worker = require("../models/Worker");
+const Admin = require("../models/Admin");
+const path = require("path");
+const { createNotification } = require("./notificationController");
 
 // @desc    Get all workers
 // @route   GET /api/workers
@@ -202,6 +205,12 @@ exports.updateAvailability = async (req, res) => {
 // @access  Private (Worker only)
 exports.uploadIDProof = async (req, res) => {
   try {
+    console.log("📥 Upload ID Proof request received");
+    console.log("User:", req.user?._id);
+    console.log("Params ID:", req.params.id);
+    console.log("File:", req.file ? "✅ File present" : "❌ No file");
+    console.log("Body:", req.body);
+
     if (req.user._id.toString() !== req.params.id) {
       return res.status(403).json({
         success: false,
@@ -209,12 +218,23 @@ exports.uploadIDProof = async (req, res) => {
       });
     }
 
-    const { documentUrl, documentType, nicNumber } = req.body;
-
-    if (!documentUrl || !documentType) {
+    // Check if file was uploaded via multer
+    if (!req.file) {
+      console.error("❌ No file uploaded - multer did not receive file");
       return res.status(400).json({
         success: false,
-        message: "Document URL and type are required",
+        message: "Please upload a document file",
+      });
+    }
+
+    console.log("✅ File received:", req.file.originalname, req.file.size, "bytes");
+
+    const { documentType, nicNumber } = req.body;
+
+    if (!documentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Document type is required",
       });
     }
 
@@ -236,9 +256,18 @@ exports.uploadIDProof = async (req, res) => {
       });
     }
 
-    // Update ID proof
+    // Create accessible URL for the uploaded file
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    // Extract relative path from uploads folder
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    // Update ID proof with accessible file URL
     worker.idProof = {
-      url: documentUrl,
+      url: fileUrl,
       documentType,
       uploadedAt: new Date(),
       verificationStatus: "Pending", // Admin will verify
@@ -249,6 +278,31 @@ exports.uploadIDProof = async (req, res) => {
     }
 
     await worker.save();
+
+    // Create notification for all admins
+    try {
+      const admins = await Admin.find({ isActive: true });
+      const notificationPromises = admins.map((admin) =>
+        createNotification({
+          recipient: admin._id,
+          recipientModel: "Admin",
+          type: "DOCUMENT_UPLOADED",
+          title: "New ID Proof Uploaded",
+          message: `${worker.name} (${worker.category}) uploaded ${documentType} for verification`,
+          data: {
+            workerId: worker._id.toString(),
+            workerName: worker.name,
+            documentType,
+          },
+          actionUrl: "/admin/documents",
+        }),
+      );
+      await Promise.all(notificationPromises);
+      console.log(`✅ Notification sent to ${admins.length} admin(s)`);
+    } catch (notifError) {
+      console.error("Error creating notification:", notifError);
+      // Don't fail the upload if notification fails
+    }
 
     res.status(200).json({
       success: true,
@@ -276,8 +330,15 @@ exports.uploadExperienceDocument = async (req, res) => {
       });
     }
 
+    // Check if file was uploaded via multer
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a document file",
+      });
+    }
+
     const {
-      documentUrl,
       documentName,
       description,
       documentType = "Certificate",
@@ -285,10 +346,10 @@ exports.uploadExperienceDocument = async (req, res) => {
       expiryDate,
     } = req.body;
 
-    if (!documentUrl || !documentName) {
+    if (!documentName) {
       return res.status(400).json({
         success: false,
-        message: "Document URL and name are required",
+        message: "Document name is required",
       });
     }
 
@@ -310,11 +371,20 @@ exports.uploadExperienceDocument = async (req, res) => {
       });
     }
 
-    // Add experience document
+    // Create accessible URL for the uploaded file
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    // Extract relative path from uploads folder
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    // Add experience document with accessible file URL
     const newDocument = {
       name: documentName,
       description: description || "",
-      url: documentUrl,
+      url: fileUrl,
       documentType,
       issueDate: issueDate ? new Date(issueDate) : null,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
@@ -414,6 +484,32 @@ exports.verifyIDProof = async (req, res) => {
     }
 
     await worker.save();
+
+    // Create notification for worker
+    try {
+      await createNotification({
+        recipient: worker._id,
+        recipientModel: "Worker",
+        type: status === "Verified" ? "DOCUMENT_VERIFIED" : "DOCUMENT_REJECTED",
+        title: `ID Proof ${status}`,
+        message:
+          status === "Verified"
+            ? "Your ID proof has been verified successfully!"
+            : `Your ID proof was rejected. ${notes || "Please upload a valid document."}`,
+        data: {
+          workerId: worker._id.toString(),
+          workerName: worker.name,
+          documentType: "ID Proof",
+          status,
+          notes: notes || "",
+        },
+        actionUrl: "/worker/documents",
+      });
+      console.log(`✅ Notification sent to worker: ${worker.name}`);
+    } catch (notifError) {
+      console.error("Error creating notification:", notifError);
+      // Don't fail the verification if notification fails
+    }
 
     res.status(200).json({
       success: true,

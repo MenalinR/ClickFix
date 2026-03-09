@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 42,
-    fontFamily: "Inter_700Bold",
+    fontWeight: "bold",
     color: Colors.white,
     letterSpacing: -1,
   },
@@ -153,14 +153,13 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 32,
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     color: Colors.white,
     lineHeight: 40,
     marginBottom: 16,
   },
   subtext: {
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
     color: "#E0E0E0",
     lineHeight: 24,
   },
@@ -176,7 +175,7 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     color: "#B0C4DE",
     textAlign: "center",
     marginBottom: 8,
@@ -208,10 +207,9 @@ const styles = StyleSheet.create({
   },
   loginText: {
     color: "#E0E0E0",
-    fontFamily: "Inter_400Regular",
   },
   loginLink: {
     color: Colors.accent,
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
   },
 });

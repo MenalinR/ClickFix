@@ -1,5 +1,6 @@
 const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
+const Admin = require("../models/Admin");
 const { sendTokenResponse } = require("../utils/auth");
 
 // @desc    Register Worker
@@ -165,6 +166,60 @@ exports.loginCustomer = async (req, res) => {
   }
 };
 
+// @desc    Login Admin
+// @route   POST /api/auth/admin/login
+// @access  Public
+exports.loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password",
+      });
+    }
+
+    // Check for admin
+    const admin = await Admin.findOne({ email }).select("+password");
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Check if admin is active
+    if (!admin.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: "Admin account is inactive",
+      });
+    }
+
+    // Check password
+    const isMatch = await admin.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Update last login
+    admin.lastLogin = Date.now();
+    await admin.save();
+
+    sendTokenResponse(admin, 200, res, "admin");
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private
@@ -173,8 +228,10 @@ exports.getMe = async (req, res) => {
     let user;
     if (req.userType === "worker") {
       user = await Worker.findById(req.user._id);
-    } else {
+    } else if (req.userType === "customer") {
       user = await Customer.findById(req.user._id);
+    } else if (req.userType === "admin") {
+      user = await Admin.findById(req.user._id);
     }
 
     res.status(200).json({

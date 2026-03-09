@@ -9,8 +9,8 @@ export interface User {
   _id?: string; // Added for API calls
   name: string;
   email: string;
-  phone: string;
-  userType: "worker" | "customer";
+  phone?: string;
+  userType: "worker" | "customer" | "admin";
 }
 
 export interface Worker extends User {
@@ -64,9 +64,13 @@ interface StoreState {
   // Actions
   loginWorker: (email: string, password: string) => Promise<void>;
   loginCustomer: (email: string, password: string) => Promise<void>;
+  loginAdmin: (email: string, password: string) => Promise<void>;
   registerWorker: (data: any) => Promise<void>;
   registerCustomer: (data: any) => Promise<void>;
   logout: () => void;
+  setToken: (token: string) => void;
+  setUser: (user: User | null) => void;
+  setUserType: (userType: "worker" | "customer" | "admin") => void;
 
   // Fetch Data
   fetchWorkers: (filters?: any) => Promise<void>;
@@ -136,6 +140,27 @@ export const useStore = create<StoreState>((set, get) => ({
     }
   },
 
+  loginAdmin: async (email: string, password: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await apiCall(api.auth.adminLogin, "POST", {
+        email,
+        password,
+      });
+      const user = { ...response.user, _id: response.user.id };
+      set({
+        user,
+        token: response.token,
+        isLoggedIn: true,
+      });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   registerWorker: async (data: any) => {
     set({ loading: true, error: null });
     try {
@@ -180,6 +205,20 @@ export const useStore = create<StoreState>((set, get) => ({
       workers: [],
       jobs: [],
     });
+  },
+
+  setToken: (token: string) => {
+    set({ token, isLoggedIn: !!token });
+  },
+
+  setUser: (user: User | null) => {
+    set({ user, isLoggedIn: !!user || !!get().token });
+  },
+
+  setUserType: (userType: "worker" | "customer" | "admin") => {
+    const currentUser = get().user;
+    if (!currentUser) return;
+    set({ user: { ...currentUser, userType } });
   },
 
   // ============================================

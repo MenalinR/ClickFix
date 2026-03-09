@@ -1,56 +1,60 @@
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const cloudinary = require("cloudinary").v2;
+const path = require("path");
+const fs = require("fs");
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure local storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = path.join(uploadDir, req.uploadFolder || "documents");
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
+    }
+    cb(null, folder);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
+    );
+  },
 });
 
-// Create storage for different types of uploads
-const createStorage = (folder) => {
-  return new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-      folder: folder,
-      allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
-      transformation: [{ width: 1000, height: 1000, crop: "limit" }],
-    },
-  });
-};
+// Upload documents (ID proofs, certificates, etc)
+exports.uploadDocument = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|webp/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
 
-// Upload middleware for different types
-exports.uploadJobImages = multer({
-  storage: createStorage("clickfix/jobs"),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-}).array("images", 5);
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only images and PDF files are allowed!"));
+    }
+  },
+}).single("document");
 
-exports.uploadCertificate = multer({
-  storage: createStorage("clickfix/certificates"),
-  limits: { fileSize: 5 * 1024 * 1024 },
-}).single("certificate");
-
-exports.uploadProfilePicture = multer({
-  storage: createStorage("clickfix/profiles"),
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-}).single("profilePicture");
-
-exports.uploadReviewImages = multer({
-  storage: createStorage("clickfix/reviews"),
-  limits: { fileSize: 5 * 1024 * 1024 },
-}).array("images", 4);
-
-// Delete image from cloudinary
-exports.deleteImage = async (publicId) => {
+// Delete file from local storage
+exports.deleteFile = async (filePath) => {
   try {
-    await cloudinary.uploader.destroy(publicId);
-    return true;
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return true;
+    }
+    return false;
   } catch (error) {
-    console.error("Error deleting image:", error);
+    console.error("Error deleting file:", error);
     return false;
   }
 };
-
-module.exports.cloudinary = cloudinary;

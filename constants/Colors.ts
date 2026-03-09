@@ -5,6 +5,7 @@ export const Colors = {
   background: "#F8F9FA", // Off-white
   lightBackground: "#F0F4F8", // Light gray-blue
   surface: "#FFFFFF",
+  card: "#FFFFFF", // Card background
   text: "#1B1B1B",
   textSecondary: "#6C757D",
   border: "#E9ECEF",
