@@ -227,7 +227,12 @@ exports.uploadIDProof = async (req, res) => {
       });
     }
 
-    console.log("✅ File received:", req.file.originalname, req.file.size, "bytes");
+    console.log(
+      "✅ File received:",
+      req.file.originalname,
+      req.file.size,
+      "bytes",
+    );
 
     const { documentType, nicNumber } = req.body;
 

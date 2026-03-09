@@ -4,12 +4,13 @@ import { ThemedView } from "@/components/themed-view";
 import { useStore } from "@/constants/Store";
 import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
-import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Dimensions,
     FlatList,
     Image,
     Modal,
@@ -18,7 +19,6 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Dimensions
 } from "react-native";
 
 interface PendingDocument {
@@ -69,15 +69,16 @@ export default function DocumentVerificationScreen() {
         undefined,
         token!,
       );
-      
-      // Find all unread document upload notifications
-      const unreadDocNotifications = notificationsResponse.data?.filter(
-        (notif: any) => 
-          notif.type === "DOCUMENT_UPLOADED" && 
-          !notif.read
-      ) || [];
 
-      console.log(`📋 Found ${unreadDocNotifications.length} unread document notifications`);
+      // Find all unread document upload notifications
+      const unreadDocNotifications =
+        notificationsResponse.data?.filter(
+          (notif: any) => notif.type === "DOCUMENT_UPLOADED" && !notif.read,
+        ) || [];
+
+      console.log(
+        `📋 Found ${unreadDocNotifications.length} unread document notifications`,
+      );
 
       // Mark each as read
       for (const notif of unreadDocNotifications) {
@@ -95,7 +96,9 @@ export default function DocumentVerificationScreen() {
       }
 
       if (unreadDocNotifications.length > 0) {
-        console.log(`✅ Successfully marked ${unreadDocNotifications.length} notifications as read`);
+        console.log(
+          `✅ Successfully marked ${unreadDocNotifications.length} notifications as read`,
+        );
       }
     } catch (error) {
       console.error("Error marking notifications as read:", error);
@@ -129,14 +132,15 @@ export default function DocumentVerificationScreen() {
         undefined,
         token!,
       );
-      
+
       // Find ALL notifications related to this worker (not just one)
-      const relatedNotifications = notificationsResponse.data?.filter(
-        (notif: any) => 
-          notif.type === "DOCUMENT_UPLOADED" && 
-          notif.data?.workerId === workerId &&
-          !notif.read
-      ) || [];
+      const relatedNotifications =
+        notificationsResponse.data?.filter(
+          (notif: any) =>
+            notif.type === "DOCUMENT_UPLOADED" &&
+            notif.data?.workerId === workerId &&
+            !notif.read,
+        ) || [];
 
       // Mark all of them as read
       for (const notif of relatedNotifications) {
@@ -147,9 +151,11 @@ export default function DocumentVerificationScreen() {
           token!,
         );
       }
-      
+
       if (relatedNotifications.length > 0) {
-        console.log(`✅ Marked ${relatedNotifications.length} notifications as read for worker ${workerId}`);
+        console.log(
+          `✅ Marked ${relatedNotifications.length} notifications as read for worker ${workerId}`,
+        );
       }
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -163,7 +169,7 @@ export default function DocumentVerificationScreen() {
     }
 
     // Check if it's a PDF
-    if (url.toLowerCase().endsWith('.pdf')) {
+    if (url.toLowerCase().endsWith(".pdf")) {
       try {
         const supported = await Linking.canOpenURL(url);
         if (supported) {
@@ -247,11 +253,12 @@ export default function DocumentVerificationScreen() {
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
-  };async (url: string) => {
+  };
+  async (url: string) => {
     console.log("📄 Opening document:", url);
-    
+
     // Check if it's a PDF
-    if (url.toLowerCase().endsWith('.pdf')) {
+    if (url.toLowerCase().endsWith(".pdf")) {
       try {
         // Try to open PDF in browser
         const result = await WebBrowser.openBrowserAsync(url);
@@ -371,20 +378,23 @@ export default function DocumentVerificationScreen() {
                   </ThemedText>
                 </View>
               )}
-              
+
               {/* Document Preview */}
-              {item.document.url && !item.document.url.toLowerCase().endsWith('.pdf') && (
-                <View style={styles.documentPreview}>
-                  <ThemedText style={styles.detailLabel}>Preview:</ThemedText>
-                  <Image
-                    source={{ uri: item.document.url }}
-                    style={styles.previewImage}
-                    resizeMode="contain"
-                    onError={(e) => console.error("Image load error:", e.nativeEvent.error)}
-                  />
-                </View>
-              )}
-              
+              {item.document.url &&
+                !item.document.url.toLowerCase().endsWith(".pdf") && (
+                  <View style={styles.documentPreview}>
+                    <ThemedText style={styles.detailLabel}>Preview:</ThemedText>
+                    <Image
+                      source={{ uri: item.document.url }}
+                      style={styles.previewImage}
+                      resizeMode="contain"
+                      onError={(e) =>
+                        console.error("Image load error:", e.nativeEvent.error)
+                      }
+                    />
+                  </View>
+                )}
+
               <TouchableOpacity
                 style={styles.viewDocButton}
                 onPress={() => openDocument(item.document.url)}
@@ -508,7 +518,7 @@ export default function DocumentVerificationScreen() {
             >
               <Ionicons name="close-circle" size={32} color="#fff" />
             </TouchableOpacity>
-            
+
             {selectedImageUrl && (
               <Image
                 source={{ uri: selectedImageUrl }}
@@ -676,33 +686,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   previewImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 8,
     marginTop: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height,
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     right: 20,
     zIndex: 1,
     padding: 10,
   },
   fullImage: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height * 0.8,
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height * 0.8,
   },
 });

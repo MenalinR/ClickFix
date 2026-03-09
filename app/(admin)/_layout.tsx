@@ -1,10 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs, usePathname } from "expo-router";
-import { Colors } from "../../constants/Colors";
-import { View, Text, StyleSheet } from "react-native";
-import { useEffect, useState } from "react";
 import { api, apiCall } from "@/constants/api";
 import { useStore } from "@/constants/Store";
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Colors } from "../../constants/Colors";
 
 export default function AdminLayout() {
   const { token } = useStore();
@@ -21,7 +21,7 @@ export default function AdminLayout() {
 
   // Clear and refresh notification count when documents tab is accessed
   useEffect(() => {
-    if (pathname?.includes('documents')) {
+    if (pathname?.includes("documents")) {
       const now = Date.now();
       // Prevent multiple rapid clears
       if (now - lastDocumentVisit > 2000) {
@@ -92,7 +92,11 @@ export default function AdminLayout() {
           title: "Documents",
           tabBarIcon: ({ color, size }) => (
             <View>
-              <Ionicons name="document-text-outline" size={size} color={color} />
+              <Ionicons
+                name="document-text-outline"
+                size={size}
+                color={color}
+              />
               {unreadCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>

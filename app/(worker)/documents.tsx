@@ -121,33 +121,33 @@ export default function DocumentsScreen() {
 
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       // Get filename and determine file type
-      const filename = idDocumentUrl.split('/').pop() || 'document.jpg';
+      const filename = idDocumentUrl.split("/").pop() || "document.jpg";
       const match = /\.(\w+)$/.exec(filename);
-      const extension = match ? match[1] : 'jpg';
-      
+      const extension = match ? match[1] : "jpg";
+
       // Determine proper MIME type
-      let mimeType = 'image/jpeg';
-      if (extension === 'pdf') {
-        mimeType = 'application/pdf';
-      } else if (extension === 'png') {
-        mimeType = 'image/png';
-      } else if (extension === 'jpg' || extension === 'jpeg') {
-        mimeType = 'image/jpeg';
+      let mimeType = "image/jpeg";
+      if (extension === "pdf") {
+        mimeType = "application/pdf";
+      } else if (extension === "png") {
+        mimeType = "image/png";
+      } else if (extension === "jpg" || extension === "jpeg") {
+        mimeType = "image/jpeg";
       }
-      
+
       // Append the file - React Native FormData format
-      formData.append('document', {
+      formData.append("document", {
         uri: idDocumentUrl,
         name: filename,
         type: mimeType,
       } as any);
-      
-      // Append other fields as strings
-      formData.append('documentType', idDocumentType);
 
-      console.log('📤 Uploading ID proof:', { filename, type: mimeType });
+      // Append other fields as strings
+      formData.append("documentType", idDocumentType);
+
+      console.log("📤 Uploading ID proof:", { filename, type: mimeType });
 
       // Upload using apiUpload instead of apiCall
       const response = await apiUpload(
@@ -160,7 +160,7 @@ export default function DocumentsScreen() {
       setIdDocumentUrl("");
       fetchVerificationStatus();
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setIdUploading(false);
@@ -187,35 +187,35 @@ export default function DocumentsScreen() {
 
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       // Get filename and determine file type
-      const filename = expCertificateUrl.split('/').pop() || 'certificate.jpg';
+      const filename = expCertificateUrl.split("/").pop() || "certificate.jpg";
       const match = /\.(\w+)$/.exec(filename);
-      const extension = match ? match[1] : 'jpg';
-      
+      const extension = match ? match[1] : "jpg";
+
       // Determine proper MIME type
-      let mimeType = 'image/jpeg';
-      if (extension === 'pdf') {
-        mimeType = 'application/pdf';
-      } else if (extension === 'png') {
-        mimeType = 'image/png';
-      } else if (extension === 'jpg' || extension === 'jpeg') {
-        mimeType = 'image/jpeg';
+      let mimeType = "image/jpeg";
+      if (extension === "pdf") {
+        mimeType = "application/pdf";
+      } else if (extension === "png") {
+        mimeType = "image/png";
+      } else if (extension === "jpg" || extension === "jpeg") {
+        mimeType = "image/jpeg";
       }
-      
+
       // Append the file - React Native FormData format
-      formData.append('document', {
+      formData.append("document", {
         uri: expCertificateUrl,
         name: filename,
         type: mimeType,
       } as any);
-      
-      // Append other fields as strings
-      formData.append('documentName', expCertificateName);
-      formData.append('documentType', 'Certificate');
-      formData.append('description', expDescription);
 
-      console.log('📤 Uploading certificate:', { filename, type: mimeType });
+      // Append other fields as strings
+      formData.append("documentName", expCertificateName);
+      formData.append("documentType", "Certificate");
+      formData.append("description", expDescription);
+
+      console.log("📤 Uploading certificate:", { filename, type: mimeType });
 
       // Upload using apiUpload instead of apiCall
       const response = await apiUpload(
@@ -228,7 +228,7 @@ export default function DocumentsScreen() {
       resetExpForm();
       fetchVerificationStatus();
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setExpUploading(false);

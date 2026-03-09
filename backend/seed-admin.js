@@ -7,7 +7,8 @@ const mongoose = require("mongoose");
 const Admin = require("./models/Admin");
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/clickfix";
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://localhost:27017/clickfix";
 
 async function seedAdmin() {
   try {
@@ -17,9 +18,11 @@ async function seedAdmin() {
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email: "admin@clickfix.com" });
-    
+
     if (existingAdmin) {
-      console.log("⚠️  Admin user already exists with email: admin@clickfix.com");
+      console.log(
+        "⚠️  Admin user already exists with email: admin@clickfix.com",
+      );
       console.log("Email:", existingAdmin.email);
       console.log("Name:", existingAdmin.name);
       console.log("Role:", existingAdmin.role);
