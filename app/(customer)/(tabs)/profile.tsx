@@ -1,46 +1,167 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
+import { useStore } from "../../../constants/Store";
+import { api, apiCall } from "../../../constants/api";
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const {
+    user: currentUser,
+    token,
+    setUser: setStoreUser,
+    logout,
+  } = useStore();
 
   // State for user data
   const [user, setUser] = useState({
-    name: "John ",
-    email: "john.@example.com",
-    mobile: "+94 77 123 4567",
-    address: "123, Galle Road, Colombo 03",
+    name: currentUser?.name || "",
+    email: currentUser?.email || "",
+    mobile: currentUser?.phone || "",
+    address: "Not provided",
     image: "https://randomuser.me/api/portraits/men/1.jpg",
   });
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const customerId = currentUser?._id || currentUser?.id;
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setUser((prev) => ({
+      ...prev,
+      name: currentUser.name || "",
+      email: currentUser.email || "",
+      mobile: currentUser.phone || "",
+    }));
+  }, [currentUser]);
+
+  useEffect(() => {
+    const loadCustomerProfile = async () => {
+      if (!customerId || !token) return;
+      try {
+        const response = await apiCall(
+          api.customers.getById(customerId),
+          "GET",
+          undefined,
+          token,
+        );
+
+        const profile = response.data;
+        const latestAddress =
+          profile?.addresses?.[profile.addresses.length - 1];
+
+        setUser((prev) => ({
+          ...prev,
+          name: profile?.name || prev.name,
+          email: profile?.email || prev.email,
+          mobile: profile?.phone || prev.mobile,
+          address: latestAddress?.street || prev.address,
+        }));
+
+        setStoreUser({
+          ...currentUser!,
+          name: profile?.name || currentUser!.name,
+          email: profile?.email || currentUser!.email,
+          phone: profile?.phone || currentUser!.phone,
+        });
+      } catch (error) {
+        console.error("Failed to load customer profile:", error);
+      }
+    };
+
+    loadCustomerProfile();
+  }, [customerId, token]);
 
   const handleEdit = (field: string, currentValue: string) => {
     setEditingField(field);
     setTempValue(currentValue);
   };
 
-  const handleSave = () => {
-    if (editingField) {
-      setUser((prev) => ({ ...prev, [editingField.toLowerCase()]: tempValue }));
+  const handleSave = async () => {
+    if (!editingField) return;
+    if (!customerId || !token) {
+      Alert.alert("Error", "Please login again");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      if (editingField === "name") {
+        const response = await apiCall(
+          api.customers.update(customerId),
+          "PUT",
+          { name: tempValue },
+          token,
+        );
+
+        setUser((prev) => ({
+          ...prev,
+          name: response.data?.name || tempValue,
+        }));
+        setStoreUser({
+          ...currentUser!,
+          name: response.data?.name || tempValue,
+          phone: response.data?.phone || currentUser!.phone,
+        });
+      } else if (editingField === "mobile") {
+        const response = await apiCall(
+          api.customers.update(customerId),
+          "PUT",
+          { phone: tempValue },
+          token,
+        );
+
+        setUser((prev) => ({
+          ...prev,
+          mobile: response.data?.phone || tempValue,
+        }));
+        setStoreUser({
+          ...currentUser!,
+          name: response.data?.name || currentUser!.name,
+          phone: response.data?.phone || tempValue,
+        });
+      } else if (editingField === "address") {
+        await apiCall(
+          api.customers.addAddress(customerId),
+          "POST",
+          {
+            label: "Home",
+            street: tempValue,
+            city: "",
+            state: "",
+            zipCode: "",
+          },
+          token,
+        );
+        setUser((prev) => ({ ...prev, address: tempValue }));
+      } else if (editingField === "email") {
+        Alert.alert("Info", "Email update is not supported right now.");
+      }
+
       setEditingField(null);
       setTempValue("");
+    } catch (error: any) {
+      Alert.alert("Update Failed", error.message || "Could not save changes");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -126,7 +247,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity onPress={() => handleEdit(fieldKey, value)}>
+          <TouchableOpacity
+            onPress={() => handleEdit(fieldKey, value)}
+            disabled={saving}
+          >
             <Ionicons
               name="pencil-outline"
               size={20}
@@ -144,7 +268,10 @@ export default function ProfileScreen() {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => router.replace("/"),
+        onPress: () => {
+          logout();
+          router.replace("/");
+        },
       },
     ]);
   };
@@ -158,13 +285,18 @@ export default function ProfileScreen() {
           <View style={styles.imageContainer}>
             <Image source={{ uri: user.image }} style={styles.profileImage} />
 
-            <TouchableOpacity onPress={pickImage} style={styles.editIconBadge}>
+            <TouchableOpacity
+              onPress={pickImage}
+              style={styles.editIconBadge}
+              disabled={saving}
+            >
               <Ionicons name="pencil" size={12} color="#FFF" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={removeImage}
               style={styles.removeIconBadge}
+              disabled={saving}
             >
               <Ionicons name="trash-outline" size={14} color="#FFF" />
             </TouchableOpacity>
@@ -183,17 +315,20 @@ export default function ProfileScreen() {
                   onChangeText={setTempValue}
                   autoFocus
                 />
-                <TouchableOpacity onPress={handleSave}>
+                <TouchableOpacity onPress={handleSave} disabled={saving}>
                   <Ionicons name="checkmark" size={20} color={Colors.success} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleCancel}>
+                <TouchableOpacity onPress={handleCancel} disabled={saving}>
                   <Ionicons name="close" size={20} color={Colors.error} />
                 </TouchableOpacity>
               </View>
             ) : (
               <>
                 <Text style={styles.profileName}>{user.name}</Text>
-                <TouchableOpacity onPress={() => handleEdit("name", user.name)}>
+                <TouchableOpacity
+                  onPress={() => handleEdit("name", user.name)}
+                  disabled={saving}
+                >
                   <Ionicons name="pencil" size={16} color={Colors.primary} />
                 </TouchableOpacity>
               </>
