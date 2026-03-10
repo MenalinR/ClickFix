@@ -132,6 +132,10 @@ exports.updateWorker = async (req, res) => {
       }
     });
 
+    if (req.body.about !== undefined && req.body.bio === undefined) {
+      updates.bio = req.body.about;
+    }
+
     console.log("🔧 Update Worker - Updates Object:", JSON.stringify(updates));
 
     const worker = await Worker.findByIdAndUpdate(req.params.id, updates, {

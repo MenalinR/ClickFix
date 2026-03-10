@@ -39,6 +39,11 @@ const workerSchema = new mongoose.Schema(
         "Other",
       ],
     },
+    bio: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     experience: {
       type: Number,
       default: 0,

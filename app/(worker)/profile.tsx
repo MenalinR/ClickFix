@@ -35,6 +35,7 @@ export default function WorkerProfileScreen() {
     image: (storeUser as any)?.image || "https://via.placeholder.com/150",
     category: (storeUser as any)?.category || "Service Professional",
     experience: (storeUser as any)?.experience?.toString() || "0",
+    about: (storeUser as any)?.bio || (storeUser as any)?.about || "",
     hourlyRate: (storeUser as any)?.hourlyRate || 0,
     rating: (storeUser as any)?.rating || 0,
     reviewCount: (storeUser as any)?.reviewCount || 0,
@@ -60,6 +61,7 @@ export default function WorkerProfileScreen() {
     image: workerData.image || "https://via.placeholder.com/150",
     category: workerData.category || "Service Professional",
     experience: workerData.experience?.toString() || "0",
+    about: workerData.bio || workerData.about || "",
     hourlyRate: workerData.hourlyRate || 0,
     rating: workerData.rating || 0,
     reviewCount: workerData.reviewCount || 0,
@@ -132,6 +134,8 @@ export default function WorkerProfileScreen() {
           coordinates: [0, 0], // Default coordinates (will be updated if we add GPS lookup)
           address: tempValue,
         };
+      } else if (fieldKey === "about") {
+        updateData.bio = tempValue;
       } else {
         updateData[fieldKey] = tempValue;
       }
@@ -467,6 +471,56 @@ export default function WorkerProfileScreen() {
           {renderEditableField("Address", "address", user.address)}
         </View>
 
+        <Text style={styles.sectionTitle}>About</Text>
+        <View style={styles.infoSection}>
+          {editingField === "about" ? (
+            <>
+              <TextInput
+                style={styles.aboutInput}
+                value={tempValue}
+                onChangeText={setTempValue}
+                placeholder="Tell customers about your experience and expertise"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                autoFocus
+              />
+              <View style={styles.aboutActions}>
+                <TouchableOpacity onPress={handleSave} disabled={saving}>
+                  <Ionicons
+                    name="checkmark"
+                    size={20}
+                    color={saving ? Colors.textSecondary : Colors.success}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCancel} disabled={saving}>
+                  <Ionicons
+                    name="close"
+                    size={20}
+                    color={saving ? Colors.textSecondary : Colors.error}
+                  />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.aboutViewRow}>
+              <Text style={styles.aboutValue}>
+                {user.about || "No description added yet"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => handleEdit("about", user.about || "")}
+                disabled={saving}
+              >
+                <Ionicons
+                  name="pencil-outline"
+                  size={20}
+                  color={saving ? Colors.textSecondary : Colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Professional Details Section */}
         <Text style={styles.sectionTitle}>Professional Details</Text>
         <View style={styles.infoSection}>
@@ -753,6 +807,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.primary,
     paddingVertical: 4,
+  },
+  aboutInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    padding: 12,
+    minHeight: 100,
+    fontSize: 14,
+    color: Colors.text,
+    backgroundColor: Colors.background,
+  },
+  aboutActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 14,
+    marginTop: 10,
+  },
+  aboutViewRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  aboutValue: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
   },
   ratingCard: {
     backgroundColor: "white",
