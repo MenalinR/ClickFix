@@ -12,28 +12,49 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
-import { useStore } from "../../../constants/Store";
+import { api, apiCall } from "../../../constants/api";
 
 export default function CustomerHome() {
   const router = useRouter();
-  const { workers, fetchWorkers, loading } = useStore();
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
+  const loadApprovedWorkers = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setFetchError("");
+      const response = await apiCall(`${api.workers.getAll}?approved=true`, "GET");
+      const mappedWorkers = (response?.data || []).map((worker: any) => ({
+        ...worker,
+        id: worker.id || worker._id,
+        image: worker.image || "https://via.placeholder.com/150",
+      }));
+      setWorkers(mappedWorkers);
+    } catch (error: any) {
+      setFetchError(error.message || "Failed to load workers");
+      setWorkers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchWorkers({ approved: true });
+    loadApprovedWorkers();
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchWorkers({ approved: true });
-    }, []),
+      loadApprovedWorkers();
+    }, [loadApprovedWorkers]),
   );
 
   const filteredWorkers = workers.filter((w) => {
     const matchesSearch =
-      w.name.toLowerCase().includes(search.toLowerCase()) ||
-      w.category.toLowerCase().includes(search.toLowerCase());
+      (w.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (w.category || "").toLowerCase().includes(search.toLowerCase());
     const matchesCategory =
       activeCategory === "All" || w.category === activeCategory;
     return matchesSearch && matchesCategory;
@@ -102,6 +123,9 @@ export default function CustomerHome() {
         {/* Workers List */}
         <Text style={styles.sectionTitle}>Top Professionals</Text>
         <View style={styles.workerList}>
+          {!!fetchError ? (
+            <Text style={styles.emptyText}>Failed to load workers: {fetchError}</Text>
+          ) : null}
           {!loading && filteredWorkers.length === 0 ? (
             <Text style={styles.emptyText}>
               No approved workers available right now.
