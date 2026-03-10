@@ -1,5 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -10,7 +10,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import uuid from "react-native-uuid";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -130,6 +130,12 @@ export default function WorkerProfile() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: worker?.name || "Worker Details",
+          headerShown: true,
+        }}
+      />
       <ScrollView>
         <Image source={{ uri: worker.image }} style={styles.coverImage} />
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -140,6 +146,26 @@ export default function WorkerProfile() {
           <Text style={styles.name}>{worker.name}</Text>
           <Text style={styles.category}>{worker.category}</Text>
 
+          {/* Contact Information */}
+          <View style={styles.contactSection}>
+            <View style={styles.contactItem}>
+              <Ionicons name="call-outline" size={18} color={Colors.primary} />
+              <Text style={styles.contactText}>
+                {worker.phone || "Not provided"}
+              </Text>
+            </View>
+            <View style={styles.contactItem}>
+              <Ionicons
+                name="location-outline"
+                size={18}
+                color={Colors.primary}
+              />
+              <Text style={styles.contactText}>
+                {worker.location?.address || worker.address || "Not provided"}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.stats}>
             <View style={styles.statItem}>
               <Ionicons name="star" size={20} color={Colors.accent} />
@@ -148,7 +174,7 @@ export default function WorkerProfile() {
             </View>
             <View style={styles.statItem}>
               <Ionicons name="time-outline" size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>5 Yr</Text>
+              <Text style={styles.statValue}>{worker.experience || 0} Yr</Text>
               <Text style={styles.statLabel}>Exp.</Text>
             </View>
             <View style={styles.statItem}>
@@ -164,6 +190,20 @@ export default function WorkerProfile() {
 
           <Text style={styles.sectionHeader}>About</Text>
           <Text style={styles.bio}>{worker.about}</Text>
+
+          {/* Skills Section */}
+          {worker.skills && worker.skills.length > 0 && (
+            <>
+              <Text style={styles.sectionHeader}>Skills</Text>
+              <View style={styles.skillsContainer}>
+                {worker.skills.map((skill, index) => (
+                  <View key={index} style={styles.skillTag}>
+                    <Text style={styles.skillText}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
           <Text style={styles.sectionHeader}>Reviews</Text>
           {(worker.reviews || []).map((r) => (
@@ -342,6 +382,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addMediaText: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
+  contactSection: {
+    backgroundColor: Colors.white,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 12,
+  },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  contactText: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  skillsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  skillTag: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  skillText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
   // New styles for Android picker buttons
   pickerButton: {
     borderWidth: 1,
