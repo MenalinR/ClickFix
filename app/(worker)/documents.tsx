@@ -24,6 +24,7 @@ interface Document {
   _id?: string;
   name?: string;
   documentName?: string;
+  institution?: string;
   description?: string;
   url: string;
   documentType: string;
@@ -58,6 +59,18 @@ export default function DocumentsScreen() {
   const [expUploading, setExpUploading] = useState(false);
   const [editingExpIndex, setEditingExpIndex] = useState<number | null>(null);
 
+  // Education document form
+  const [showEduForm, setShowEduForm] = useState(false);
+  const [eduFormMode, setEduFormMode] = useState<"add" | "edit">("add");
+  const [eduDocumentName, setEduDocumentName] = useState("");
+  const [eduInstitution, setEduInstitution] = useState("");
+  const [eduDescription, setEduDescription] = useState("");
+  const [eduDocumentUrl, setEduDocumentUrl] = useState("");
+  const [eduDocumentType, setEduDocumentType] = useState("Certificate");
+  const [eduUploading, setEduUploading] = useState(false);
+  const [eduTypeModalVisible, setEduTypeModalVisible] = useState(false);
+  const [editingEduIndex, setEditingEduIndex] = useState<number | null>(null);
+
   useEffect(() => {
     if (user?._id) {
       fetchVerificationStatus();
@@ -78,7 +91,28 @@ export default function DocumentsScreen() {
         undefined,
         token!,
       );
-      setVerificationStatus(response.data);
+
+      // Fallback: if some backend instances don't include educationDocuments
+      // in verification-status response, fetch from worker profile endpoint.
+      const workerProfileResponse = await apiCall(
+        api.workers.getById(user._id),
+        "GET",
+      );
+
+      const verificationData = response?.data || {};
+      const profileData = workerProfileResponse?.data || {};
+
+      setVerificationStatus({
+        ...verificationData,
+        experienceDocuments:
+          verificationData.experienceDocuments ||
+          profileData.experienceDocuments ||
+          [],
+        educationDocuments:
+          verificationData.educationDocuments ||
+          profileData.educationDocuments ||
+          [],
+      });
     } catch (error) {
       console.error("Error fetching verification status:", error);
     } finally {
@@ -244,6 +278,89 @@ export default function DocumentsScreen() {
     setExpFormMode("add");
   };
 
+  const resetEduForm = () => {
+    setEduDocumentName("");
+    setEduInstitution("");
+    setEduDescription("");
+    setEduDocumentUrl("");
+    setEduDocumentType("Certificate");
+    setShowEduForm(false);
+    setEditingEduIndex(null);
+    setEduFormMode("add");
+  };
+
+  const handleUploadEducationDocument = async () => {
+    if (!user?._id) {
+      Alert.alert("Error", "User information not loaded. Please try again.");
+      return;
+    }
+
+    if (
+      !eduDocumentUrl.trim() ||
+      !eduDocumentName.trim() ||
+      !eduDescription.trim()
+    ) {
+      Alert.alert("Error", "Please fill all required fields");
+      return;
+    }
+
+    try {
+      setEduUploading(true);
+
+      // Create FormData for file upload
+      const formData = new FormData();
+
+      // Get filename and determine file type
+      const filename = eduDocumentUrl.split("/").pop() || "education.jpg";
+      const match = /\.(\w+)$/.exec(filename);
+      const extension = match ? match[1] : "jpg";
+
+      // Determine proper MIME type
+      let mimeType = "image/jpeg";
+      if (extension === "pdf") {
+        mimeType = "application/pdf";
+      } else if (extension === "png") {
+        mimeType = "image/png";
+      } else if (extension === "jpg" || extension === "jpeg") {
+        mimeType = "image/jpeg";
+      }
+
+      // Append the file - React Native FormData format
+      formData.append("document", {
+        uri: eduDocumentUrl,
+        name: filename,
+        type: mimeType,
+      } as any);
+
+      // Append other fields as strings
+      formData.append("documentName", eduDocumentName);
+      formData.append("institution", eduInstitution);
+      formData.append("documentType", eduDocumentType);
+      formData.append("description", eduDescription);
+
+      console.log("📤 Uploading education document:", {
+        filename,
+        type: mimeType,
+      });
+
+      // Upload using apiUpload instead of apiCall
+      const response = await apiUpload(
+        api.workers.uploadEducation(user._id),
+        formData,
+        token!,
+      );
+
+      Alert.alert("Success", "Education document uploaded successfully!");
+      resetEduForm();
+      fetchVerificationStatus();
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert("Error", error.message);
+    } finally {
+      setEduUploading(false);
+    }
+  };
+
   const getStatusColor = (status: DocumentStatus) => {
     switch (status) {
       case "Verified":
@@ -280,6 +397,7 @@ export default function DocumentsScreen() {
 
   const idProof = verificationStatus?.idProof;
   const expDocs = verificationStatus?.experienceDocuments || [];
+  const eduDocs = verificationStatus?.educationDocuments || [];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -289,7 +407,7 @@ export default function DocumentsScreen() {
           <ThemedText style={styles.title}>Documents</ThemedText>
           <ThemedText style={styles.subtitle}>
             Upload ID proof for verification and add experience proof to your
-            profile
+            profile. Add your education documents as well.
           </ThemedText>
         </View>
 
@@ -616,6 +734,250 @@ export default function DocumentsScreen() {
           </View>
         </Modal>
 
+        {/* EDUCATION DOCUMENTS SECTION */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.sectionTitle}>Education</ThemedText>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                setEduFormMode("add");
+                setShowEduForm(true);
+              }}
+            >
+              <Ionicons name="add-circle" size={28} color="#0066CC" />
+            </TouchableOpacity>
+          </View>
+
+          {eduDocs.length > 0 ? (
+            eduDocs.map((doc: Document, index: number) => (
+              <View key={doc._id || index} style={styles.experienceCard}>
+                <View style={styles.experienceHeader}>
+                  <View style={styles.experienceInfo}>
+                    <ThemedText style={styles.certificateName}>
+                      {doc.name || "Unnamed Education"}
+                    </ThemedText>
+                    {!!doc.institution && (
+                      <ThemedText style={styles.institutionText}>
+                        {doc.institution}
+                      </ThemedText>
+                    )}
+                    <ThemedText style={styles.experienceDescription}>
+                      {doc.description || "No description provided"}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => {
+                      setEditingEduIndex(index);
+                      setEduDocumentName(doc.name || "");
+                      setEduInstitution(doc.institution || "");
+                      setEduDescription(doc.description || "");
+                      setEduDocumentUrl(doc.url);
+                      setEduDocumentType(doc.documentType || "Certificate");
+                      setEduFormMode("edit");
+                      setShowEduForm(true);
+                    }}
+                  >
+                    <Ionicons name="pencil" size={18} color="#0066CC" />
+                  </TouchableOpacity>
+                </View>
+
+                {doc.url && (
+                  <View style={styles.certificateThumbnailContainer}>
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={styles.certificateThumbnail}
+                      onError={() =>
+                        console.log("Image loading error for:", doc.url)
+                      }
+                    />
+                  </View>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="school" size={48} color="#9CA3AF" />
+              <ThemedText style={styles.emptyText}>
+                No education added yet
+              </ThemedText>
+              <ThemedText style={styles.emptySubtext}>
+                Add your degrees, diplomas, and certificates
+              </ThemedText>
+            </View>
+          )}
+        </View>
+
+        {/* Education Form Modal */}
+        <Modal
+          visible={showEduForm}
+          transparent
+          animationType="slide"
+          onRequestClose={resetEduForm}
+        >
+          <View style={styles.formModalContainer}>
+            <View style={styles.formModalContent}>
+              {/* Form Header */}
+              <View style={styles.formModalHeader}>
+                <ThemedText style={styles.formModalTitle}>
+                  {eduFormMode === "add" ? "Add Education" : "Edit Education"}
+                </ThemedText>
+                <TouchableOpacity onPress={resetEduForm}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.formModalScroll}>
+                {/* Document Name */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Degree/Certificate Name *
+                  </ThemedText>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g., Bachelor of Engineering"
+                    placeholderTextColor="#9CA3AF"
+                    value={eduDocumentName}
+                    onChangeText={setEduDocumentName}
+                  />
+                </View>
+
+                {/* Institution */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Institution Name
+                  </ThemedText>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g., University of Colombo"
+                    placeholderTextColor="#9CA3AF"
+                    value={eduInstitution}
+                    onChangeText={setEduInstitution}
+                  />
+                </View>
+
+                {/* Document Type */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Document Type *
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={styles.dropdown}
+                    onPress={() => setEduTypeModalVisible(true)}
+                  >
+                    <ThemedText style={styles.dropdownText}>
+                      {eduDocumentType}
+                    </ThemedText>
+                    <Ionicons name="chevron-down" size={20} color="#0066CC" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Description */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Description *
+                  </ThemedText>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Describe your education background"
+                    placeholderTextColor="#9CA3AF"
+                    multiline
+                    numberOfLines={3}
+                    value={eduDescription}
+                    onChangeText={setEduDescription}
+                  />
+                </View>
+
+                {/* Upload Document */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Upload Document *
+                  </ThemedText>
+                  {eduDocumentUrl && (
+                    <View style={styles.fileSelectedBadge}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color="#10B981"
+                      />
+                      <ThemedText style={styles.fileSelectedText}>
+                        Document selected
+                      </ThemedText>
+                    </View>
+                  )}
+                  <Button
+                    title={
+                      eduDocumentUrl ? "Document Selected ✓" : "Select Document"
+                    }
+                    onPress={() => handlePickDocument(setEduDocumentUrl, true)}
+                    variant="secondary"
+                  />
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.formActions}>
+                  <Button
+                    title={eduUploading ? "Saving..." : "Save Education"}
+                    onPress={handleUploadEducationDocument}
+                    disabled={
+                      !eduDocumentUrl ||
+                      !eduDocumentName ||
+                      !eduDescription ||
+                      eduUploading
+                    }
+                  />
+                  <Button
+                    title="Cancel"
+                    onPress={resetEduForm}
+                    variant="secondary"
+                  />
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Education Type Modal */}
+        <Modal
+          transparent
+          visible={eduTypeModalVisible}
+          onRequestClose={() => setEduTypeModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setEduTypeModalVisible(false)}
+          >
+            <View style={styles.modalContent}>
+              <ThemedText style={styles.modalTitle}>
+                Select Document Type
+              </ThemedText>
+              {["Degree", "Diploma", "Certificate", "Other"].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setEduDocumentType(type);
+                    setEduTypeModalVisible(false);
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      eduDocumentType === type
+                        ? "radio-button-on"
+                        : "radio-button-off"
+                    }
+                    size={20}
+                    color="#0066CC"
+                  />
+                  <ThemedText style={styles.modalOptionText}>{type}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
         {/* SECURITY INFO */}
         <View style={styles.securityInfo}>
           <Ionicons name="shield-checkmark" size={20} color="#0066CC" />
@@ -892,6 +1254,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 4,
     color: "#1F2937",
+  },
+  institutionText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#0066CC",
+    marginBottom: 4,
   },
   experienceDescription: {
     fontSize: 13,

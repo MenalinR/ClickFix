@@ -56,6 +56,7 @@ export default function WorkerProfile() {
               "No description available",
             reviews: response.data.reviews || [],
             experienceDocuments: response.data.experienceDocuments || [],
+            educationDocuments: response.data.educationDocuments || [],
             certificates: response.data.certificates || [],
             image: response.data.image || "https://via.placeholder.com/150",
             experience: Number.isFinite(normalizedExperience)
@@ -240,6 +241,41 @@ export default function WorkerProfile() {
             ))
           ) : (
             <Text style={styles.bio}>No experience details available</Text>
+          )}
+
+          <Text style={styles.sectionHeader}>Education</Text>
+          {(worker.educationDocuments || []).length > 0 ? (
+            (worker.educationDocuments || []).map((doc, index) => (
+              <View key={doc._id || index} style={styles.documentCard}>
+                <Text style={styles.documentTitle}>
+                  {doc.name || "Education Document"}
+                </Text>
+                {!!doc.institution ? (
+                  <Text style={styles.institutionText}>{doc.institution}</Text>
+                ) : null}
+                {!!doc.description ? (
+                  <Text style={styles.documentText}>{doc.description}</Text>
+                ) : null}
+                <Text style={styles.documentMeta}>
+                  {doc.documentType || "Document"}
+                </Text>
+                {!!doc.url ? (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setPreviewImage(doc.url)}
+                  >
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={styles.certificateImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.viewHint}>Tap to view</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.bio}>No education details available</Text>
           )}
 
           {/* Skills Section */}
@@ -495,6 +531,12 @@ const styles = StyleSheet.create({
   documentTitle: {
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
+    marginBottom: 4,
+  },
+  institutionText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Colors.primary,
     marginBottom: 4,
   },
   documentText: {

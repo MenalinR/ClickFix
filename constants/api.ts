@@ -28,6 +28,8 @@ export const api = {
     uploadIDProof: (id: string) => `${API_URL}/workers/${id}/upload-id-proof`,
     uploadExperience: (id: string) =>
       `${API_URL}/workers/${id}/upload-experience`,
+    uploadEducation: (id: string) =>
+      `${API_URL}/workers/${id}/upload-education`,
     getVerificationStatus: (id: string) =>
       `${API_URL}/workers/${id}/verification-status`,
     verifyIDProof: (id: string) => `${API_URL}/workers/${id}/verify-id-proof`,

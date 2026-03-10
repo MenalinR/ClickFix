@@ -7,6 +7,7 @@ const {
   updateAvailability,
   uploadIDProof,
   uploadExperienceDocument,
+  uploadEducationDocument,
   uploadProfileImage,
   getVerificationStatus,
   verifyIDProof,
@@ -62,6 +63,17 @@ router.post(
   },
   uploadDocument,
   uploadExperienceDocument,
+);
+router.post(
+  "/:id/upload-education",
+  protect,
+  authorize("worker"),
+  (req, res, next) => {
+    req.uploadFolder = "education-docs";
+    next();
+  },
+  uploadDocument,
+  uploadEducationDocument,
 );
 router.post(
   "/:id/upload-image",

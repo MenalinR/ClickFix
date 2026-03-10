@@ -123,6 +123,28 @@ const workerSchema = new mongoose.Schema(
         verifiedAt: Date, // When admin verified/rejected
       },
     ],
+    educationDocuments: [
+      {
+        name: String, // Degree/Education name
+        institution: String, // School/University name
+        description: String, // Education details
+        url: String, // Secure URL to certificate/diploma
+        documentType: {
+          type: String,
+          enum: ["Degree", "Diploma", "Certificate", "Other"],
+        },
+        startDate: Date,
+        endDate: Date,
+        uploadedAt: Date,
+        verificationStatus: {
+          type: String,
+          enum: ["Pending", "Verified", "Rejected"],
+          default: "Verified",
+        },
+        verificationNotes: String,
+        verifiedAt: Date,
+      },
+    ],
     certificates: [
       {
         name: String,

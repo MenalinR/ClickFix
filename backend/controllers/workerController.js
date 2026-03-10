@@ -435,13 +435,106 @@ exports.uploadExperienceDocument = async (req, res) => {
   }
 };
 
+// @desc    Upload Education Documents (Degrees, Diplomas, Certificates)
+// @route   POST /api/workers/:id/upload-education
+// @access  Private (Worker only)
+exports.uploadEducationDocument = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    // Check if file was uploaded via multer
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a document file",
+      });
+    }
+
+    const {
+      documentName,
+      institution,
+      description,
+      documentType = "Certificate",
+      startDate,
+      endDate,
+    } = req.body;
+
+    if (!documentName) {
+      return res.status(400).json({
+        success: false,
+        message: "Document name is required",
+      });
+    }
+
+    // Validate document type
+    const validTypes = ["Degree", "Diploma", "Certificate", "Other"];
+    if (!validTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document type",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    // Create accessible URL for the uploaded file
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    // Extract relative path from uploads folder
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    // Add education document with accessible file URL
+    const newDocument = {
+      name: documentName,
+      institution: institution || "",
+      description: description || "",
+      url: fileUrl,
+      documentType,
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null,
+      uploadedAt: new Date(),
+      verificationStatus: "Verified",
+      verifiedAt: new Date(),
+    };
+
+    worker.educationDocuments.push(newDocument);
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Education document added successfully.",
+      data: worker,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Get worker verification status
 // @route   GET /api/workers/:id/verification-status
 // @access  Private (Worker only)
 exports.getVerificationStatus = async (req, res) => {
   try {
     const worker = await Worker.findById(req.params.id).select(
-      "idProof experienceDocuments nicVerified",
+      "idProof experienceDocuments educationDocuments nicVerified",
     );
 
     if (!worker) {
@@ -456,6 +549,7 @@ exports.getVerificationStatus = async (req, res) => {
       data: {
         idProof: worker.idProof,
         experienceDocuments: worker.experienceDocuments,
+        educationDocuments: worker.educationDocuments,
         isFullyVerified:
           worker.nicVerified ||
           worker.idProof?.verificationStatus === "Verified",
