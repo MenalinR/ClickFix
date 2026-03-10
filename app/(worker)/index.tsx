@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
@@ -15,17 +15,20 @@ import { useStore } from "../../constants/Store";
 
 export default function WorkerDashboard() {
   const router = useRouter();
-  const { jobs, updateJobStatus } = useStore();
-  const workerId = "1"; // TODO: Replace with real logged-in worker's id
-  const pendingJobs = jobs.filter((j) => j.status === "Pending");
+  const { jobs, updateJobStatus, user } = useStore();
+  const workerId = user?.id || user?._id || "1"; // Get logged-in worker's id
+  const workerName = user?.name || "Professional";
+  const workerCategory = (user as any)?.category || "Worker";
+
+  const pendingJobs = jobs.filter((j) => j.status === "pending");
   const acceptedJobs = jobs.filter(
-    (j) => j.status === "Accepted" && j.workerId === workerId,
+    (j) => j.status === "accepted" && j.workerId === workerId,
   );
   const earnings = jobs
-    .filter((j) => j.status === "Completed" && j.workerId === workerId)
-    .reduce((acc, j) => acc + j.price, 0);
+    .filter((j) => j.status === "completed" && j.workerId === workerId)
+    .reduce((acc, j) => acc + ((j as any).price || 0), 0);
   const completedCount = jobs.filter(
-    (j) => j.status === "Completed" && j.workerId === workerId,
+    (j) => j.status === "completed" && j.workerId === workerId,
   ).length;
 
   // Notification for new job requests
@@ -56,7 +59,9 @@ export default function WorkerDashboard() {
         <View style={styles.welcomeCard}>
           <View>
             <Text style={styles.welcomeText}>Welcome back! 👋</Text>
-            <Text style={styles.welcomeSubtext}>John (Plumber)</Text>
+            <Text style={styles.welcomeSubtext}>
+              {workerName} ({workerCategory})
+            </Text>
           </View>
           <Text style={styles.welcomeEmoji}>🔧</Text>
         </View>
@@ -160,8 +165,12 @@ export default function WorkerDashboard() {
                 <View style={styles.jobCardContent}>
                   <View>
                     <Text style={styles.jobTitle}>{job.serviceType}</Text>
-                    <Text style={styles.jobDesc}>{job.customerName}</Text>
-                    <Text style={styles.jobPrice}>{job.price} LKR</Text>
+                    <Text style={styles.jobDesc}>
+                      {(job as any).customerName || "Customer"}
+                    </Text>
+                    <Text style={styles.jobPrice}>
+                      {(job as any).price || 0} LKR
+                    </Text>
                   </View>
                   <View style={styles.jobAction}>
                     <Ionicons
@@ -196,7 +205,9 @@ export default function WorkerDashboard() {
                 <View style={styles.jobCardContent}>
                   <View>
                     <Text style={styles.jobTitle}>{job.serviceType}</Text>
-                    <Text style={styles.jobDesc}>{job.customerName}</Text>
+                    <Text style={styles.jobDesc}>
+                      {(job as any).customerName || "Customer"}
+                    </Text>
                     <Text style={styles.jobStatus}>In Progress</Text>
                   </View>
                   <View style={styles.jobAction}>

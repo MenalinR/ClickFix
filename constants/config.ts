@@ -12,14 +12,14 @@ const IS_DEV = ENV === "development";
  * - Add to .env: EXPO_PUBLIC_LOCAL_IP=192.168.1.6
  */
 const getLocalIP = (): string => {
+  const envIP = process.env.EXPO_PUBLIC_LOCAL_IP;
+  if (envIP) return envIP;
+
   const hostUri =
     (Constants.expoConfig as any)?.hostUri ||
     (Constants as any)?.manifest2?.extra?.expoClient?.hostUri;
   const expoHostIP = hostUri?.split(":")?.[0];
   if (expoHostIP) return expoHostIP;
-
-  const envIP = process.env.EXPO_PUBLIC_LOCAL_IP;
-  if (envIP) return envIP;
 
   // Fallback IPs for common scenarios
   if (Platform.OS === "web") return "localhost";
@@ -33,10 +33,13 @@ const COMPUTED_LOCAL_API_URL = `http://${LOCAL_IP}:${API_PORT}/api`;
 const EXPLICIT_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const getApiBaseURL = (): string => {
+  if (EXPLICIT_API_URL) {
+    return EXPLICIT_API_URL;
+  }
   if (IS_DEV) {
     return COMPUTED_LOCAL_API_URL;
   }
-  return EXPLICIT_API_URL || COMPUTED_LOCAL_API_URL;
+  return COMPUTED_LOCAL_API_URL;
 };
 
 /**

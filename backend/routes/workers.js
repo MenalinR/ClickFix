@@ -7,6 +7,7 @@ const {
   updateAvailability,
   uploadIDProof,
   uploadExperienceDocument,
+  uploadProfileImage,
   getVerificationStatus,
   verifyIDProof,
   verifyExperienceDocument,
@@ -45,25 +46,33 @@ router.post(
   protect,
   authorize("worker"),
   (req, res, next) => {
-    console.log("🔍 Upload middleware - Before multer");
-    console.log("Content-Type:", req.headers["content-type"]);
+    req.uploadFolder = "id-proofs";
     next();
   },
-  uploadDocument, // Multer middleware to handle file upload
-  (req, res, next) => {
-    console.log("🔍 Upload middleware - After multer");
-    console.log("File:", req.file);
-    console.log("Body:", req.body);
-    next();
-  },
+  uploadDocument,
   uploadIDProof,
 );
 router.post(
   "/:id/upload-experience",
   protect,
   authorize("worker"),
-  uploadDocument, // Multer middleware to handle file upload
+  (req, res, next) => {
+    req.uploadFolder = "experience-docs";
+    next();
+  },
+  uploadDocument,
   uploadExperienceDocument,
+);
+router.post(
+  "/:id/upload-image",
+  protect,
+  authorize("worker"),
+  (req, res, next) => {
+    req.uploadFolder = "profile-images";
+    next();
+  },
+  uploadDocument,
+  uploadProfileImage,
 );
 
 module.exports = router;

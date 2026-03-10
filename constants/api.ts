@@ -23,6 +23,7 @@ export const api = {
     update: (id: string) => `${API_URL}/workers/${id}`,
     addCertificate: (id: string) => `${API_URL}/workers/${id}/certificates`,
     updateAvailability: (id: string) => `${API_URL}/workers/${id}/availability`,
+    uploadImage: (id: string) => `${API_URL}/workers/${id}/upload-image`,
     // Document Verification
     uploadIDProof: (id: string) => `${API_URL}/workers/${id}/upload-id-proof`,
     uploadExperience: (id: string) =>

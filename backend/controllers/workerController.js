@@ -86,12 +86,14 @@ exports.getWorker = async (req, res) => {
     });
   }
 };
-
 // @desc    Update worker profile
 // @route   PUT /api/workers/:id
 // @access  Private (Worker only)
 exports.updateWorker = async (req, res) => {
   try {
+    console.log("🔧 Update Worker - Worker ID:", req.params.id);
+    console.log("🔧 Update Worker - Request Body:", JSON.stringify(req.body));
+
     // Check if worker is updating their own profile
     if (req.user._id.toString() !== req.params.id) {
       return res.status(403).json({
@@ -108,6 +110,8 @@ exports.updateWorker = async (req, res) => {
       "hourlyRate",
       "location",
       "availability",
+      "skills",
+      "image",
     ];
     const updates = {};
 
@@ -117,16 +121,22 @@ exports.updateWorker = async (req, res) => {
       }
     });
 
+    console.log("🔧 Update Worker - Updates Object:", JSON.stringify(updates));
+
     const worker = await Worker.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     }).select("-password");
+
+    console.log("🔧 Update Worker - Result Skills:", worker.skills);
+    console.log("🔧 Update Worker - Result Image:", worker.image);
 
     res.status(200).json({
       success: true,
       data: worker,
     });
   } catch (error) {
+    console.error("❌ Update Worker Error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -612,6 +622,63 @@ exports.getPendingDocuments = async (req, res) => {
       success: true,
       data: pendingDocs,
       count: pendingDocs.length,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Upload profile image
+// @route   POST /api/workers/:id/upload-image
+// @access  Private (Worker only)
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    console.log("📥 Upload profile image request received");
+    console.log("User:", req.user?._id);
+    console.log("Params ID:", req.params.id);
+    console.log("File:", req.file ? "✅ File present" : "❌ No file");
+
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    if (!req.file) {
+      console.error("❌ No file uploaded - multer did not receive file");
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an image file",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    worker.image = imageUrl;
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile image updated successfully",
+      data: { image: imageUrl },
     });
   } catch (error) {
     res.status(500).json({
