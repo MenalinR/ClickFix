@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
     Image,
     ScrollView,
@@ -16,9 +16,19 @@ import { useStore } from "../../../constants/Store";
 
 export default function CustomerHome() {
   const router = useRouter();
-  const { workers } = useStore();
+  const { workers, fetchWorkers, loading } = useStore();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+
+  useEffect(() => {
+    fetchWorkers({ approved: true });
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchWorkers({ approved: true });
+    }, []),
+  );
 
   const filteredWorkers = workers.filter((w) => {
     const matchesSearch =
@@ -92,14 +102,19 @@ export default function CustomerHome() {
         {/* Workers List */}
         <Text style={styles.sectionTitle}>Top Professionals</Text>
         <View style={styles.workerList}>
+          {!loading && filteredWorkers.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No approved workers available right now.
+            </Text>
+          ) : null}
           {filteredWorkers.map((worker) => (
             <TouchableOpacity
-              key={worker.id}
+              key={worker.id || (worker as any)._id}
               style={styles.workerCard}
               onPress={() =>
                 router.push({
                   pathname: "/(customer)/worker-detail/[id]",
-                  params: { id: worker.id },
+                  params: { id: worker.id || (worker as any)._id },
                 })
               }
             >
@@ -207,4 +222,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   rateText: { marginLeft: 8, color: Colors.textSecondary, fontSize: 14 },
+  emptyText: {
+    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
+    marginTop: 8,
+  },
 });

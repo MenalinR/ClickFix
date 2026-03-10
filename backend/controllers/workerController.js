@@ -14,9 +14,20 @@ exports.getWorkers = async (req, res) => {
       longitude,
       maxDistance = 50000,
       minRating,
+      approved,
     } = req.query;
 
-    let query = { availability: "available" };
+    let query = { availability: "Available", isActive: true };
+
+    if (approved === "true") {
+      query = {
+        ...query,
+        $or: [
+          { nicVerified: true },
+          { "idProof.verificationStatus": "Verified" },
+        ],
+      };
+    }
 
     // Filter by category
     if (category) {

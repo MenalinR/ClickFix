@@ -229,18 +229,28 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       let url = api.workers.getAll;
-      if (filters) {
-        const params = new URLSearchParams();
-        if (filters.category) params.append("category", filters.category);
-        if (filters.latitude)
-          params.append("latitude", filters.latitude.toString());
-        if (filters.longitude)
-          params.append("longitude", filters.longitude.toString());
+      const params = new URLSearchParams();
+
+      if (filters?.category) params.append("category", filters.category);
+      if (filters?.latitude)
+        params.append("latitude", filters.latitude.toString());
+      if (filters?.longitude)
+        params.append("longitude", filters.longitude.toString());
+      if (filters?.approved) params.append("approved", "true");
+
+      if (params.toString()) {
         url += `?${params.toString()}`;
       }
 
       const response = await apiCall(url);
-      set({ workers: response.data });
+      const mappedWorkers = (response.data || []).map((worker: any) => ({
+        ...worker,
+        id: worker.id || worker._id,
+        image: worker.image || "https://via.placeholder.com/150",
+        reviews: worker.reviews || [],
+        about: worker.bio || worker.about || "",
+      }));
+      set({ workers: mappedWorkers });
     } catch (error: any) {
       set({ error: error.message });
     } finally {

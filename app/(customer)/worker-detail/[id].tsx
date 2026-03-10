@@ -1,24 +1,23 @@
-import React, { useState } from "react";
-import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Modal,
-  TextInput,
-  Alert,
-  TouchableOpacity,
-  Platform,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import uuid from "react-native-uuid";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { Colors } from "../../../constants/Colors";
 import { Button } from "../../../components/Button";
+import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
-import uuid from 'react-native-uuid';
+import { api, apiCall } from "../../../constants/api";
 
 export default function WorkerProfile() {
   const router = useRouter();
@@ -28,9 +27,36 @@ export default function WorkerProfile() {
   const [modalVisible, setModalVisible] = useState(false);
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState([]);
+  const [workerData, setWorkerData] = useState<any>(null);
 
   // Find the worker by id from the store
-  const worker = workers.find((w) => String(w.id) === String(id));
+  const worker = workerData || workers.find((w) => String(w.id) === String(id));
+
+  useEffect(() => {
+    const loadWorker = async () => {
+      if (!id) return;
+      try {
+        const response = await apiCall(api.workers.getById(String(id)), "GET");
+        if (response?.data) {
+          setWorkerData({
+            ...response.data,
+            id: response.data.id || response.data._id,
+            about:
+              response.data.bio ||
+              response.data.about ||
+              "No description available",
+            reviews: response.data.reviews || [],
+            image: response.data.image || "https://via.placeholder.com/150",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load worker details:", error);
+      }
+    };
+
+    loadWorker();
+  }, [id]);
+
   if (!worker) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -40,7 +66,7 @@ export default function WorkerProfile() {
   }
 
   const handleBook = () => {
-    console.log('Description on confirm:', description);
+    console.log("Description on confirm:", description);
     if (!description.trim()) {
       Alert.alert("Description required", "Please describe your issue.");
       return;
@@ -48,12 +74,12 @@ export default function WorkerProfile() {
     // Add job to store
     addJob({
       id: uuid.v4(),
-      customerId: 'c1', // Replace with real customer id if available
+      customerId: "c1", // Replace with real customer id if available
       workerId: worker.id,
       workerName: worker.name,
       service: worker.category,
       description,
-      status: 'Pending',
+      status: "Pending",
       date: new Date().toISOString(),
       price: worker.hourlyRate,
       attachedMedia: media,
@@ -75,7 +101,10 @@ export default function WorkerProfile() {
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission required", "Please allow access to your media library.");
+      Alert.alert(
+        "Permission required",
+        "Please allow access to your media library.",
+      );
       return;
     }
     // Pick image or video
@@ -86,7 +115,9 @@ export default function WorkerProfile() {
     });
     if (!result.canceled) {
       // For multiple selection, result.assets is an array
-      const uris = result.assets ? result.assets.map((a) => a.uri) : [result.uri];
+      const uris = result.assets
+        ? result.assets.map((a) => a.uri)
+        : [result.uri];
       setMedia([...media, ...uris]);
     }
   };
@@ -121,7 +152,11 @@ export default function WorkerProfile() {
               <Text style={styles.statLabel}>Exp.</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="pricetag-outline" size={20} color={Colors.success} />
+              <Ionicons
+                name="pricetag-outline"
+                size={20}
+                color={Colors.success}
+              />
               <Text style={styles.statValue}>{worker.hourlyRate}</Text>
               <Text style={styles.statLabel}>LKR/hr</Text>
             </View>
@@ -131,7 +166,7 @@ export default function WorkerProfile() {
           <Text style={styles.bio}>{worker.about}</Text>
 
           <Text style={styles.sectionHeader}>Reviews</Text>
-          {worker.reviews.map((r) => (
+          {(worker.reviews || []).map((r) => (
             <View key={r.id} style={styles.reviewCard}>
               <Text style={styles.reviewUser}>{r.user}</Text>
               <Text style={styles.reviewText}>{r.text}</Text>
@@ -157,9 +192,9 @@ export default function WorkerProfile() {
               style={styles.input}
               placeholder="e.g., Leaking pipe in kitchen..."
               value={description}
-              onChangeText={text => {
+              onChangeText={(text) => {
                 setDescription(text);
-                console.log('Description input:', text);
+                console.log("Description input:", text);
               }}
               multiline
             />
@@ -173,18 +208,38 @@ export default function WorkerProfile() {
                 contentContainerStyle={{ gap: 8 }}
               >
                 {media.map((uri, index) => (
-                  <Image key={index} source={{ uri }} style={styles.mediaThumbnail} />
+                  <Image
+                    key={index}
+                    source={{ uri }}
+                    style={styles.mediaThumbnail}
+                  />
                 ))}
-                <TouchableOpacity onPress={pickMedia} style={styles.addMediaBtn}>
-                  <Ionicons name="camera-outline" size={24} color={Colors.textSecondary} />
+                <TouchableOpacity
+                  onPress={pickMedia}
+                  style={styles.addMediaBtn}
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={24}
+                    color={Colors.textSecondary}
+                  />
                   <Text style={styles.addMediaText}>Add</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
 
             <View style={styles.modalActions}>
-              <Button title="Cancel" variant="ghost" onPress={resetForm} style={{ flex: 1 }} />
-              <Button title="Confirm" onPress={handleBook} style={{ flex: 1 }} />
+              <Button
+                title="Cancel"
+                variant="ghost"
+                onPress={resetForm}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Confirm"
+                onPress={handleBook}
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
         </View>
