@@ -174,6 +174,7 @@ export default function WorkerProfileScreen() {
       const imageUri = result.assets[0].uri;
       try {
         setSaving(true);
+        console.log("📷 Starting image upload...");
 
         // Create FormData to upload the actual image file
         const formData = new FormData();
@@ -188,6 +189,8 @@ export default function WorkerProfileScreen() {
           type: type,
         });
 
+        console.log("📤 Uploading to:", api.workers.uploadImage(user.id));
+
         // Upload image file
         const response = await fetch(api.workers.uploadImage(user.id), {
           method: "POST",
@@ -198,31 +201,28 @@ export default function WorkerProfileScreen() {
           body: formData,
         });
 
-        const result = await response.json();
+        console.log("📥 Upload response status:", response.status);
 
-        if (response.status === 404) {
-          const updateResponse = await apiCall(
-            api.workers.update(user.id),
-            "PUT",
-            { image: imageUri },
-            token,
-          );
-          if (updateResponse?.data) {
-            setUser(mapWorkerToUser(updateResponse.data));
-          } else {
-            setUser((prev) => ({ ...prev, image: imageUri }));
-          }
-        } else if (!result.success) {
-          throw new Error(result.message || "Failed to upload image");
-        } else {
-          setUser((prev) => ({
-            ...prev,
-            image: result?.data?.image || imageUri,
-          }));
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Upload failed:", response.status, errorText);
+          throw new Error(`Upload failed: ${response.status}`);
         }
 
-        Alert.alert("Success", "Profile picture updated successfully");
+        const uploadResult = await response.json();
+        console.log("✅ Upload successful:", uploadResult);
+
+        if (uploadResult.success && uploadResult.data?.image) {
+          setUser((prev) => ({
+            ...prev,
+            image: uploadResult.data.image,
+          }));
+          Alert.alert("Success", "Profile picture updated successfully");
+        } else {
+          throw new Error(uploadResult.message || "Failed to upload image");
+        }
       } catch (error: any) {
+        console.error("❌ Image upload error:", error);
         Alert.alert(
           "Error",
           error.message || "Failed to update profile picture",
