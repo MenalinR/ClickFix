@@ -19,6 +19,14 @@ exports.registerWorker = async (req, res) => {
       location,
     } = req.body;
 
+    const normalizedLocation = {
+      type: "Point",
+      coordinates: location?.coordinates || [0, 0],
+      address: location?.address || "Not provided",
+      city: location?.city || "",
+      district: location?.district || "",
+    };
+
     // Check if worker exists
     const existingWorker = await Worker.findOne({ email });
     if (existingWorker) {
@@ -37,7 +45,7 @@ exports.registerWorker = async (req, res) => {
       category,
       experience,
       hourlyRate,
-      location,
+      location: normalizedLocation,
     });
 
     sendTokenResponse(worker, 201, res, "worker");
