@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
@@ -26,7 +26,10 @@ export default function CustomerHome() {
     try {
       setLoading(true);
       setFetchError("");
-      const response = await apiCall(`${api.workers.getAll}?approved=true`, "GET");
+      const response = await apiCall(
+        `${api.workers.getAll}?approved=true`,
+        "GET",
+      );
       const mappedWorkers = (response?.data || []).map((worker: any) => ({
         ...worker,
         id: worker.id || worker._id,
@@ -124,7 +127,9 @@ export default function CustomerHome() {
         <Text style={styles.sectionTitle}>Top Professionals</Text>
         <View style={styles.workerList}>
           {!!fetchError ? (
-            <Text style={styles.emptyText}>Failed to load workers: {fetchError}</Text>
+            <Text style={styles.emptyText}>
+              Failed to load workers: {fetchError}
+            </Text>
           ) : null}
           {!loading && filteredWorkers.length === 0 ? (
             <Text style={styles.emptyText}>
