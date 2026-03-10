@@ -100,27 +100,33 @@ export default function CustomerHome() {
           showsHorizontalScrollIndicator={false}
           style={styles.categoriesScroll}
         >
-          {["All", "Plumber", "Electrician", "Cleaner", "Carpenter"].map(
-            (cat) => (
-              <TouchableOpacity
-                key={cat}
+          {[
+            "All",
+            "Plumber",
+            "Electrician",
+            "Cleaner",
+            "Carpenter",
+            "AC Technician",
+            "Painter",
+          ].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.categoryCard,
+                activeCategory === cat && styles.activeCategory,
+              ]}
+              onPress={() => setActiveCategory(cat)}
+            >
+              <Text
                 style={[
-                  styles.categoryCard,
-                  activeCategory === cat && styles.activeCategory,
+                  styles.categoryText,
+                  activeCategory === cat && styles.activeCategoryText,
                 ]}
-                onPress={() => setActiveCategory(cat)}
               >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    activeCategory === cat && styles.activeCategoryText,
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ),
-          )}
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
         {/* Workers List */}
