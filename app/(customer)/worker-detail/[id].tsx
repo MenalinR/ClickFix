@@ -28,6 +28,8 @@ export default function WorkerProfile() {
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState([]);
   const [workerData, setWorkerData] = useState<any>(null);
+  const [workerExperience, setWorkerExperience] = useState<number>(0);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Find the worker by id from the store
   const worker = workerData || workers.find((w) => String(w.id) === String(id));
@@ -38,6 +40,13 @@ export default function WorkerProfile() {
       try {
         const response = await apiCall(api.workers.getById(String(id)), "GET");
         if (response?.data) {
+          const normalizedExperience = Number(
+            response.data.experience ??
+              response.data.exp ??
+              response.data.yearsOfExperience ??
+              0,
+          );
+
           setWorkerData({
             ...response.data,
             id: response.data.id || response.data._id,
@@ -46,8 +55,16 @@ export default function WorkerProfile() {
               response.data.about ||
               "No description available",
             reviews: response.data.reviews || [],
+            experienceDocuments: response.data.experienceDocuments || [],
+            certificates: response.data.certificates || [],
             image: response.data.image || "https://via.placeholder.com/150",
+            experience: Number.isFinite(normalizedExperience)
+              ? normalizedExperience
+              : 0,
           });
+          setWorkerExperience(
+            Number.isFinite(normalizedExperience) ? normalizedExperience : 0,
+          );
         }
       } catch (error) {
         console.error("Failed to load worker details:", error);
@@ -174,7 +191,9 @@ export default function WorkerProfile() {
             </View>
             <View style={styles.statItem}>
               <Ionicons name="time-outline" size={20} color={Colors.primary} />
-              <Text style={styles.statValue}>{worker.experience || 0} Yr</Text>
+              <Text style={styles.statValue}>
+                {Number(worker.experience ?? workerExperience ?? 0)} Yr
+              </Text>
               <Text style={styles.statLabel}>Exp.</Text>
             </View>
             <View style={styles.statItem}>
@@ -190,6 +209,38 @@ export default function WorkerProfile() {
 
           <Text style={styles.sectionHeader}>About</Text>
           <Text style={styles.bio}>{worker.about}</Text>
+
+          <Text style={styles.sectionHeader}>Experience</Text>
+          {(worker.experienceDocuments || []).length > 0 ? (
+            (worker.experienceDocuments || []).map((doc, index) => (
+              <View key={doc._id || index} style={styles.documentCard}>
+                <Text style={styles.documentTitle}>
+                  {doc.name || "Experience Document"}
+                </Text>
+                {!!doc.description ? (
+                  <Text style={styles.documentText}>{doc.description}</Text>
+                ) : null}
+                <Text style={styles.documentMeta}>
+                  {doc.documentType || "Document"}
+                </Text>
+                {!!doc.url ? (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setPreviewImage(doc.url)}
+                  >
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={styles.certificateImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.viewHint}>Tap to view</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.bio}>No experience details available</Text>
+          )}
 
           {/* Skills Section */}
           {worker.skills && worker.skills.length > 0 && (
@@ -282,6 +333,25 @@ export default function WorkerProfile() {
               />
             </View>
           </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!previewImage} animationType="fade" transparent>
+        <View style={styles.imagePreviewOverlay}>
+          <TouchableOpacity
+            style={styles.imagePreviewCloseArea}
+            onPress={() => setPreviewImage(null)}
+            activeOpacity={1}
+          >
+            {previewImage ? (
+              <Image
+                source={{ uri: previewImage }}
+                style={styles.imagePreview}
+                resizeMode="contain"
+              />
+            ) : null}
+            <Text style={styles.imagePreviewHint}>Tap anywhere to close</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -415,6 +485,59 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+  },
+  documentCard: {
+    backgroundColor: Colors.white,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  documentTitle: {
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  documentText: {
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  documentMeta: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+  },
+  certificateImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 8,
+    marginTop: 10,
+    backgroundColor: "#f0f0f0",
+  },
+  viewHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreviewCloseArea: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  imagePreview: {
+    width: "100%",
+    height: "80%",
+  },
+  imagePreviewHint: {
+    color: Colors.white,
+    marginTop: 12,
+    fontSize: 12,
   },
   // New styles for Android picker buttons
   pickerButton: {
