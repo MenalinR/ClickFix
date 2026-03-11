@@ -32,8 +32,11 @@ export default function ProfileScreen() {
     name: currentUser?.name || "",
     email: currentUser?.email || "",
     mobile: currentUser?.phone || "",
-    address: "Not provided",
-    image: "https://randomuser.me/api/portraits/men/1.jpg",
+    address:
+      (currentUser as any)?.addresses?.[
+        ((currentUser as any)?.addresses?.length || 1) - 1
+      ]?.address || "Not provided",
+    image: (currentUser as any)?.image || "https://via.placeholder.com/150",
   });
 
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -44,11 +47,19 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!currentUser) return;
+
+    const addresses = ((currentUser as any)?.addresses || []) as any[];
+    const latestAddress = addresses.length
+      ? addresses[addresses.length - 1]
+      : null;
+
     setUser((prev) => ({
       ...prev,
       name: currentUser.name || "",
       email: currentUser.email || "",
       mobile: currentUser.phone || "",
+      address: latestAddress?.address || latestAddress?.street || prev.address,
+      image: (currentUser as any).image || prev.image,
     }));
   }, [currentUser]);
 
@@ -64,15 +75,19 @@ export default function ProfileScreen() {
         );
 
         const profile = response.data;
-        const latestAddress =
-          profile?.addresses?.[profile.addresses.length - 1];
+        const addresses = (profile?.addresses || []) as any[];
+        const latestAddress = addresses.length
+          ? addresses[addresses.length - 1]
+          : null;
 
         setUser((prev) => ({
           ...prev,
           name: profile?.name || prev.name,
           email: profile?.email || prev.email,
           mobile: profile?.phone || prev.mobile,
-          address: latestAddress?.street || prev.address,
+          address:
+            latestAddress?.address || latestAddress?.street || prev.address,
+          image: profile?.image || prev.image,
         }));
 
         setStoreUser({
@@ -80,7 +95,9 @@ export default function ProfileScreen() {
           name: profile?.name || currentUser!.name,
           email: profile?.email || currentUser!.email,
           phone: profile?.phone || currentUser!.phone,
-        });
+          image: profile?.image || (currentUser as any)?.image,
+          addresses: addresses,
+        } as any);
       } catch (error) {
         console.error("Failed to load customer profile:", error);
       }
@@ -139,19 +156,31 @@ export default function ProfileScreen() {
           phone: response.data?.phone || tempValue,
         });
       } else if (editingField === "address") {
-        await apiCall(
+        const response = await apiCall(
           api.customers.addAddress(customerId),
           "POST",
           {
             label: "Home",
-            street: tempValue,
+            address: tempValue,
             city: "",
             state: "",
             zipCode: "",
           },
           token,
         );
-        setUser((prev) => ({ ...prev, address: tempValue }));
+
+        const addresses = (response?.data?.addresses || []) as any[];
+        const latestAddress = addresses.length
+          ? addresses[addresses.length - 1]
+          : null;
+        const savedAddress =
+          latestAddress?.address || latestAddress?.street || tempValue;
+
+        setUser((prev) => ({ ...prev, address: savedAddress }));
+        setStoreUser({
+          ...currentUser!,
+          addresses,
+        } as any);
       } else if (editingField === "email") {
         Alert.alert("Info", "Email update is not supported right now.");
       }
@@ -178,8 +207,65 @@ export default function ProfileScreen() {
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setUser((prev) => ({ ...prev, image: result.assets[0].uri }));
+    if (!result.canceled && customerId && token) {
+      const imageUri = result.assets[0].uri;
+
+      try {
+        setSaving(true);
+
+        const formData = new FormData();
+        const filename = imageUri.split("/").pop() || "profile.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : "image/jpeg";
+
+        // @ts-ignore - React Native FormData file type
+        formData.append("document", {
+          uri: imageUri,
+          name: filename,
+          type,
+        });
+
+        const response = await fetch(api.customers.uploadImage(customerId), {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errorMessage = `Upload failed: ${response.status}`;
+          try {
+            const errorResult = await response.json();
+            errorMessage = errorResult?.message || errorMessage;
+          } catch {
+            const errorText = await response.text();
+            if (errorText) errorMessage = errorText;
+          }
+          throw new Error(errorMessage);
+        }
+
+        const uploadResult = await response.json();
+        const newImage = uploadResult?.data?.image;
+
+        if (!newImage) {
+          throw new Error("Failed to upload profile image");
+        }
+
+        setUser((prev) => ({ ...prev, image: newImage }));
+        setStoreUser({
+          ...currentUser!,
+          image: newImage,
+        } as any);
+        Alert.alert("Success", "Profile picture updated successfully");
+      } catch (error: any) {
+        Alert.alert(
+          "Error",
+          error.message || "Failed to update profile picture",
+        );
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -192,11 +278,33 @@ export default function ProfileScreen() {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () =>
-            setUser((prev) => ({
-              ...prev,
-              image: "https://via.placeholder.com/100",
-            })),
+          onPress: async () => {
+            if (!customerId || !token) return;
+            try {
+              setSaving(true);
+              await apiCall(
+                api.customers.update(customerId),
+                "PUT",
+                { image: "https://via.placeholder.com/150" },
+                token,
+              );
+              setUser((prev) => ({
+                ...prev,
+                image: "https://via.placeholder.com/150",
+              }));
+              setStoreUser({
+                ...currentUser!,
+                image: "https://via.placeholder.com/150",
+              } as any);
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.message || "Failed to remove profile photo",
+              );
+            } finally {
+              setSaving(false);
+            }
+          },
         },
       ],
     );

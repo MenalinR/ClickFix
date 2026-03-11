@@ -2,6 +2,10 @@ const jwt = require("jsonwebtoken");
 
 // Generate JWT Token
 exports.generateToken = (id, userType) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("Server configuration error: JWT_SECRET is missing");
+  }
+
   return jwt.sign({ id, userType }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "30d",
   });

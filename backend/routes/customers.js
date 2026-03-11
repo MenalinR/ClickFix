@@ -6,14 +6,27 @@ const {
   addFavorite,
   removeFavorite,
   addWalletTransaction,
+  uploadProfileImage,
 } = require("../controllers/customerController");
 const { protect, authorize } = require("../middleware/auth");
+const { uploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
 router.get("/:id", protect, authorize("customer"), getCustomer);
 router.put("/:id", protect, authorize("customer"), updateCustomer);
 router.post("/:id/addresses", protect, authorize("customer"), addAddress);
+router.post(
+  "/:id/upload-image",
+  protect,
+  authorize("customer"),
+  (req, res, next) => {
+    req.uploadFolder = "profile-images";
+    next();
+  },
+  uploadDocument,
+  uploadProfileImage,
+);
 router.post(
   "/:id/favorites/:workerId",
   protect,

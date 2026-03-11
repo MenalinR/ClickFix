@@ -8,7 +8,7 @@ const path = require("path");
 const { connectDB, initializeDatabase, checkDatabaseHealth } = require("./db");
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 // Initialize express app
 const app = express();

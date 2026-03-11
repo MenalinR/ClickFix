@@ -56,6 +56,7 @@ export const api = {
     getById: (id: string) => `${API_URL}/customers/${id}`,
     update: (id: string) => `${API_URL}/customers/${id}`,
     addAddress: (id: string) => `${API_URL}/customers/${id}/addresses`,
+    uploadImage: (id: string) => `${API_URL}/customers/${id}/upload-image`,
     addFavorite: (id: string, workerId: string) =>
       `${API_URL}/customers/${id}/favorites/${workerId}`,
     removeFavorite: (id: string, workerId: string) =>

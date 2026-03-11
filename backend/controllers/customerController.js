@@ -48,7 +48,7 @@ exports.updateCustomer = async (req, res) => {
       });
     }
 
-    const allowedFields = ["name", "phone"];
+    const allowedFields = ["name", "phone", "image"];
     const updates = {};
 
     allowedFields.forEach((field) => {
@@ -88,12 +88,19 @@ exports.addAddress = async (req, res) => {
 
     const customer = await Customer.findById(req.params.id);
 
+    const addressText = req.body.address || req.body.street;
+
+    if (!addressText) {
+      return res.status(400).json({
+        success: false,
+        message: "Address is required",
+      });
+    }
+
     const address = {
       label: req.body.label,
-      street: req.body.street,
+      address: addressText,
       city: req.body.city,
-      state: req.body.state,
-      zipCode: req.body.zipCode,
       location: req.body.location,
     };
 
@@ -212,6 +219,57 @@ exports.addWalletTransaction = async (req, res) => {
     res.status(200).json({
       success: true,
       data: customer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Upload customer profile image
+// @route   POST /api/customers/:id/upload-image
+// @access  Private (Customer only)
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an image file",
+      });
+    }
+
+    const customer = await Customer.findById(req.params.id);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    customer.image = imageUrl;
+    await customer.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile image updated successfully",
+      data: { image: imageUrl },
     });
   } catch (error) {
     res.status(500).json({
