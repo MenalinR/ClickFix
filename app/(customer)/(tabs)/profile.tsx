@@ -378,7 +378,10 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: () => {
           logout();
-          router.replace("/");
+          setTimeout(() => {
+            router.dismissAll();
+            router.replace("/");
+          }, 0);
         },
       },
     ]);

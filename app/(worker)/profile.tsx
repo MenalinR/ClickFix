@@ -354,7 +354,10 @@ export default function WorkerProfileScreen() {
         style: "destructive",
         onPress: () => {
           logout();
-          router.replace("/");
+          setTimeout(() => {
+            router.dismissAll();
+            router.replace("/");
+          }, 0);
         },
       },
     ]);
