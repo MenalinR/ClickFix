@@ -109,6 +109,7 @@ const workerSchema = new mongoose.Schema(
     },
     experienceDocuments: [
       {
+        title: String, // Experience title shown as heading
         name: String, // Certificate name
         description: String, // Worker-provided experience/proof description
         url: String, // Secure URL

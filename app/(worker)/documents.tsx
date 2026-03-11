@@ -22,6 +22,7 @@ type DocumentStatus = "Pending" | "Verified" | "Rejected";
 
 interface Document {
   _id?: string;
+  title?: string;
   name?: string;
   documentName?: string;
   institution?: string;
@@ -53,6 +54,7 @@ export default function DocumentsScreen() {
   // Experience document form - new structure
   const [showExpForm, setShowExpForm] = useState(false);
   const [expFormMode, setExpFormMode] = useState<"add" | "edit">("add");
+  const [expTitle, setExpTitle] = useState("");
   const [expDescription, setExpDescription] = useState("");
   const [expCertificateName, setExpCertificateName] = useState("");
   const [expCertificateUrl, setExpCertificateUrl] = useState("");
@@ -207,49 +209,58 @@ export default function DocumentsScreen() {
       return;
     }
 
-    if (
-      !expCertificateUrl.trim() ||
-      !expCertificateName.trim() ||
-      !expDescription.trim()
-    ) {
-      Alert.alert("Error", "Please fill all required fields");
+    if (!expTitle.trim()) {
+      Alert.alert("Error", "Please enter an experience title");
+      return;
+    }
+
+    if (!expDescription.trim()) {
+      Alert.alert("Error", "Please enter your experience description");
       return;
     }
 
     try {
       setExpUploading(true);
 
-      // Create FormData for file upload
       const formData = new FormData();
 
-      // Get filename and determine file type
-      const filename = expCertificateUrl.split("/").pop() || "certificate.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const extension = match ? match[1] : "jpg";
+      let filename = "";
+      let mimeType = "";
 
-      // Determine proper MIME type
-      let mimeType = "image/jpeg";
-      if (extension === "pdf") {
-        mimeType = "application/pdf";
-      } else if (extension === "png") {
-        mimeType = "image/png";
-      } else if (extension === "jpg" || extension === "jpeg") {
+      if (expCertificateUrl.trim()) {
+        filename = expCertificateUrl.split("/").pop() || "certificate.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const extension = match ? match[1] : "jpg";
+
         mimeType = "image/jpeg";
+        if (extension === "pdf") {
+          mimeType = "application/pdf";
+        } else if (extension === "png") {
+          mimeType = "image/png";
+        } else if (extension === "jpg" || extension === "jpeg") {
+          mimeType = "image/jpeg";
+        }
+
+        formData.append("document", {
+          uri: expCertificateUrl,
+          name: filename,
+          type: mimeType,
+        } as any);
       }
 
-      // Append the file - React Native FormData format
-      formData.append("document", {
-        uri: expCertificateUrl,
-        name: filename,
-        type: mimeType,
-      } as any);
-
       // Append other fields as strings
-      formData.append("documentName", expCertificateName);
+      if (expCertificateName.trim()) {
+        formData.append("documentName", expCertificateName);
+      }
+      formData.append("title", expTitle);
       formData.append("documentType", "Certificate");
       formData.append("description", expDescription);
 
-      console.log("📤 Uploading certificate:", { filename, type: mimeType });
+      console.log("📤 Saving experience:", {
+        hasCertificate: !!expCertificateUrl.trim(),
+        filename,
+        type: mimeType,
+      });
 
       // Upload using apiUpload instead of apiCall
       const response = await apiUpload(
@@ -258,7 +269,7 @@ export default function DocumentsScreen() {
         token!,
       );
 
-      Alert.alert("Success", "Experience document uploaded successfully!");
+      Alert.alert("Success", "Experience saved successfully!");
       resetExpForm();
       fetchVerificationStatus();
     } catch (error: any) {
@@ -270,6 +281,7 @@ export default function DocumentsScreen() {
   };
 
   const resetExpForm = () => {
+    setExpTitle("");
     setExpDescription("");
     setExpCertificateName("");
     setExpCertificateUrl("");
@@ -584,7 +596,7 @@ export default function DocumentsScreen() {
                 <View style={styles.experienceHeader}>
                   <View style={styles.experienceInfo}>
                     <ThemedText style={styles.certificateName}>
-                      {doc.name || "Unnamed Certificate"}
+                      {doc.title || doc.name || doc.description || "Experience"}
                     </ThemedText>
                     <ThemedText style={styles.experienceDescription}>
                       {doc.description || "No description provided"}
@@ -594,6 +606,7 @@ export default function DocumentsScreen() {
                     style={styles.editButton}
                     onPress={() => {
                       setEditingExpIndex(index);
+                      setExpTitle(doc.title || doc.name || doc.description || "");
                       setExpDescription(doc.description || "");
                       setExpCertificateName(doc.name || "");
                       setExpCertificateUrl(doc.url);
@@ -625,7 +638,7 @@ export default function DocumentsScreen() {
                 No experience added yet
               </ThemedText>
               <ThemedText style={styles.emptySubtext}>
-                Add your certificates and training to enhance your profile
+                Add your work experience. Certificates are optional.
               </ThemedText>
             </View>
           )}
@@ -651,6 +664,20 @@ export default function DocumentsScreen() {
               </View>
 
               <ScrollView contentContainerStyle={styles.formModalScroll}>
+                {/* Experience Title */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>
+                    Experience Title *
+                  </ThemedText>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g., HVAC Technician"
+                    placeholderTextColor="#9CA3AF"
+                    value={expTitle}
+                    onChangeText={setExpTitle}
+                  />
+                </View>
+
                 {/* Experience Description */}
                 <View style={styles.formGroup}>
                   <ThemedText style={styles.formLabel}>
@@ -670,7 +697,7 @@ export default function DocumentsScreen() {
                 {/* Certificate Name */}
                 <View style={styles.formGroup}>
                   <ThemedText style={styles.formLabel}>
-                    Certificate Name *
+                    Certificate Name (Optional)
                   </ThemedText>
                   <TextInput
                     style={styles.formInput}
@@ -684,7 +711,7 @@ export default function DocumentsScreen() {
                 {/* Upload Certificate */}
                 <View style={styles.formGroup}>
                   <ThemedText style={styles.formLabel}>
-                    Upload Certificate *
+                    Upload Certificate (Optional)
                   </ThemedText>
                   {expCertificateUrl && (
                     <View style={styles.fileSelectedBadge}>
@@ -702,7 +729,7 @@ export default function DocumentsScreen() {
                     title={
                       expCertificateUrl
                         ? "Document Selected ✓"
-                        : "Select Certificate"
+                        : "Select Certificate (Optional)"
                     }
                     onPress={() =>
                       handlePickDocument(setExpCertificateUrl, true)
@@ -716,12 +743,7 @@ export default function DocumentsScreen() {
                   <Button
                     title={expUploading ? "Saving..." : "Save Experience"}
                     onPress={handleUploadExperienceDocument}
-                    disabled={
-                      !expCertificateUrl ||
-                      !expCertificateName ||
-                      !expDescription ||
-                      expUploading
-                    }
+                    disabled={!expTitle || !expDescription || expUploading}
                   />
                   <Button
                     title="Cancel"

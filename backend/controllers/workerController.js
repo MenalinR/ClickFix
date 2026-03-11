@@ -360,15 +360,8 @@ exports.uploadExperienceDocument = async (req, res) => {
       });
     }
 
-    // Check if file was uploaded via multer
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Please upload a document file",
-      });
-    }
-
     const {
+      title,
       documentName,
       description,
       documentType = "Certificate",
@@ -376,10 +369,17 @@ exports.uploadExperienceDocument = async (req, res) => {
       expiryDate,
     } = req.body;
 
-    if (!documentName) {
+    if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Document name is required",
+        message: "Experience title is required",
+      });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Experience description is required",
       });
     }
 
@@ -401,18 +401,21 @@ exports.uploadExperienceDocument = async (req, res) => {
       });
     }
 
-    // Create accessible URL for the uploaded file
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    // Extract relative path from uploads folder
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    let fileUrl = "";
 
-    // Add experience document with accessible file URL
+    if (req.file) {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const relativePath = req.file.path
+        .split("uploads")[1]
+        .replace(/\\/g, "/")
+        .replace(/^\//, "");
+      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    }
+
+    // Add experience entry; certificate is optional
     const newDocument = {
-      name: documentName,
+      title: title.trim(),
+      name: documentName || "",
       description: description || "",
       url: fileUrl,
       documentType,
@@ -428,7 +431,7 @@ exports.uploadExperienceDocument = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Experience proof added successfully.",
+      message: "Experience added successfully.",
       data: worker,
     });
   } catch (error) {
