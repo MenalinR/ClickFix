@@ -301,6 +301,94 @@ export default function DocumentsScreen() {
     setEduFormMode("add");
   };
 
+  const handleDeleteExperienceDocument = (doc: Document) => {
+    if (!user?._id) {
+      Alert.alert("Error", "User information not loaded. Please try again.");
+      return;
+    }
+
+    if (!doc._id) {
+      Alert.alert(
+        "Error",
+        "Cannot delete this item right now. Please refresh.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Delete Experience",
+      "Are you sure you want to delete this experience?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(
+                api.workers.deleteExperience(user._id, doc._id!),
+                "DELETE",
+                undefined,
+                token!,
+              );
+              Alert.alert("Success", "Experience deleted successfully.");
+              fetchVerificationStatus();
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.message || "Failed to delete experience",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteEducationDocument = (doc: Document) => {
+    if (!user?._id) {
+      Alert.alert("Error", "User information not loaded. Please try again.");
+      return;
+    }
+
+    if (!doc._id) {
+      Alert.alert(
+        "Error",
+        "Cannot delete this item right now. Please refresh.",
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Delete Education",
+      "Are you sure you want to delete this education record?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(
+                api.workers.deleteEducation(user._id, doc._id!),
+                "DELETE",
+                undefined,
+                token!,
+              );
+              Alert.alert("Success", "Education deleted successfully.");
+              fetchVerificationStatus();
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.message || "Failed to delete education",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleUploadEducationDocument = async () => {
     if (!user?._id) {
       Alert.alert("Error", "User information not loaded. Please try again.");
@@ -602,22 +690,34 @@ export default function DocumentsScreen() {
                       {doc.description || "No description provided"}
                     </ThemedText>
                   </View>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => {
-                      setEditingExpIndex(index);
-                      setExpTitle(
-                        doc.title || doc.name || doc.description || "",
-                      );
-                      setExpDescription(doc.description || "");
-                      setExpCertificateName(doc.name || "");
-                      setExpCertificateUrl(doc.url);
-                      setExpFormMode("edit");
-                      setShowExpForm(true);
-                    }}
-                  >
-                    <Ionicons name="pencil" size={18} color="#0066CC" />
-                  </TouchableOpacity>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => {
+                        setEditingExpIndex(index);
+                        setExpTitle(
+                          doc.title || doc.name || doc.description || "",
+                        );
+                        setExpDescription(doc.description || "");
+                        setExpCertificateName(doc.name || "");
+                        setExpCertificateUrl(doc.url);
+                        setExpFormMode("edit");
+                        setShowExpForm(true);
+                      }}
+                    >
+                      <Ionicons name="pencil" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteExperienceDocument(doc)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {doc.url && (
@@ -790,21 +890,33 @@ export default function DocumentsScreen() {
                       {doc.description || "No description provided"}
                     </ThemedText>
                   </View>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => {
-                      setEditingEduIndex(index);
-                      setEduDocumentName(doc.name || "");
-                      setEduInstitution(doc.institution || "");
-                      setEduDescription(doc.description || "");
-                      setEduDocumentUrl(doc.url);
-                      setEduDocumentType(doc.documentType || "Certificate");
-                      setEduFormMode("edit");
-                      setShowEduForm(true);
-                    }}
-                  >
-                    <Ionicons name="pencil" size={18} color="#0066CC" />
-                  </TouchableOpacity>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => {
+                        setEditingEduIndex(index);
+                        setEduDocumentName(doc.name || "");
+                        setEduInstitution(doc.institution || "");
+                        setEduDescription(doc.description || "");
+                        setEduDocumentUrl(doc.url);
+                        setEduDocumentType(doc.documentType || "Certificate");
+                        setEduFormMode("edit");
+                        setShowEduForm(true);
+                      }}
+                    >
+                      <Ionicons name="pencil" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteEducationDocument(doc)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {doc.url && (
@@ -1290,9 +1402,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     color: "#6B7280",
   },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
   editButton: {
     padding: 6,
-    marginLeft: 8,
+  },
+  deleteButton: {
+    padding: 6,
   },
   certificateThumbnailContainer: {
     marginTop: 12,

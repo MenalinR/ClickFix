@@ -8,6 +8,8 @@ const {
   uploadIDProof,
   uploadExperienceDocument,
   uploadEducationDocument,
+  deleteExperienceDocument,
+  deleteEducationDocument,
   uploadProfileImage,
   getVerificationStatus,
   verifyIDProof,
@@ -74,6 +76,18 @@ router.post(
   },
   uploadDocument,
   uploadEducationDocument,
+);
+router.delete(
+  "/:id/experience/:docId",
+  protect,
+  authorize("worker"),
+  deleteExperienceDocument,
+);
+router.delete(
+  "/:id/education/:docId",
+  protect,
+  authorize("worker"),
+  deleteEducationDocument,
 );
 router.post(
   "/:id/upload-image",

@@ -535,6 +535,98 @@ exports.uploadEducationDocument = async (req, res) => {
   }
 };
 
+// @desc    Delete experience document
+// @route   DELETE /api/workers/:id/experience/:docId
+// @access  Private (Worker only)
+exports.deleteExperienceDocument = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    const document = worker.experienceDocuments.id(req.params.docId);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Experience document not found",
+      });
+    }
+
+    worker.experienceDocuments.pull(req.params.docId);
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Experience deleted successfully",
+      data: worker,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Delete education document
+// @route   DELETE /api/workers/:id/education/:docId
+// @access  Private (Worker only)
+exports.deleteEducationDocument = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    const document = worker.educationDocuments.id(req.params.docId);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Education document not found",
+      });
+    }
+
+    worker.educationDocuments.pull(req.params.docId);
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Education deleted successfully",
+      data: worker,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Get worker verification status
 // @route   GET /api/workers/:id/verification-status
 // @access  Private (Worker only)

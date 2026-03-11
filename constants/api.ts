@@ -30,6 +30,10 @@ export const api = {
       `${API_URL}/workers/${id}/upload-experience`,
     uploadEducation: (id: string) =>
       `${API_URL}/workers/${id}/upload-education`,
+    deleteExperience: (id: string, docId: string) =>
+      `${API_URL}/workers/${id}/experience/${docId}`,
+    deleteEducation: (id: string, docId: string) =>
+      `${API_URL}/workers/${id}/education/${docId}`,
     getVerificationStatus: (id: string) =>
       `${API_URL}/workers/${id}/verification-status`,
     verifyIDProof: (id: string) => `${API_URL}/workers/${id}/verify-id-proof`,
