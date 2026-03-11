@@ -606,7 +606,9 @@ export default function DocumentsScreen() {
                     style={styles.editButton}
                     onPress={() => {
                       setEditingExpIndex(index);
-                      setExpTitle(doc.title || doc.name || doc.description || "");
+                      setExpTitle(
+                        doc.title || doc.name || doc.description || "",
+                      );
                       setExpDescription(doc.description || "");
                       setExpCertificateName(doc.name || "");
                       setExpCertificateUrl(doc.url);
