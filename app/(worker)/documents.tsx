@@ -33,11 +33,42 @@ interface Document {
   verificationNotes?: string;
   issueDate?: string;
   expiryDate?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface IDProof extends Document {
   uploadedAt?: string;
   verifiedAt?: string;
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const getYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = currentYear + 1; y >= 1980; y--) years.push(y);
+  return years;
+};
+
+function monthYearToIso(month: number | "", year: number | ""): string {
+  if (month === "" || year === "" || !month || !year) return "";
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+function isoToMonthYear(iso: string | undefined): { month: number | ""; year: number | "" } {
+  if (!iso) return { month: "", year: "" };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { month: "", year: "" };
+  return { month: d.getMonth() + 1, year: d.getFullYear() };
+}
+
+function formatMonthYear(month: number | "", year: number | ""): string {
+  if (month === "" || year === "") return "Select";
+  return `${MONTH_NAMES[Number(month) - 1]} ${year}`;
 }
 
 export default function DocumentsScreen() {
@@ -58,6 +89,10 @@ export default function DocumentsScreen() {
   const [expDescription, setExpDescription] = useState("");
   const [expCertificateName, setExpCertificateName] = useState("");
   const [expCertificateUrl, setExpCertificateUrl] = useState("");
+  const [expStartMonth, setExpStartMonth] = useState<number | "">("");
+  const [expStartYear, setExpStartYear] = useState<number | "">("");
+  const [expEndMonth, setExpEndMonth] = useState<number | "">("");
+  const [expEndYear, setExpEndYear] = useState<number | "">("");
   const [expUploading, setExpUploading] = useState(false);
   const [editingExpIndex, setEditingExpIndex] = useState<number | null>(null);
 
@@ -69,9 +104,17 @@ export default function DocumentsScreen() {
   const [eduDescription, setEduDescription] = useState("");
   const [eduDocumentUrl, setEduDocumentUrl] = useState("");
   const [eduDocumentType, setEduDocumentType] = useState("Certificate");
+  const [eduStartMonth, setEduStartMonth] = useState<number | "">("");
+  const [eduStartYear, setEduStartYear] = useState<number | "">("");
+  const [eduEndMonth, setEduEndMonth] = useState<number | "">("");
+  const [eduEndYear, setEduEndYear] = useState<number | "">("");
   const [eduUploading, setEduUploading] = useState(false);
   const [eduTypeModalVisible, setEduTypeModalVisible] = useState(false);
   const [editingEduIndex, setEditingEduIndex] = useState<number | null>(null);
+
+  // Month/Year picker modal: which field is being edited
+  const [datePickerTarget, setDatePickerTarget] = useState<string | null>(null);
+  const YEAR_OPTIONS = getYearOptions();
 
   useEffect(() => {
     if (user?._id) {
@@ -255,6 +298,10 @@ export default function DocumentsScreen() {
       formData.append("title", expTitle);
       formData.append("documentType", "Certificate");
       formData.append("description", expDescription);
+      const expIssue = monthYearToIso(expStartMonth, expStartYear);
+      const expExpiry = monthYearToIso(expEndMonth, expEndYear);
+      if (expIssue) formData.append("issueDate", expIssue);
+      if (expExpiry) formData.append("expiryDate", expExpiry);
 
       console.log("📤 Saving experience:", {
         hasCertificate: !!expCertificateUrl.trim(),
@@ -285,6 +332,10 @@ export default function DocumentsScreen() {
     setExpDescription("");
     setExpCertificateName("");
     setExpCertificateUrl("");
+    setExpStartMonth("");
+    setExpStartYear("");
+    setExpEndMonth("");
+    setExpEndYear("");
     setShowExpForm(false);
     setEditingExpIndex(null);
     setExpFormMode("add");
@@ -296,6 +347,10 @@ export default function DocumentsScreen() {
     setEduDescription("");
     setEduDocumentUrl("");
     setEduDocumentType("Certificate");
+    setEduStartMonth("");
+    setEduStartYear("");
+    setEduEndMonth("");
+    setEduEndYear("");
     setShowEduForm(false);
     setEditingEduIndex(null);
     setEduFormMode("add");
@@ -437,6 +492,10 @@ export default function DocumentsScreen() {
       formData.append("institution", eduInstitution);
       formData.append("documentType", eduDocumentType);
       formData.append("description", eduDescription);
+      const eduStart = monthYearToIso(eduStartMonth, eduStartYear);
+      const eduEnd = monthYearToIso(eduEndMonth, eduEndYear);
+      if (eduStart) formData.append("startDate", eduStart);
+      if (eduEnd) formData.append("endDate", eduEnd);
 
       console.log("📤 Uploading education document:", {
         filename,
@@ -689,6 +748,14 @@ export default function DocumentsScreen() {
                     <ThemedText style={styles.experienceDescription}>
                       {doc.description || "No description provided"}
                     </ThemedText>
+                    {(doc.issueDate || doc.expiryDate) && (
+                      <ThemedText style={styles.dateRangeText}>
+                        {[
+                          doc.issueDate ? formatMonthYear(isoToMonthYear(doc.issueDate).month, isoToMonthYear(doc.issueDate).year) : null,
+                          doc.expiryDate ? formatMonthYear(isoToMonthYear(doc.expiryDate).month, isoToMonthYear(doc.expiryDate).year) : null,
+                        ].filter((s) => s && s !== "Select").join(" – ")}
+                      </ThemedText>
+                    )}
                   </View>
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
@@ -701,6 +768,12 @@ export default function DocumentsScreen() {
                         setExpDescription(doc.description || "");
                         setExpCertificateName(doc.name || "");
                         setExpCertificateUrl(doc.url);
+                        const start = isoToMonthYear(doc.issueDate);
+                        const end = isoToMonthYear(doc.expiryDate);
+                        setExpStartMonth(start.month);
+                        setExpStartYear(start.year);
+                        setExpEndMonth(end.month);
+                        setExpEndYear(end.year);
                         setExpFormMode("edit");
                         setShowExpForm(true);
                       }}
@@ -796,6 +869,56 @@ export default function DocumentsScreen() {
                   />
                 </View>
 
+                {/* Experience Start Date */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>Start Date</ThemedText>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("expStartMonth")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {expStartMonth ? MONTH_NAMES[Number(expStartMonth) - 1] : "Month"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("expStartYear")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {expStartYear || "Year"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Experience End Date */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>End Date</ThemedText>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("expEndMonth")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {expEndMonth ? MONTH_NAMES[Number(expEndMonth) - 1] : "Month"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("expEndYear")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {expEndYear || "Year"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
                 {/* Certificate Name */}
                 <View style={styles.formGroup}>
                   <ThemedText style={styles.formLabel}>
@@ -889,6 +1012,14 @@ export default function DocumentsScreen() {
                     <ThemedText style={styles.experienceDescription}>
                       {doc.description || "No description provided"}
                     </ThemedText>
+                    {(doc.startDate || doc.endDate) && (
+                      <ThemedText style={styles.dateRangeText}>
+                        {[
+                          doc.startDate ? formatMonthYear(isoToMonthYear(doc.startDate).month, isoToMonthYear(doc.startDate).year) : null,
+                          doc.endDate ? formatMonthYear(isoToMonthYear(doc.endDate).month, isoToMonthYear(doc.endDate).year) : null,
+                        ].filter((s) => s && s !== "Select").join(" – ")}
+                      </ThemedText>
+                    )}
                   </View>
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
@@ -900,6 +1031,12 @@ export default function DocumentsScreen() {
                         setEduDescription(doc.description || "");
                         setEduDocumentUrl(doc.url);
                         setEduDocumentType(doc.documentType || "Certificate");
+                        const start = isoToMonthYear(doc.startDate);
+                        const end = isoToMonthYear(doc.endDate);
+                        setEduStartMonth(start.month);
+                        setEduStartYear(start.year);
+                        setEduEndMonth(end.month);
+                        setEduEndYear(end.year);
                         setEduFormMode("edit");
                         setShowEduForm(true);
                       }}
@@ -991,6 +1128,56 @@ export default function DocumentsScreen() {
                     value={eduInstitution}
                     onChangeText={setEduInstitution}
                   />
+                </View>
+
+                {/* Education Start Date */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>Start Date</ThemedText>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("eduStartMonth")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {eduStartMonth ? MONTH_NAMES[Number(eduStartMonth) - 1] : "Month"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("eduStartYear")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {eduStartYear || "Year"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Education End Date */}
+                <View style={styles.formGroup}>
+                  <ThemedText style={styles.formLabel}>End Date</ThemedText>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("eduEndMonth")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {eduEndMonth ? MONTH_NAMES[Number(eduEndMonth) - 1] : "Month"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dateField}
+                      onPress={() => setDatePickerTarget("eduEndYear")}
+                    >
+                      <ThemedText style={styles.dateFieldText}>
+                        {eduEndYear || "Year"}
+                      </ThemedText>
+                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Document Type */}
@@ -1110,6 +1297,59 @@ export default function DocumentsScreen() {
                   <ThemedText style={styles.modalOptionText}>{type}</ThemedText>
                 </TouchableOpacity>
               ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Month/Year Picker Modal */}
+        <Modal
+          transparent
+          visible={!!datePickerTarget}
+          onRequestClose={() => setDatePickerTarget(null)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setDatePickerTarget(null)}
+          >
+            <View style={styles.modalContent}>
+              <ThemedText style={styles.modalTitle}>
+                {datePickerTarget?.endsWith("Month") ? "Select Month" : "Select Year"}
+              </ThemedText>
+              <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps="handled">
+                {datePickerTarget?.endsWith("Month")
+                  ? MONTH_NAMES.map((name, idx) => (
+                      <TouchableOpacity
+                        key={name}
+                        style={styles.modalOption}
+                        onPress={() => {
+                          const month = idx + 1;
+                          if (datePickerTarget === "expStartMonth") setExpStartMonth(month);
+                          else if (datePickerTarget === "expEndMonth") setExpEndMonth(month);
+                          else if (datePickerTarget === "eduStartMonth") setEduStartMonth(month);
+                          else if (datePickerTarget === "eduEndMonth") setEduEndMonth(month);
+                          setDatePickerTarget(null);
+                        }}
+                      >
+                        <ThemedText style={styles.modalOptionText}>{name}</ThemedText>
+                      </TouchableOpacity>
+                    ))
+                  : YEAR_OPTIONS.map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        style={styles.modalOption}
+                        onPress={() => {
+                          if (datePickerTarget === "expStartYear") setExpStartYear(year);
+                          else if (datePickerTarget === "expEndYear") setExpEndYear(year);
+                          else if (datePickerTarget === "eduStartYear") setEduStartYear(year);
+                          else if (datePickerTarget === "eduEndYear") setEduEndYear(year);
+                          setDatePickerTarget(null);
+                        }}
+                      >
+                        <ThemedText style={styles.modalOptionText}>{String(year)}</ThemedText>
+                      </TouchableOpacity>
+                    ))}
+              </ScrollView>
             </View>
           </TouchableOpacity>
         </Modal>
@@ -1468,6 +1708,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 8,
     color: "#1F2937",
+  },
+  dateRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  dateField: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateFieldText: {
+    fontSize: 15,
+    color: "#1F2937",
+  },
+  pickerScroll: {
+    maxHeight: 280,
+  },
+  dateRangeText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
   },
   formInput: {
     borderWidth: 1,

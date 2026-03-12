@@ -221,6 +221,13 @@ export default function WorkerProfile() {
                 {!!doc.description ? (
                   <Text style={styles.documentText}>{doc.description}</Text>
                 ) : null}
+                {(doc.issueDate || doc.expiryDate) ? (
+                  <Text style={styles.documentMeta}>
+                    {(doc.issueDate ? new Date(doc.issueDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "") +
+                      (doc.issueDate && doc.expiryDate ? " – " : "") +
+                      (doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "")}
+                  </Text>
+                ) : null}
                 <Text style={styles.documentMeta}>
                   {doc.documentType || "Document"}
                 </Text>
@@ -255,6 +262,13 @@ export default function WorkerProfile() {
                 ) : null}
                 {!!doc.description ? (
                   <Text style={styles.documentText}>{doc.description}</Text>
+                ) : null}
+                {(doc.startDate || doc.endDate) ? (
+                  <Text style={styles.documentMeta}>
+                    {(doc.startDate ? new Date(doc.startDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "") +
+                      (doc.startDate && doc.endDate ? " – " : "") +
+                      (doc.endDate ? new Date(doc.endDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "")}
+                  </Text>
                 ) : null}
                 <Text style={styles.documentMeta}>
                   {doc.documentType || "Document"}
