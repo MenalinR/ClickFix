@@ -87,6 +87,10 @@ function formatRangeWithPresent(start?: string, end?: string): string {
   return `${startText} – ${endText}`;
 }
 
+function isLocalFileUri(uri: string): boolean {
+  return !!uri && !uri.startsWith("http://") && !uri.startsWith("https://");
+}
+
 export default function DocumentsScreen() {
   const { user, token } = useStore();
   const [loading, setLoading] = useState(false);
@@ -110,7 +114,7 @@ export default function DocumentsScreen() {
   const [expEndMonth, setExpEndMonth] = useState<number | "">("");
   const [expEndYear, setExpEndYear] = useState<number | "">("");
   const [expUploading, setExpUploading] = useState(false);
-  const [editingExpIndex, setEditingExpIndex] = useState<number | null>(null);
+  const [editingExpId, setEditingExpId] = useState<string | null>(null);
 
   // Education document form
   const [showEduForm, setShowEduForm] = useState(false);
@@ -126,7 +130,7 @@ export default function DocumentsScreen() {
   const [eduEndYear, setEduEndYear] = useState<number | "">("");
   const [eduUploading, setEduUploading] = useState(false);
   const [eduTypeModalVisible, setEduTypeModalVisible] = useState(false);
-  const [editingEduIndex, setEditingEduIndex] = useState<number | null>(null);
+  const [editingEduId, setEditingEduId] = useState<string | null>(null);
 
   // Month/Year picker modal: which field is being edited
   const [datePickerTarget, setDatePickerTarget] =
@@ -290,7 +294,7 @@ export default function DocumentsScreen() {
       let filename = "";
       let mimeType = "";
 
-      if (expCertificateUrl.trim()) {
+      if (expCertificateUrl.trim() && isLocalFileUri(expCertificateUrl)) {
         filename = expCertificateUrl.split("/").pop() || "certificate.jpg";
         const match = /\.(\w+)$/.exec(filename);
         const extension = match ? match[1] : "jpg";
@@ -331,12 +335,20 @@ export default function DocumentsScreen() {
 
       // Upload using apiUpload instead of apiCall
       const response = await apiUpload(
-        api.workers.uploadExperience(user._id),
+        expFormMode === "edit" && editingExpId
+          ? api.workers.updateExperience(user._id, editingExpId)
+          : api.workers.uploadExperience(user._id),
         formData,
         token!,
+        expFormMode === "edit" ? "PUT" : "POST",
       );
 
-      Alert.alert("Success", "Experience saved successfully!");
+      Alert.alert(
+        "Success",
+        expFormMode === "edit"
+          ? "Experience updated successfully!"
+          : "Experience saved successfully!",
+      );
       resetExpForm();
       fetchVerificationStatus();
     } catch (error: any) {
@@ -357,7 +369,7 @@ export default function DocumentsScreen() {
     setExpEndMonth("");
     setExpEndYear("");
     setShowExpForm(false);
-    setEditingExpIndex(null);
+    setEditingExpId(null);
     setExpFormMode("add");
   };
 
@@ -372,7 +384,7 @@ export default function DocumentsScreen() {
     setEduEndMonth("");
     setEduEndYear("");
     setShowEduForm(false);
-    setEditingEduIndex(null);
+    setEditingEduId(null);
     setEduFormMode("add");
   };
 
@@ -522,12 +534,13 @@ export default function DocumentsScreen() {
       return;
     }
 
-    if (
-      !eduDocumentUrl.trim() ||
-      !eduDocumentName.trim() ||
-      !eduDescription.trim()
-    ) {
+    if (!eduDocumentName.trim() || !eduDescription.trim()) {
       Alert.alert("Error", "Please fill all required fields");
+      return;
+    }
+
+    if (eduFormMode !== "edit" && !eduDocumentUrl.trim()) {
+      Alert.alert("Error", "Please upload a document file");
       return;
     }
 
@@ -537,27 +550,31 @@ export default function DocumentsScreen() {
       // Create FormData for file upload
       const formData = new FormData();
 
-      // Get filename and determine file type
-      const filename = eduDocumentUrl.split("/").pop() || "education.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const extension = match ? match[1] : "jpg";
+      let filename = "";
+      let mimeType = "";
 
-      // Determine proper MIME type
-      let mimeType = "image/jpeg";
-      if (extension === "pdf") {
-        mimeType = "application/pdf";
-      } else if (extension === "png") {
-        mimeType = "image/png";
-      } else if (extension === "jpg" || extension === "jpeg") {
+      if (eduDocumentUrl.trim() && isLocalFileUri(eduDocumentUrl)) {
+        filename = eduDocumentUrl.split("/").pop() || "education.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const extension = match ? match[1] : "jpg";
+
+        // Determine proper MIME type
         mimeType = "image/jpeg";
-      }
+        if (extension === "pdf") {
+          mimeType = "application/pdf";
+        } else if (extension === "png") {
+          mimeType = "image/png";
+        } else if (extension === "jpg" || extension === "jpeg") {
+          mimeType = "image/jpeg";
+        }
 
-      // Append the file - React Native FormData format
-      formData.append("document", {
-        uri: eduDocumentUrl,
-        name: filename,
-        type: mimeType,
-      } as any);
+        // Append the file - React Native FormData format
+        formData.append("document", {
+          uri: eduDocumentUrl,
+          name: filename,
+          type: mimeType,
+        } as any);
+      }
 
       // Append other fields as strings
       formData.append("documentName", eduDocumentName);
@@ -576,12 +593,20 @@ export default function DocumentsScreen() {
 
       // Upload using apiUpload instead of apiCall
       const response = await apiUpload(
-        api.workers.uploadEducation(user._id),
+        eduFormMode === "edit" && editingEduId
+          ? api.workers.updateEducation(user._id, editingEduId)
+          : api.workers.uploadEducation(user._id),
         formData,
         token!,
+        eduFormMode === "edit" ? "PUT" : "POST",
       );
 
-      Alert.alert("Success", "Education document uploaded successfully!");
+      Alert.alert(
+        "Success",
+        eduFormMode === "edit"
+          ? "Education updated successfully!"
+          : "Education document uploaded successfully!",
+      );
       resetEduForm();
       fetchVerificationStatus();
     } catch (error: any) {
@@ -830,7 +855,7 @@ export default function DocumentsScreen() {
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => {
-                        setEditingExpIndex(index);
+                        setEditingExpId(doc._id || null);
                         setExpTitle(
                           doc.title || doc.name || doc.description || "",
                         );
@@ -1106,7 +1131,7 @@ export default function DocumentsScreen() {
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => {
-                        setEditingEduIndex(index);
+                        setEditingEduId(doc._id || null);
                         setEduDocumentName(doc.name || "");
                         setEduInstitution(doc.institution || "");
                         setEduDescription(doc.description || "");
@@ -1340,7 +1365,6 @@ export default function DocumentsScreen() {
                     title={eduUploading ? "Saving..." : "Save Education"}
                     onPress={handleUploadEducationDocument}
                     disabled={
-                      !eduDocumentUrl ||
                       !eduDocumentName ||
                       !eduDescription ||
                       eduUploading

@@ -1,4 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { api, apiCall } from "./api";
 
 // ============================================
@@ -83,7 +85,9 @@ interface StoreState {
   updateJobStatus: (jobId: string, status: string) => Promise<void>;
 }
 
-export const useStore = create<StoreState>((set, get) => ({
+export const useStore = create<StoreState>()(
+  persist(
+    (set, get) => ({
   // Initial State
   user: null,
   token: null,
@@ -385,4 +389,15 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ loading: false });
     }
   },
-}));
+    }),
+    {
+      name: "clickfix-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isLoggedIn: state.isLoggedIn,
+      }),
+    },
+  ),
+);

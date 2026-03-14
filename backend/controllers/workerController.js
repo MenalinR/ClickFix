@@ -535,6 +535,187 @@ exports.uploadEducationDocument = async (req, res) => {
   }
 };
 
+// @desc    Update experience document
+// @route   PUT /api/workers/:id/experience/:docId
+// @access  Private (Worker only)
+exports.updateExperienceDocument = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    const {
+      title,
+      documentName,
+      description,
+      documentType = "Certificate",
+      issueDate,
+      expiryDate,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Experience title is required",
+      });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Experience description is required",
+      });
+    }
+
+    const validTypes = ["Certificate", "License", "Training", "Other"];
+    if (!validTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document type",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    const document = worker.experienceDocuments.id(req.params.docId);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Experience document not found",
+      });
+    }
+
+    let fileUrl = document.url || "";
+    if (req.file) {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const relativePath = req.file.path
+        .split("uploads")[1]
+        .replace(/\\/g, "/")
+        .replace(/^\//, "");
+      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    }
+
+    document.title = title.trim();
+    document.name = documentName || "";
+    document.description = description || "";
+    document.url = fileUrl;
+    document.documentType = documentType;
+    document.issueDate = issueDate ? new Date(issueDate) : null;
+    document.expiryDate = expiryDate ? new Date(expiryDate) : null;
+
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Experience updated successfully.",
+      data: worker,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update education document
+// @route   PUT /api/workers/:id/education/:docId
+// @access  Private (Worker only)
+exports.updateEducationDocument = async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    const {
+      documentName,
+      institution,
+      description,
+      documentType = "Certificate",
+      startDate,
+      endDate,
+    } = req.body;
+
+    if (!documentName || !documentName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Document name is required",
+      });
+    }
+
+    const validTypes = ["Degree", "Diploma", "Certificate", "Other"];
+    if (!validTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document type",
+      });
+    }
+
+    const worker = await Worker.findById(req.params.id);
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+      });
+    }
+
+    const document = worker.educationDocuments.id(req.params.docId);
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Education document not found",
+      });
+    }
+
+    let fileUrl = document.url || "";
+    if (req.file) {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const relativePath = req.file.path
+        .split("uploads")[1]
+        .replace(/\\/g, "/")
+        .replace(/^\//, "");
+      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    }
+
+    document.name = documentName.trim();
+    document.institution = institution || "";
+    document.description = description || "";
+    document.url = fileUrl;
+    document.documentType = documentType;
+    document.startDate = startDate ? new Date(startDate) : null;
+    document.endDate = endDate ? new Date(endDate) : null;
+
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Education updated successfully.",
+      data: worker,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Delete experience document
 // @route   DELETE /api/workers/:id/experience/:docId
 // @access  Private (Worker only)

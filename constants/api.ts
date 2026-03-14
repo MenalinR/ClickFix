@@ -30,6 +30,10 @@ export const api = {
       `${API_URL}/workers/${id}/upload-experience`,
     uploadEducation: (id: string) =>
       `${API_URL}/workers/${id}/upload-education`,
+    updateExperience: (id: string, docId: string) =>
+      `${API_URL}/workers/${id}/experience/${docId}`,
+    updateEducation: (id: string, docId: string) =>
+      `${API_URL}/workers/${id}/education/${docId}`,
     deleteExperience: (id: string, docId: string) =>
       `${API_URL}/workers/${id}/experience/${docId}`,
     deleteEducation: (id: string, docId: string) =>
@@ -163,6 +167,7 @@ export const apiUpload = async (
   url: string,
   formData: FormData,
   token?: string,
+  method: "POST" | "PUT" = "POST",
 ) => {
   const headers: any = {};
 
@@ -173,9 +178,9 @@ export const apiUpload = async (
   // Don't set Content-Type - let the browser set it automatically with boundary
 
   try {
-    console.log(`🌐 API Upload: POST ${url}`);
+    console.log(`🌐 API Upload: ${method} ${url}`);
     const response = await fetch(url, {
-      method: "POST",
+      method,
       headers,
       body: formData,
     });
