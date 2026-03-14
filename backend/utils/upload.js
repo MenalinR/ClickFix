@@ -45,6 +45,23 @@ exports.uploadDocument = multer({
   },
 }).single("document");
 
+// Optional upload middleware - continues even if no file is provided
+exports.optionalUploadDocument = (req, res, next) => {
+  exports.uploadDocument(req, res, (err) => {
+    if (err) {
+      // If it's a multer error about no file, continue anyway
+      if (err.code === "LIMIT_UNEXPECTED_FILE") {
+        return next();
+      }
+      return res.status(400).json({
+        success: false,
+        message: err.message || "File upload error",
+      });
+    }
+    next();
+  });
+};
+
 // Delete file from local storage
 exports.deleteFile = async (filePath) => {
   try {

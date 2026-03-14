@@ -8,6 +8,8 @@ const {
   uploadIDProof,
   uploadExperienceDocument,
   uploadEducationDocument,
+  updateExperienceDocument,
+  updateEducationDocument,
   deleteExperienceDocument,
   deleteEducationDocument,
   uploadProfileImage,
@@ -17,7 +19,7 @@ const {
   getPendingDocuments,
 } = require("../controllers/workerController");
 const { protect, authorize } = require("../middleware/auth");
-const { uploadDocument } = require("../utils/upload");
+const { uploadDocument, optionalUploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
@@ -76,6 +78,28 @@ router.post(
   },
   uploadDocument,
   uploadEducationDocument,
+);
+router.put(
+  "/:id/experience/:docId",
+  protect,
+  authorize("worker"),
+  (req, res, next) => {
+    req.uploadFolder = "experience-docs";
+    next();
+  },
+  optionalUploadDocument,
+  updateExperienceDocument,
+);
+router.put(
+  "/:id/education/:docId",
+  protect,
+  authorize("worker"),
+  (req, res, next) => {
+    req.uploadFolder = "education-docs";
+    next();
+  },
+  optionalUploadDocument,
+  updateEducationDocument,
 );
 router.delete(
   "/:id/experience/:docId",
