@@ -28,7 +28,7 @@ const getLocalIP = (): string => {
 };
 
 const LOCAL_IP = getLocalIP();
-const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5001";
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5000";
 const COMPUTED_LOCAL_API_URL = `http://${LOCAL_IP}:${API_PORT}/api`;
 const EXPLICIT_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
