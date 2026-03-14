@@ -19,6 +19,7 @@ import {
 } from "react-native";
 
 type DocumentStatus = "Pending" | "Verified" | "Rejected";
+type DatePickerField = "expStart" | "expEnd" | "eduStart" | "eduEnd";
 
 interface Document {
   _id?: string;
@@ -71,6 +72,21 @@ function formatMonthYear(month: number | "", year: number | ""): string {
   return `${MONTH_NAMES[Number(month) - 1]} ${year}`;
 }
 
+function formatRangeWithPresent(start?: string, end?: string): string {
+  const startText = start
+    ? formatMonthYear(
+        isoToMonthYear(start).month,
+        isoToMonthYear(start).year,
+      )
+    : "";
+  const endText = end
+    ? formatMonthYear(isoToMonthYear(end).month, isoToMonthYear(end).year)
+    : "Present";
+
+  if (!startText || startText === "Select") return endText;
+  return `${startText} – ${endText}`;
+}
+
 export default function DocumentsScreen() {
   const { user, token } = useStore();
   const [loading, setLoading] = useState(false);
@@ -113,7 +129,11 @@ export default function DocumentsScreen() {
   const [editingEduIndex, setEditingEduIndex] = useState<number | null>(null);
 
   // Month/Year picker modal: which field is being edited
-  const [datePickerTarget, setDatePickerTarget] = useState<string | null>(null);
+  const [datePickerTarget, setDatePickerTarget] =
+    useState<DatePickerField | null>(null);
+  const [datePickerStep, setDatePickerStep] = useState<"month" | "year">(
+    "month",
+  );
   const YEAR_OPTIONS = getYearOptions();
 
   useEffect(() => {
@@ -354,6 +374,58 @@ export default function DocumentsScreen() {
     setShowEduForm(false);
     setEditingEduIndex(null);
     setEduFormMode("add");
+  };
+
+  const openDatePicker = (field: DatePickerField) => {
+    setDatePickerTarget(field);
+    setDatePickerStep("month");
+  };
+
+  const closeDatePicker = () => {
+    setDatePickerTarget(null);
+    setDatePickerStep("month");
+  };
+
+  const handleMonthSelect = (month: number) => {
+    if (datePickerTarget === "expStart") setExpStartMonth(month);
+    else if (datePickerTarget === "expEnd") setExpEndMonth(month);
+    else if (datePickerTarget === "eduStart") setEduStartMonth(month);
+    else if (datePickerTarget === "eduEnd") setEduEndMonth(month);
+
+    setDatePickerStep("year");
+  };
+
+  const handleYearSelect = (year: number) => {
+    if (datePickerTarget === "expStart") setExpStartYear(year);
+    else if (datePickerTarget === "expEnd") setExpEndYear(year);
+    else if (datePickerTarget === "eduStart") setEduStartYear(year);
+    else if (datePickerTarget === "eduEnd") setEduEndYear(year);
+
+    closeDatePicker();
+  };
+
+  const setEndDateAsPresent = () => {
+    if (datePickerTarget === "expEnd") {
+      setExpEndMonth("");
+      setExpEndYear("");
+    } else if (datePickerTarget === "eduEnd") {
+      setEduEndMonth("");
+      setEduEndYear("");
+    }
+
+    closeDatePicker();
+  };
+
+  const getDateFieldDisplay = (
+    month: number | "",
+    year: number | "",
+    placeholder: string,
+    showPresentWhenEmpty: boolean = false,
+  ) => {
+    if (month === "" || year === "") {
+      return showPresentWhenEmpty ? "Present" : placeholder;
+    }
+    return formatMonthYear(month, year);
   };
 
   const handleDeleteExperienceDocument = (doc: Document) => {
@@ -750,10 +822,7 @@ export default function DocumentsScreen() {
                     </ThemedText>
                     {(doc.issueDate || doc.expiryDate) && (
                       <ThemedText style={styles.dateRangeText}>
-                        {[
-                          doc.issueDate ? formatMonthYear(isoToMonthYear(doc.issueDate).month, isoToMonthYear(doc.issueDate).year) : null,
-                          doc.expiryDate ? formatMonthYear(isoToMonthYear(doc.expiryDate).month, isoToMonthYear(doc.expiryDate).year) : null,
-                        ].filter((s) => s && s !== "Select").join(" – ")}
+                        {formatRangeWithPresent(doc.issueDate, doc.expiryDate)}
                       </ThemedText>
                     )}
                   </View>
@@ -870,54 +939,69 @@ export default function DocumentsScreen() {
                 </View>
 
                 {/* Experience Start Date */}
-                <View style={styles.formGroup}>
-                  <ThemedText style={styles.formLabel}>Start Date</ThemedText>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("expStartMonth")}
+                <TouchableOpacity
+                  style={styles.dateInputWrapper}
+                  activeOpacity={0.8}
+                  onPress={() => openDatePicker("expStart")}
+                >
+                  <ThemedText style={styles.dateInputLabel}>
+                    Start date*
+                  </ThemedText>
+                  <View style={styles.dateInputField}>
+                    <ThemedText
+                      style={[
+                        styles.dateInputValue,
+                        expStartMonth === "" || expStartYear === ""
+                          ? styles.dateInputPlaceholder
+                          : undefined,
+                      ]}
                     >
-                      <ThemedText style={styles.dateFieldText}>
-                        {expStartMonth ? MONTH_NAMES[Number(expStartMonth) - 1] : "Month"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("expStartYear")}
-                    >
-                      <ThemedText style={styles.dateFieldText}>
-                        {expStartYear || "Year"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
+                      {getDateFieldDisplay(
+                        expStartMonth,
+                        expStartYear,
+                        "Start date*",
+                      )}
+                    </ThemedText>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={24}
+                      color="#1F2937"
+                    />
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Experience End Date */}
-                <View style={styles.formGroup}>
-                  <ThemedText style={styles.formLabel}>End Date</ThemedText>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("expEndMonth")}
+                <TouchableOpacity
+                  style={styles.dateInputWrapper}
+                  activeOpacity={0.8}
+                  onPress={() => openDatePicker("expEnd")}
+                >
+                  <ThemedText style={styles.dateInputLabel}>
+                    End date*
+                  </ThemedText>
+                  <View style={styles.dateInputField}>
+                    <ThemedText
+                      style={[
+                        styles.dateInputValue,
+                        expEndMonth === "" || expEndYear === ""
+                          ? styles.dateInputPlaceholder
+                          : undefined,
+                      ]}
                     >
-                      <ThemedText style={styles.dateFieldText}>
-                        {expEndMonth ? MONTH_NAMES[Number(expEndMonth) - 1] : "Month"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("expEndYear")}
-                    >
-                      <ThemedText style={styles.dateFieldText}>
-                        {expEndYear || "Year"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
+                      {getDateFieldDisplay(
+                        expEndMonth,
+                        expEndYear,
+                        "End date*",
+                        true,
+                      )}
+                    </ThemedText>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={24}
+                      color="#1F2937"
+                    />
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Certificate Name */}
                 <View style={styles.formGroup}>
@@ -1014,10 +1098,7 @@ export default function DocumentsScreen() {
                     </ThemedText>
                     {(doc.startDate || doc.endDate) && (
                       <ThemedText style={styles.dateRangeText}>
-                        {[
-                          doc.startDate ? formatMonthYear(isoToMonthYear(doc.startDate).month, isoToMonthYear(doc.startDate).year) : null,
-                          doc.endDate ? formatMonthYear(isoToMonthYear(doc.endDate).month, isoToMonthYear(doc.endDate).year) : null,
-                        ].filter((s) => s && s !== "Select").join(" – ")}
+                        {formatRangeWithPresent(doc.startDate, doc.endDate)}
                       </ThemedText>
                     )}
                   </View>
@@ -1131,54 +1212,69 @@ export default function DocumentsScreen() {
                 </View>
 
                 {/* Education Start Date */}
-                <View style={styles.formGroup}>
-                  <ThemedText style={styles.formLabel}>Start Date</ThemedText>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("eduStartMonth")}
+                <TouchableOpacity
+                  style={styles.dateInputWrapper}
+                  activeOpacity={0.8}
+                  onPress={() => openDatePicker("eduStart")}
+                >
+                  <ThemedText style={styles.dateInputLabel}>
+                    Start date*
+                  </ThemedText>
+                  <View style={styles.dateInputField}>
+                    <ThemedText
+                      style={[
+                        styles.dateInputValue,
+                        eduStartMonth === "" || eduStartYear === ""
+                          ? styles.dateInputPlaceholder
+                          : undefined,
+                      ]}
                     >
-                      <ThemedText style={styles.dateFieldText}>
-                        {eduStartMonth ? MONTH_NAMES[Number(eduStartMonth) - 1] : "Month"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("eduStartYear")}
-                    >
-                      <ThemedText style={styles.dateFieldText}>
-                        {eduStartYear || "Year"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
+                      {getDateFieldDisplay(
+                        eduStartMonth,
+                        eduStartYear,
+                        "Start date*",
+                      )}
+                    </ThemedText>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={24}
+                      color="#1F2937"
+                    />
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Education End Date */}
-                <View style={styles.formGroup}>
-                  <ThemedText style={styles.formLabel}>End Date</ThemedText>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("eduEndMonth")}
+                <TouchableOpacity
+                  style={styles.dateInputWrapper}
+                  activeOpacity={0.8}
+                  onPress={() => openDatePicker("eduEnd")}
+                >
+                  <ThemedText style={styles.dateInputLabel}>
+                    End date*
+                  </ThemedText>
+                  <View style={styles.dateInputField}>
+                    <ThemedText
+                      style={[
+                        styles.dateInputValue,
+                        eduEndMonth === "" || eduEndYear === ""
+                          ? styles.dateInputPlaceholder
+                          : undefined,
+                      ]}
                     >
-                      <ThemedText style={styles.dateFieldText}>
-                        {eduEndMonth ? MONTH_NAMES[Number(eduEndMonth) - 1] : "Month"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.dateField}
-                      onPress={() => setDatePickerTarget("eduEndYear")}
-                    >
-                      <ThemedText style={styles.dateFieldText}>
-                        {eduEndYear || "Year"}
-                      </ThemedText>
-                      <Ionicons name="chevron-down" size={18} color="#0066CC" />
-                    </TouchableOpacity>
+                      {getDateFieldDisplay(
+                        eduEndMonth,
+                        eduEndYear,
+                        "End date*",
+                        true,
+                      )}
+                    </ThemedText>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={24}
+                      color="#1F2937"
+                    />
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* Document Type */}
                 <View style={styles.formGroup}>
@@ -1305,31 +1401,39 @@ export default function DocumentsScreen() {
         <Modal
           transparent
           visible={!!datePickerTarget}
-          onRequestClose={() => setDatePickerTarget(null)}
+          onRequestClose={closeDatePicker}
         >
           <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
-            onPress={() => setDatePickerTarget(null)}
+            onPress={closeDatePicker}
           >
             <View style={styles.modalContent}>
               <ThemedText style={styles.modalTitle}>
-                {datePickerTarget?.endsWith("Month") ? "Select Month" : "Select Year"}
+                {datePickerStep === "month" ? "Select Month" : "Select Year"}
               </ThemedText>
+              {(datePickerTarget === "expEnd" || datePickerTarget === "eduEnd") && (
+                <TouchableOpacity
+                  style={styles.presentOption}
+                  onPress={setEndDateAsPresent}
+                >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color="#0066CC"
+                  />
+                  <ThemedText style={styles.presentOptionText}>
+                    Set as Present
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
               <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps="handled">
-                {datePickerTarget?.endsWith("Month")
+                {datePickerStep === "month"
                   ? MONTH_NAMES.map((name, idx) => (
                       <TouchableOpacity
                         key={name}
                         style={styles.modalOption}
-                        onPress={() => {
-                          const month = idx + 1;
-                          if (datePickerTarget === "expStartMonth") setExpStartMonth(month);
-                          else if (datePickerTarget === "expEndMonth") setExpEndMonth(month);
-                          else if (datePickerTarget === "eduStartMonth") setEduStartMonth(month);
-                          else if (datePickerTarget === "eduEndMonth") setEduEndMonth(month);
-                          setDatePickerTarget(null);
-                        }}
+                        onPress={() => handleMonthSelect(idx + 1)}
                       >
                         <ThemedText style={styles.modalOptionText}>{name}</ThemedText>
                       </TouchableOpacity>
@@ -1338,13 +1442,7 @@ export default function DocumentsScreen() {
                       <TouchableOpacity
                         key={year}
                         style={styles.modalOption}
-                        onPress={() => {
-                          if (datePickerTarget === "expStartYear") setExpStartYear(year);
-                          else if (datePickerTarget === "expEndYear") setExpEndYear(year);
-                          else if (datePickerTarget === "eduStartYear") setEduStartYear(year);
-                          else if (datePickerTarget === "eduEndYear") setEduEndYear(year);
-                          setDatePickerTarget(null);
-                        }}
+                        onPress={() => handleYearSelect(year)}
                       >
                         <ThemedText style={styles.modalOptionText}>{String(year)}</ThemedText>
                       </TouchableOpacity>
@@ -1709,27 +1807,48 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#1F2937",
   },
-  dateRow: {
-    flexDirection: "row",
-    gap: 12,
+  dateInputWrapper: {
+    marginBottom: 24,
   },
-  dateField: {
-    flex: 1,
+  dateInputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 6,
+  },
+  dateInputField: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#4B5563",
+    paddingBottom: 8,
   },
-  dateFieldText: {
-    fontSize: 15,
-    color: "#1F2937",
+  dateInputValue: {
+    flex: 1,
+    fontSize: 18,
+    color: "#111827",
+  },
+  dateInputPlaceholder: {
+    color: "#9CA3AF",
   },
   pickerScroll: {
     maxHeight: 280,
+  },
+  presentOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    marginBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E5E7EB",
+  },
+  presentOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0066CC",
   },
   dateRangeText: {
     fontSize: 12,
