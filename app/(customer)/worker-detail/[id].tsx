@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import uuid from "react-native-uuid";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
@@ -22,7 +21,7 @@ import { api, apiCall } from "../../../constants/api";
 export default function WorkerProfile() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { workers, addJob } = useStore();
+  const { workers, createJob, user, token } = useStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [description, setDescription] = useState("");
@@ -83,36 +82,37 @@ export default function WorkerProfile() {
     );
   }
 
-  const handleBook = () => {
-    console.log("Description on confirm:", description);
+  const handleBook = async () => {
     if (!description.trim()) {
       Alert.alert("Description required", "Please describe your issue.");
       return;
     }
-    // Add job to store
-    addJob({
-      id: uuid.v4(),
-      customerId: "c1", // Replace with real customer id if available
-      workerId: worker.id,
-      workerName: worker.name,
-      service: worker.category,
-      description,
-      status: "Pending",
-      date: new Date().toISOString(),
-      price: worker.hourlyRate,
-      attachedMedia: media,
-    });
-    Alert.alert("Booking Confirmed", "Your booking has been confirmed.", [
-      {
-        text: "OK",
-        onPress: () => {
-          setModalVisible(false);
-          setDescription("");
-          setMedia([]);
-          router.push("/(customer)/bookings");
+    if (!token || !user?._id) {
+      Alert.alert("Error", "Please log in to book.");
+      return;
+    }
+    try {
+      const workerId = worker._id || worker.id;
+      const job = await createJob({
+        serviceType: worker.category || "Other",
+        description: description.trim(),
+        requestedWorkerId: workerId,
+        scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        location: {
+          type: "Point",
+          coordinates: [79.8612, 6.9271],
+          address: "Address to be confirmed",
         },
-      },
-    ]);
+      });
+      setModalVisible(false);
+      setDescription("");
+      setMedia([]);
+      Alert.alert("Booking confirmed", "The worker will be notified and can accept your request.", [
+        { text: "OK", onPress: () => router.push("/(customer)/(tabs)/bookings") },
+      ]);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to create booking.");
+    }
   };
 
   const pickMedia = async () => {

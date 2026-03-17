@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     Image,
@@ -19,13 +20,24 @@ const { width } = Dimensions.get("window");
 
 export default function JobRequestsPage() {
   const router = useRouter();
-  const { jobs, updateJobStatus } = useStore();
-  const workerId = "1"; // TODO: Replace with real logged-in worker's id
+  const { jobs, fetchJobs, acceptJob, updateJobStatus, token, user } = useStore();
+  const workerId = user?._id || (user as any)?.id;
   const [filter, setFilter] = useState<"all" | "new" | "accepted">("all");
+  const [loading, setLoading] = useState(true);
 
-  const pendingJobs = jobs.filter((j) => j.status === "Pending");
-  const acceptedJobs = jobs.filter(
-    (j) => j.status === "Accepted" && j.workerId === workerId,
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      fetchJobs().finally(() => setLoading(false));
+    }
+  }, [token]);
+
+  const jobList = Array.isArray(jobs) ? jobs : [];
+  const pendingJobs = jobList.filter((j) => (j.status || "").toLowerCase() === "pending");
+  const acceptedJobs = jobList.filter(
+    (j) =>
+      (j.status || "").toLowerCase() === "accepted" &&
+      (j.workerId?._id === workerId || j.workerId === workerId),
   );
 
   const displayedJobs =
@@ -35,21 +47,33 @@ export default function JobRequestsPage() {
         ? acceptedJobs
         : [...pendingJobs, ...acceptedJobs];
 
-  const handleAcceptJob = (jobId: string) => {
-    updateJobStatus(jobId, "Accepted");
-    Alert.alert("Success", "Job accepted! You can now chat with the customer.");
+  const jobId = (j: any) => j._id || j.id;
+
+  const handleAcceptJob = async (id: string) => {
+    try {
+      await acceptJob(id);
+      Alert.alert("Success", "Job accepted! You can now chat with the customer.");
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to accept job.");
+    }
   };
 
-  const handleRejectJob = (jobId: string) => {
-    updateJobStatus(jobId, "Rejected");
+  const handleRejectJob = (id: string) => {
+    updateJobStatus(id, "Rejected");
     Alert.alert("Job Rejected", "This job request has been rejected.");
   };
 
-  const handleViewDetails = (jobId: string) => {
+  const handleViewDetails = (id: string) => {
     router.push({
       pathname: "/job-details",
-      params: { jobId },
+      params: { jobId: id },
     });
+  };
+
+  const formatDate = (d: string | Date) => {
+    if (!d) return "—";
+    const date = typeof d === "string" ? new Date(d) : d;
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -118,7 +142,11 @@ export default function JobRequestsPage() {
           </TouchableOpacity>
         </View>
 
-        {displayedJobs.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : displayedJobs.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons
               name="briefcase-outline"
@@ -131,152 +159,161 @@ export default function JobRequestsPage() {
             </Text>
           </View>
         ) : (
-          displayedJobs.map((job) => (
-            <TouchableOpacity
-              key={job.id}
-              style={styles.jobCard}
-              onPress={() => handleViewDetails(job.id)}
-            >
-              <View style={styles.jobCardHeader}>
-                <View>
-                  <Text style={styles.customerName}>{job.customerName}</Text>
-                  <Text style={styles.serviceType}>{job.serviceType}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        job.status === "Pending" ? "#FFA500" : "#4CAF50",
-                    },
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {job.status === "Pending" ? "🔔 New" : "✓ Accepted"}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={styles.description} numberOfLines={2}>
-                {job.description}
-              </Text>
-
-              <View style={styles.jobDetails}>
-                <View style={styles.detailItem}>
-                  <Ionicons
-                    name="location-outline"
-                    size={16}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.detailText}>{job.location}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={16}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.detailText}>{job.requestedDate}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.detailText}>{job.estimatedDuration}</Text>
-                </View>
-              </View>
-
-              {job.images && job.images.length > 0 && (
-                <View style={styles.imagesContainer}>
-                  {job.images.slice(0, 2).map((image, idx) => (
-                    <Image
-                      key={idx}
-                      source={{ uri: image }}
-                      style={styles.jobImage}
-                    />
-                  ))}
-                  {job.images.length > 2 && (
-                    <View style={styles.moreImages}>
-                      <Text style={styles.moreImagesText}>
-                        +{job.images.length - 2}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>Estimated Price:</Text>
-                <Text style={styles.priceValue}>{job.price} LKR</Text>
-              </View>
-
-              {job.status === "Pending" && (
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.rejectButton]}
-                    onPress={() => handleRejectJob(job.id)}
+          displayedJobs.map((job) => {
+            const id = jobId(job);
+            const isPending = (job.status || "").toLowerCase() === "pending";
+            const isAccepted = (job.status || "").toLowerCase() === "accepted";
+            const customerName = job.customerId?.name || "Customer";
+            const location = job.location?.address || "Address to be confirmed";
+            const requestedDate = formatDate(job.scheduledDate || job.createdAt);
+            const duration = job.estimatedDuration != null ? `${job.estimatedDuration} min` : "—";
+            const price = job.pricing?.totalAmount ?? job.pricing?.serviceCharge ?? 0;
+            return (
+              <TouchableOpacity
+                key={id}
+                style={styles.jobCard}
+                onPress={() => handleViewDetails(id)}
+              >
+                <View style={styles.jobCardHeader}>
+                  <View>
+                    <Text style={styles.customerName}>{customerName}</Text>
+                    <Text style={styles.serviceType}>{job.serviceType}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: isPending ? "#FFA500" : "#4CAF50",
+                      },
+                    ]}
                   >
-                    <Ionicons
-                      name="close-circle-outline"
-                      size={20}
-                      color="#FF6B6B"
-                    />
-                    <Text style={styles.rejectButtonText}>Reject</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.acceptButton]}
-                    onPress={() => handleAcceptJob(job.id)}
-                  >
-                    <Ionicons
-                      name="checkmark-circle-outline"
-                      size={20}
-                      color="white"
-                    />
-                    <Text style={styles.acceptButtonText}>Accept</Text>
-                  </TouchableOpacity>
+                    <Text style={styles.statusText}>
+                      {isPending ? "🔔 New" : "✓ Accepted"}
+                    </Text>
+                  </View>
                 </View>
-              )}
 
-              {job.status === "Accepted" && (
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.chatButton]}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/chat",
-                        params: { jobId: job.id, customerId: job.customerId },
-                      })
-                    }
-                  >
+                <Text style={styles.description} numberOfLines={2}>
+                  {job.description}
+                </Text>
+
+                <View style={styles.jobDetails}>
+                  <View style={styles.detailItem}>
                     <Ionicons
-                      name="chatbubble-outline"
-                      size={20}
-                      color="white"
+                      name="location-outline"
+                      size={16}
+                      color={Colors.primary}
                     />
-                    <Text style={styles.chatButtonText}>Chat</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.startButton]}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/job-details",
-                        params: { jobId: job.id },
-                      })
-                    }
-                  >
+                    <Text style={styles.detailText}>{location}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
                     <Ionicons
-                      name="play-circle-outline"
-                      size={20}
-                      color="white"
+                      name="calendar-outline"
+                      size={16}
+                      color={Colors.primary}
                     />
-                    <Text style={styles.startButtonText}>Start Job</Text>
-                  </TouchableOpacity>
+                    <Text style={styles.detailText}>{requestedDate}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.detailText}>{duration}</Text>
+                  </View>
                 </View>
-              )}
-            </TouchableOpacity>
-          ))
+
+                {job.images && job.images.length > 0 && (
+                  <View style={styles.imagesContainer}>
+                    {job.images.slice(0, 2).map((image: string, idx: number) => (
+                      <Image
+                        key={idx}
+                        source={{ uri: image }}
+                        style={styles.jobImage}
+                      />
+                    ))}
+                    {job.images.length > 2 && (
+                      <View style={styles.moreImages}>
+                        <Text style={styles.moreImagesText}>
+                          +{job.images.length - 2}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.priceContainer}>
+                  <Text style={styles.priceLabel}>Estimated Price:</Text>
+                  <Text style={styles.priceValue}>{price} LKR</Text>
+                </View>
+
+                {isPending && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.rejectButton]}
+                      onPress={() => handleRejectJob(id)}
+                    >
+                      <Ionicons
+                        name="close-circle-outline"
+                        size={20}
+                        color="#FF6B6B"
+                      />
+                      <Text style={styles.rejectButtonText}>Reject</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.acceptButton]}
+                      onPress={() => handleAcceptJob(id)}
+                    >
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.acceptButtonText}>Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {isAccepted && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.chatButton]}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/chat",
+                          params: { jobId: id, customerId: (job.customerId?._id || job.customerId)?.toString?.() || job.customerId },
+                        } as any)
+                      }
+                    >
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.chatButtonText}>Chat</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.startButton]}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/job-details",
+                          params: { jobId: id },
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="play-circle-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.startButtonText}>Start Job</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>

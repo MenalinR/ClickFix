@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
+    ActivityIndicator,
     Image,
     ScrollView,
     StyleSheet,
@@ -12,175 +12,52 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
+import { useStore } from "../../../constants/Store";
 
-type BookingFilter = "All" | "Completed" | "Cancelled";
-
-interface Booking {
-  id: string;
-  workerName: string;
-  workerImage: string;
-  serviceType: string;
-  amount: number;
-  date: string;
-  status: "Completed" | "Cancelled" | "Pending";
-  rating: number;
-  isRated: boolean;
-}
+type BookingFilter = "All" | "Pending" | "Completed" | "Cancelled";
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const { jobs, fetchJobs, token } = useStore();
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
+  const [loading, setLoading] = useState(true);
 
-  const bookings: Booking[] = [
-    {
-      id: "1",
-      workerName: "Ravi Kumar",
-      workerImage: "https://via.placeholder.com/40",
-      serviceType: "Plumbing",
-      amount: 3500,
-      date: "2024-01-15",
-      status: "Completed",
-      rating: 5,
-      isRated: true,
-    },
-    {
-      id: "2",
-      workerName: "Priya Sharma",
-      workerImage: "https://via.placeholder.com/40",
-      serviceType: "Electrical",
-      amount: 2500,
-      date: "2024-01-08",
-      status: "Completed",
-      rating: 4,
-      isRated: true,
-    },
-    {
-      id: "3",
-      workerName: "Arun Singh",
-      workerImage: "https://via.placeholder.com/40",
-      serviceType: "Carpentry",
-      amount: 4200,
-      date: "2024-01-01",
-      status: "Completed",
-      rating: 0,
-      isRated: false,
-    },
-    {
-      id: "4",
-      workerName: "Vijay Nair",
-      workerImage: "https://via.placeholder.com/40",
-      serviceType: "AC Repair",
-      amount: 2000,
-      date: "2023-12-25",
-      status: "Cancelled",
-      rating: 0,
-      isRated: false,
-    },
-  ];
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      fetchJobs().finally(() => setLoading(false));
+    }
+  }, [token]);
 
-  const filteredBookings = bookings.filter((booking) => {
-    if (selectedFilter === "All") return true;
-    return booking.status === selectedFilter;
-  });
+  const bookings = useMemo(() => (Array.isArray(jobs) ? jobs : []), [jobs]);
+
+  const filteredBookings = useMemo(() => {
+    if (selectedFilter === "All") return bookings;
+    const status = selectedFilter.toLowerCase();
+    return bookings.filter((j) => (j.status || "").toLowerCase() === status);
+  }, [bookings, selectedFilter]);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Completed":
-        return { background: "#E8F5E9", text: "#2E7D32" };
-      case "Cancelled":
-        return { background: "#FFEBEE", text: "#C62828" };
-      case "Pending":
-        return { background: "#FFF3E0", text: "#E65100" };
-      default:
-        return { background: Colors.lightBackground, text: Colors.primary };
-    }
+    const s = (status || "").toLowerCase();
+    if (s === "completed") return { background: "#E8F5E9", text: "#2E7D32" };
+    if (s === "cancelled" || s === "rejected") return { background: "#FFEBEE", text: "#C62828" };
+    if (s === "pending" || s === "accepted" || s === "on the way" || s === "in progress")
+      return { background: "#FFF3E0", text: "#E65100" };
+    return { background: Colors.lightBackground, text: Colors.primary };
   };
 
-  const renderBookingCard = ({ item }: { item: Booking }) => (
-    <TouchableOpacity style={styles.bookingCard}>
-      <View style={styles.cardContent}>
-        <Image source={{ uri: item.workerImage }} style={styles.workerImage} />
-        <View style={styles.bookingInfo}>
-          <Text style={styles.workerName}>{item.workerName}</Text>
-          <Text style={styles.serviceType}>{item.serviceType}</Text>
-          <View style={styles.dateRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={12}
-              color={Colors.textSecondary}
-            />
-            <Text style={styles.date}>{item.date}</Text>
-          </View>
-        </View>
-        <View style={styles.cardRight}>
-          <Text style={styles.amount}>{item.amount} LKR</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(item.status).background },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                { color: getStatusColor(item.status).text },
-              ]}
-            >
-              {item.status}
-            </Text>
-          </View>
-        </View>
-      </View>
+  const formatDate = (d: string | Date) => {
+    if (!d) return "—";
+    const date = typeof d === "string" ? new Date(d) : d;
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
 
-      {/* Action Buttons */}
-      <View style={styles.actionRow}>
-        {item.isRated ? (
-          <View style={styles.ratingDisplay}>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Ionicons
-                  key={star}
-                  name={star <= item.rating ? "star" : "star-outline"}
-                  size={12}
-                  color={star <= item.rating ? "#FFB800" : Colors.border}
-                  style={{ marginRight: 2 }}
-                />
-              ))}
-            </View>
-            <Text style={styles.ratingText}>You rated {item.rating}/5</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.rateButton}
-            onPress={() =>
-              router.push({
-                pathname: "/customer/rating-review",
-                params: { workerName: item.workerName },
-              })
-            }
-          >
-            <Ionicons name="star-outline" size={14} color={Colors.primary} />
-            <Text style={styles.rateButtonText}>Rate</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={styles.chatButton}
-          onPress={() => router.push("../chat")}
-        >
-          <Ionicons
-            name="chatbubble-outline"
-            size={14}
-            color={Colors.primary}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.detailsButton}>
-          <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+  const workerName = (job: any) =>
+    job?.workerId?.name || job?.requestedWorkerId?.name || "—";
+  const workerImage = (job: any) =>
+    job?.workerId?.image || job?.requestedWorkerId?.image || "https://via.placeholder.com/40";
+  const amount = (job: any) =>
+    job?.pricing?.totalAmount ?? job?.pricing?.serviceCharge ?? 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -198,7 +75,7 @@ export default function BookingsScreen() {
 
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
-          {(["All", "Completed", "Cancelled"] as BookingFilter[]).map(
+          {(["All", "Pending", "Completed", "Cancelled"] as BookingFilter[]).map(
             (filter) => (
               <TouchableOpacity
                 key={filter}
@@ -222,7 +99,7 @@ export default function BookingsScreen() {
         </View>
 
         {/* Summary Stats */}
-        {selectedFilter === "All" && (
+        {selectedFilter === "All" && !loading && (
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Total Bookings</Text>
@@ -231,32 +108,59 @@ export default function BookingsScreen() {
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Total Spent</Text>
               <Text style={styles.statValue}>
-                {bookings.reduce((sum, b) => sum + b.amount, 0)} LKR
-              </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Avg Rating</Text>
-              <Text style={styles.statValue}>
-                {(
-                  bookings
-                    .filter((b) => b.isRated)
-                    .reduce((sum, b) => sum + b.rating, 0) /
-                    bookings.filter((b) => b.isRated).length || 0
-                ).toFixed(1)}
+                {bookings.reduce((sum, b) => sum + amount(b), 0)} LKR
               </Text>
             </View>
           </View>
         )}
 
-        {/* Bookings List */}
-        {filteredBookings.length > 0 ? (
-          <FlatList
-            data={filteredBookings}
-            renderItem={renderBookingCard}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          />
+        {/* Bookings Table */}
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : filteredBookings.length > 0 ? (
+          <View style={styles.tableWrap}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, styles.colDate]}>Date</Text>
+              <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
+              <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
+              <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
+              <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
+            </View>
+            {filteredBookings.map((job) => {
+              const id = job._id || job.id;
+              const status = (job.status || "Pending") as string;
+              const colors = getStatusColor(status);
+              return (
+                <View key={id} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
+                    {formatDate(job.scheduledDate || job.createdAt)}
+                  </Text>
+                  <View style={[styles.colWorker, styles.cellWorker]}>
+                    <Image
+                      source={{ uri: workerImage(job) }}
+                      style={styles.tableWorkerImage}
+                    />
+                    <Text style={styles.tableCell} numberOfLines={1}>
+                      {workerName(job)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.tableCell, styles.colService]} numberOfLines={1}>
+                    {job.serviceType || "—"}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.colAmount]}>
+                    {amount(job)} LKR
+                  </Text>
+                  <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.statusText, { color: colors.text }]} numberOfLines={1}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={48} color={Colors.border} />
@@ -479,5 +383,57 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 13,
     fontWeight: "600",
+  },
+  loadingWrap: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  tableWrap: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  tableHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    backgroundColor: Colors.lightBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tableHeaderText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  colDate: { flex: 0.9, minWidth: 56 },
+  colWorker: { flex: 1.1, minWidth: 72 },
+  colService: { flex: 0.9, minWidth: 56 },
+  colAmount: { flex: 0.8, minWidth: 56 },
+  colStatus: { flex: 1, minWidth: 70 },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tableCell: {
+    fontSize: 12,
+    color: Colors.text,
+  },
+  cellWorker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tableWorkerImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
 });

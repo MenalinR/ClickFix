@@ -20,6 +20,7 @@ const notificationSchema = new mongoose.Schema(
         "DOCUMENT_VERIFIED",
         "DOCUMENT_REJECTED",
         "JOB_ASSIGNED",
+        "JOB_REQUESTED",
         "JOB_COMPLETED",
         "PAYMENT_RECEIVED",
         "REVIEW_RECEIVED",

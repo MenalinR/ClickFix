@@ -1,6 +1,7 @@
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
+const { createNotification } = require("./notificationController");
 
 // @desc    Create new job
 // @route   POST /api/jobs
@@ -15,33 +16,71 @@ exports.createJob = async (req, res) => {
       scheduledDate,
       urgency,
       estimatedHours,
+      requestedWorkerId,
     } = req.body;
 
-    // Get default hourly rate based on service type (you can adjust these)
+    // Get default hourly rate based on service type (matches Worker category enum)
     const hourlyRateMap = {
-      Electrician: 50,
       Plumber: 45,
+      Electrician: 50,
       Carpenter: 40,
+      Cleaner: 30,
+      "AC Technician": 55,
       Painter: 35,
-      "AC Repair": 55,
-      "Appliance Repair": 45,
-      "General Handyman": 30,
+      Other: 40,
     };
 
-    const job = await Job.create({
+    const defaultLocation = {
+      type: "Point",
+      coordinates: [79.8612, 6.9271],
+      address: "Address to be confirmed",
+    };
+    const defaultScheduledDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const jobPayload = {
       customerId: req.user._id,
       serviceType,
       description,
-      images,
-      location,
-      scheduledDate,
-      urgency,
+      images: images || [],
+      location: location && location.coordinates ? location : defaultLocation,
+      scheduledDate: scheduledDate ? new Date(scheduledDate) : defaultScheduledDate,
+      urgency: urgency || "Normal",
       pricing: {
         hourlyRate: hourlyRateMap[serviceType] || 40,
         estimatedHours: estimatedHours || 2,
         platformFee: 5,
       },
-    });
+    };
+    if (requestedWorkerId) {
+      jobPayload.requestedWorkerId = requestedWorkerId;
+    }
+
+    const job = await Job.create(jobPayload);
+
+    // Notify requested worker when customer chooses them
+    if (requestedWorkerId) {
+      try {
+        const customer = await Customer.findById(req.user._id).select("name");
+        const worker = await Worker.findById(requestedWorkerId).select("name");
+        if (worker) {
+          await createNotification({
+            recipient: requestedWorkerId,
+            recipientModel: "Worker",
+            type: "JOB_REQUESTED",
+            title: "New booking request",
+            message: `${customer?.name || "A customer"} requested you for ${serviceType}: ${(description || "").slice(0, 60)}${description && description.length > 60 ? "…" : ""}`,
+            data: {
+              jobId: job._id.toString(),
+              customerId: req.user._id.toString(),
+              workerId: requestedWorkerId,
+            },
+            actionUrl: "/worker/job-requests",
+          });
+        }
+      } catch (notifErr) {
+        console.error("Error creating job request notification:", notifErr);
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -66,12 +105,16 @@ exports.getJobs = async (req, res) => {
     if (req.userType === "customer") {
       query.customerId = req.user._id;
     }
-    // If worker, show jobs assigned to them
+    // If worker, show jobs assigned to them or requested for them
     else if (req.userType === "worker") {
-      query.workerId = req.user._id;
+      query.$or = [
+        { workerId: req.user._id },
+        { requestedWorkerId: req.user._id },
+      ];
     }
 
     const jobs = await Job.find(query)
+      .populate("requestedWorkerId", "name phone category")
       .populate("customerId", "name phone")
       .populate("workerId", "name phone category rating")
       .sort("-createdAt");
@@ -205,19 +248,29 @@ exports.assignWorker = async (req, res) => {
     }
 
     const worker = await Worker.findById(req.user._id);
+    const isRequestedForMe =
+      job.requestedWorkerId &&
+      job.requestedWorkerId.toString() === req.user._id.toString();
 
-    if (worker.category !== job.serviceType) {
+    if (!isRequestedForMe && worker.category !== job.serviceType) {
       return res.status(400).json({
         success: false,
         message: "Job category does not match your skills",
       });
     }
 
+    if (job.requestedWorkerId && !isRequestedForMe) {
+      return res.status(403).json({
+        success: false,
+        message: "This job was requested for another worker",
+      });
+    }
+
     job.workerId = req.user._id;
-    job.status = "accepted";
-    job.pricing.hourlyRate = worker.hourlyRate;
+    job.status = "Accepted";
+    job.pricing.hourlyRate = worker.hourlyRate || job.pricing.hourlyRate;
     job.timeline.push({
-      status: "accepted",
+      status: "Accepted",
       timestamp: new Date(),
     });
 
@@ -249,15 +302,22 @@ exports.updateJobStatus = async (req, res) => {
       });
     }
 
-    // Check authorization
-    if (
-      req.userType === "worker" &&
-      job.workerId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized",
-      });
+    // Check authorization: worker can update if assigned or if they are the requested worker (e.g. reject)
+    if (req.userType === "worker") {
+      const isAssigned = job.workerId && job.workerId.toString() === req.user._id.toString();
+      const isRequested = job.requestedWorkerId && job.requestedWorkerId.toString() === req.user._id.toString();
+      if (!isAssigned && !isRequested) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized",
+        });
+      }
+      if (!isAssigned && isRequested && req.body.status !== "Rejected") {
+        return res.status(400).json({
+          success: false,
+          message: "Accept this job via the assign endpoint first",
+        });
+      }
     }
 
     job.status = req.body.status;

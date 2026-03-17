@@ -348,10 +348,21 @@ export const useStore = create<StoreState>()(
         token,
       );
 
-      // Remove from available jobs
+      const jobs = get().jobs;
+      const updatedJobs = jobs.some(
+        (j) => (j as any)._id === jobId || (j as any).id === jobId
+      )
+        ? jobs.map((j) =>
+            (j as any)._id === jobId || (j as any).id === jobId
+              ? response.data
+              : j
+          )
+        : [...jobs, response.data];
       set({
-        availableJobs: availableJobs.filter((j) => j.id !== jobId),
-        jobs: [...get().jobs, response.data],
+        availableJobs: availableJobs.filter(
+          (j) => (j as any)._id !== jobId && (j as any).id !== jobId
+        ),
+        jobs: updatedJobs,
       });
     } catch (error: any) {
       set({ error: error.message });
@@ -377,9 +388,10 @@ export const useStore = create<StoreState>()(
         token,
       );
 
-      // Update job in state
       const updatedJobs = jobs.map((j) =>
-        j.id === jobId ? { ...j, status: response.data.status } : j,
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data, status: response.data.status }
+          : j
       );
       set({ jobs: updatedJobs });
     } catch (error: any) {
