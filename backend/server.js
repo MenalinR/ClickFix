@@ -94,10 +94,13 @@ const errorHandler = require("./middleware/error");
 
 // Health check route
 app.get("/api/health", (req, res) => {
+  const Job = require("./models/Job");
+  const serviceTypeEnum = Job.schema.path("serviceType").enumValues;
   res.json({
     status: "OK",
     message: "ClickFix API is running",
     timestamp: new Date().toISOString(),
+    debug: { serviceTypeEnum },
   });
 });
 
