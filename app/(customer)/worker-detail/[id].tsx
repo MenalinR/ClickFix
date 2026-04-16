@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
