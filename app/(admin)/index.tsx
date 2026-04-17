@@ -16,9 +16,14 @@ import { useStore } from "../../constants/Store";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { workers, bookings, token } = useStore();
+  const { workers, bookings, token, logout } = useStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/(auth)/admin-login" as any);
+  };
 
   const totalWorkers = workers.length;
   const totalBookings = bookings?.length || 0;
@@ -111,7 +116,7 @@ export default function AdminDashboard() {
             <Text style={styles.subheading}>Welcome back, Admin</Text>
           </View>
           <TouchableOpacity
-            onPress={() => router.push("/(auth)/login")}
+            onPress={handleLogout}
             style={styles.logoutButton}
           >
             <Ionicons name="log-out-outline" size={24} color={Colors.primary} />
