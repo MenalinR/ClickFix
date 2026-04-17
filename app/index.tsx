@@ -32,7 +32,7 @@ export default function LandingPage() {
   };
 
   const handleHardwareShopPress = () => {
-    router.push("/(auth)/admin-login");
+    router.push("/(auth)/hardware-shop");
   };
 
   return (

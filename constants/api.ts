@@ -13,6 +13,8 @@ export const api = {
     workerLogin: `${API_URL}/auth/worker/login`,
     customerLogin: `${API_URL}/auth/customer/login`,
     adminLogin: `${API_URL}/auth/admin/login`,
+    hardwareShopRegister: `${API_URL}/auth/hardwareShop/register`,
+    hardwareShopLogin: `${API_URL}/auth/hardwareShop/login`,
     getMe: `${API_URL}/auth/me`,
   },
 
@@ -113,6 +115,16 @@ export const api = {
       `${API_URL}/hardware/requests/${id}/status`,
     markDelivered: (id: string) =>
       `${API_URL}/hardware/requests/${id}/delivered`,
+  },
+
+  // Hardware Shop
+  hardwareShop: {
+    getItems: `${API_URL}/hardwareShop/items`,
+    addItem: `${API_URL}/hardwareShop/items`,
+    updateItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
+    deleteItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
+    getStats: `${API_URL}/hardwareShop/stats`,
+    getOrders: `${API_URL}/hardwareShop/orders`,
   },
 
   // Health

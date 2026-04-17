@@ -5,17 +5,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AdminLoginScreen() {
   const router = useRouter();
@@ -26,7 +25,6 @@ export default function AdminLoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    // Validation
     if (!email.trim()) {
       Alert.alert("Error", "Please enter your email");
       return;
@@ -44,7 +42,6 @@ export default function AdminLoginScreen() {
       });
 
       if (response.success && response.token) {
-        // Save token and user data
         setToken(response.token);
         setUser(response.user);
         setUserType("admin");
@@ -64,21 +61,20 @@ export default function AdminLoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Hardware Shop</Text>
-          <Text style={styles.subtitle}>Admin Access</Text>
-        </View>
+      <View style={styles.content}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
 
-        {/* Form */}
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Login as Admin</Text>
+
         <View style={styles.form}>
-          {/* Email Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="admin@clickfix.com"
+              placeholder="Enter your email"
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -88,7 +84,6 @@ export default function AdminLoginScreen() {
             />
           </View>
 
-          {/* Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordContainer}>
@@ -115,34 +110,32 @@ export default function AdminLoginScreen() {
             </View>
           </View>
 
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Test Credentials:</Text>
+            <Text style={styles.infoText}>Email: admin@clickfix.com</Text>
+            <Text style={styles.infoText}>Password: admin123</Text>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.loginButton,
+              pressed && { opacity: 0.7 },
+              loading && { opacity: 0.6 },
+            ]}
             onPress={handleLogin}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <View style={styles.buttonContent}>
+                <ActivityIndicator color="white" size="small" />
+                <Text style={styles.buttonText}>Logging in...</Text>
+              </View>
             ) : (
-              <Text style={styles.loginButtonText}>Login to Hardware Shop</Text>
+              <Text style={styles.buttonText}>Log In</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
-
-        {/* Demo Credentials */}
-        <View style={styles.demoBox}>
-          <Text style={styles.demoTitle}>Demo Hardware Shop Credentials:</Text>
-          <Text style={styles.demoText}>Email: admin@clickfix.com</Text>
-          <Text style={styles.demoText}>Password: admin123</Text>
-        </View>
-
-        {/* Back Button */}
-        <View style={styles.footer}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>← Back to Home</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -150,107 +143,101 @@ export default function AdminLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
+  },
+  content: {
+    padding: 24,
+    flex: 1,
+    justifyContent: "center",
+  },
+  backBtn: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 32,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    marginBottom: 40,
+  },
+  form: {
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  input: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: Colors.border,
     borderRadius: 8,
-    backgroundColor: "#f9f9f9",
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
+    fontFamily: "Inter_400Regular",
     color: Colors.text,
   },
   eyeIcon: {
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    justifyContent: "space-between",
-    paddingVertical: 20,
-  },
-  header: {
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-  },
-  form: {
-    marginBottom: 30,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
+  infoBox: {
+    backgroundColor: "#F0F8FF",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#000",
+    padding: 12,
+    marginVertical: 4,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: "#666",
+    marginBottom: 6,
+  },
+  infoText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#666",
   },
   loginButton: {
     backgroundColor: Colors.primary,
-    borderRadius: 8,
     paddingVertical: 14,
+    borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 10,
   },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  demoBox: {
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 20,
-  },
-  demoTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 12,
-    color: "#333",
-    marginBottom: 4,
-  },
-  footer: {
+  buttonContent: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 20,
+    gap: 8,
   },
-  backLink: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: "600",
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
   },
 });

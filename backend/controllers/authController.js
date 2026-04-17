@@ -1,6 +1,7 @@
 const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
 const Admin = require("../models/Admin");
+const HardwareShop = require("../models/HardwareShop");
 const { sendTokenResponse } = require("../utils/auth");
 
 // @desc    Register Worker
@@ -228,6 +229,104 @@ exports.loginAdmin = async (req, res) => {
   }
 };
 
+// @desc    Register Hardware Shop
+// @route   POST /api/auth/hardwareShop/register
+// @access  Public
+exports.registerHardwareShop = async (req, res) => {
+  try {
+    const {
+      shopName,
+      email,
+      phone,
+      password,
+      address,
+      city,
+      licenseNumber,
+    } = req.body;
+
+    // Check if hardware shop exists
+    const existingShop = await HardwareShop.findOne({ email });
+    if (existingShop) {
+      return res.status(400).json({
+        success: false,
+        message: "Hardware shop with this email already exists",
+      });
+    }
+
+    // Create hardware shop
+    const shop = await HardwareShop.create({
+      shopName,
+      email,
+      phone,
+      password,
+      address,
+      city,
+      licenseNumber,
+    });
+
+    sendTokenResponse(shop, 201, res, "hardwareShop");
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Login Hardware Shop
+// @route   POST /api/auth/hardwareShop/login
+// @access  Public
+exports.loginHardwareShop = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password",
+      });
+    }
+
+    // Check for hardware shop
+    const shop = await HardwareShop.findOne({ email }).select("+password");
+    if (!shop) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Check if shop is active
+    if (!shop.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: "Shop account is inactive",
+      });
+    }
+
+    // Check password
+    const isMatch = await shop.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Update last login
+    shop.lastLogin = Date.now();
+    await shop.save();
+
+    sendTokenResponse(shop, 200, res, "hardwareShop");
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private
@@ -240,6 +339,8 @@ exports.getMe = async (req, res) => {
       user = await Customer.findById(req.user._id);
     } else if (req.userType === "admin") {
       user = await Admin.findById(req.user._id);
+    } else if (req.userType === "hardwareShop") {
+      user = await HardwareShop.findById(req.user._id);
     }
 
     res.status(200).json({

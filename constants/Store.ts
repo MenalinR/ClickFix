@@ -12,7 +12,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  userType: "worker" | "customer" | "admin";
+  userType: "worker" | "customer" | "admin" | "hardwareShop";
 }
 
 export interface Worker extends User {
@@ -67,12 +67,14 @@ interface StoreState {
   loginWorker: (email: string, password: string) => Promise<void>;
   loginCustomer: (email: string, password: string) => Promise<void>;
   loginAdmin: (email: string, password: string) => Promise<void>;
+  loginHardwareShop: (email: string, password: string) => Promise<void>;
   registerWorker: (data: any) => Promise<void>;
   registerCustomer: (data: any) => Promise<void>;
+  registerHardwareShop: (data: any) => Promise<void>;
   logout: () => void;
   setToken: (token: string) => void;
   setUser: (user: User | null) => void;
-  setUserType: (userType: "worker" | "customer" | "admin") => void;
+  setUserType: (userType: "worker" | "customer" | "admin" | "hardwareShop") => void;
 
   // Fetch Data
   fetchWorkers: (filters?: any) => Promise<void>;
@@ -165,6 +167,27 @@ export const useStore = create<StoreState>()(
     }
   },
 
+  loginHardwareShop: async (email: string, password: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await apiCall(api.auth.hardwareShopLogin, "POST", {
+        email,
+        password,
+      });
+      const user = { ...response.user, _id: response.user.id };
+      set({
+        user,
+        token: response.token,
+        isLoggedIn: true,
+      });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   registerWorker: async (data: any) => {
     set({ loading: true, error: null });
     try {
@@ -187,6 +210,24 @@ export const useStore = create<StoreState>()(
     set({ loading: true, error: null });
     try {
       const response = await apiCall(api.auth.customerRegister, "POST", data);
+      const user = { ...response.user, _id: response.user.id };
+      set({
+        user,
+        token: response.token,
+        isLoggedIn: true,
+      });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  registerHardwareShop: async (data: any) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await apiCall(api.auth.hardwareShopRegister, "POST", data);
       const user = { ...response.user, _id: response.user.id };
       set({
         user,

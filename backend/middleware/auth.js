@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
 const Admin = require("../models/Admin");
+const HardwareShop = require("../models/HardwareShop");
 
 exports.protect = async (req, res, next) => {
   try {
@@ -36,6 +37,9 @@ exports.protect = async (req, res, next) => {
       } else if (decoded.userType === "admin") {
         req.user = await Admin.findById(decoded.id);
         req.userType = "admin";
+      } else if (decoded.userType === "hardwareShop") {
+        req.user = await HardwareShop.findById(decoded.id);
+        req.userType = "hardwareShop";
       }
 
       if (!req.user) {

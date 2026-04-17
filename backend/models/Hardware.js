@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const hardwareItemSchema = new mongoose.Schema(
   {
+    shopId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HardwareShop",
+      required: true,
+    },
     name: {
       type: String,
       required: true,

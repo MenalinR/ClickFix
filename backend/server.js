@@ -88,6 +88,7 @@ app.use("/api/jobs", require("./routes/jobs"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/reviews", require("./routes/reviews"));
 app.use("/api/hardware", require("./routes/hardware"));
+app.use("/api/hardwareShop", require("./routes/hardwareShop"));
 app.use("/api/notifications", require("./routes/notifications"));
 
 const errorHandler = require("./middleware/error");
