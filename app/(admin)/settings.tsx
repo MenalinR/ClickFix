@@ -150,15 +150,6 @@ export default function AdminSettings() {
                     </View>
                 </View>
 
-                {/* Logout Button */}
-                <TouchableOpacity 
-                    style={styles.logoutButton}
-                    onPress={() => router.push('/(auth)/login')}
-                >
-                    <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
-                    <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
-
                 <View style={{ height: 40 }} />
             </ScrollView>
         </SafeAreaView>
@@ -251,20 +242,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: Colors.text,
         flex: 1,
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FF6B6B20',
-        borderRadius: 12,
-        padding: 16,
-        gap: 8,
-        marginTop: 8,
-    },
-    logoutText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#FF6B6B',
     },
 });
