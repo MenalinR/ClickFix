@@ -62,7 +62,10 @@ export default function AdminLoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <TouchableOpacity onPress={() => router.replace("/")} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => router.replace("/")}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
 
