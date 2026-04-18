@@ -128,42 +128,6 @@ export default function CustomerHome() {
           />
         </View>
 
-        {/* DEBUG: job fetch diagnostic (remove later) */}
-        <View
-          style={{
-            backgroundColor: "#FFF8E1",
-            padding: 8,
-            borderRadius: 6,
-            marginBottom: 12,
-          }}
-        >
-          <Text style={{ fontSize: 11, color: "#E65100" }}>
-            DEBUG · total jobs: {(Array.isArray(jobs) ? jobs : []).length} · to
-            review: {toReviewJobs.length}
-          </Text>
-          <Text style={{ fontSize: 10, color: "#E65100" }}>
-            statuses:{" "}
-            {(Array.isArray(jobs) ? jobs : [])
-              .map((j: any) => j.status)
-              .join(", ") || "—"}
-          </Text>
-          <TouchableOpacity
-            style={{
-              marginTop: 6,
-              alignSelf: "flex-start",
-              backgroundColor: "#E65100",
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 4,
-            }}
-            onPress={() => token && fetchJobs()}
-          >
-            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-              Refresh jobs
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* To Review (worker proposed a price, awaiting customer decision) */}
         {toReviewJobs.length > 0 && (
           <View style={styles.toReviewSection}>
