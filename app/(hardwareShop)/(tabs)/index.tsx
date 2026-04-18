@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,7 +31,12 @@ export default function HardwareShopDashboardScreen() {
   const fetchStats = async () => {
     try {
       if (!token) return;
-      const response = await apiCall(api.hardwareShop.getStats, "GET", undefined, token);
+      const response = await apiCall(
+        api.hardwareShop.getStats,
+        "GET",
+        undefined,
+        token,
+      );
       if (response.success) {
         setStats(response.data);
       }
@@ -45,7 +51,7 @@ export default function HardwareShopDashboardScreen() {
     useCallback(() => {
       setLoading(true);
       fetchStats();
-    }, [token])
+    }, [token]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -58,6 +64,11 @@ export default function HardwareShopDashboardScreen() {
     return name || "Your Shop";
   };
 
+  const handleBack = () => {
+    logout();
+    router.replace("/(auth)/hardware-shop");
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -67,9 +78,16 @@ export default function HardwareShopDashboardScreen() {
         }
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.welcomeText}>Welcome Back,</Text>
-            <Text style={styles.shopName}>{formatShopName((user as any)?.shopName)}</Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.welcomeText}>Welcome Back,</Text>
+              <Text style={styles.shopName}>
+                {formatShopName((user as any)?.shopName)}
+              </Text>
+            </View>
           </View>
           <Ionicons name="storefront" size={32} color={Colors.primary} />
         </View>
@@ -84,11 +102,7 @@ export default function HardwareShopDashboardScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons
-                    name="cube"
-                    size={24}
-                    color={Colors.primary}
-                  />
+                  <Ionicons name="cube" size={24} color={Colors.primary} />
                 </View>
                 <Text style={styles.statValue}>{stats.totalItems}</Text>
                 <Text style={styles.statLabel}>Total Items</Text>
@@ -96,11 +110,7 @@ export default function HardwareShopDashboardScreen() {
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons
-                    name="time"
-                    size={24}
-                    color="#FF9800"
-                  />
+                  <Ionicons name="time" size={24} color="#FF9800" />
                 </View>
                 <Text style={styles.statValue}>{stats.pendingOrders}</Text>
                 <Text style={styles.statLabel}>Pending Orders</Text>
@@ -108,11 +118,7 @@ export default function HardwareShopDashboardScreen() {
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={24}
-                    color="#4CAF50"
-                  />
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
                 </View>
                 <Text style={styles.statValue}>{stats.approvedOrders}</Text>
                 <Text style={styles.statLabel}>Approved</Text>
@@ -120,11 +126,7 @@ export default function HardwareShopDashboardScreen() {
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons
-                    name="checkmark-done"
-                    size={24}
-                    color="#2196F3"
-                  />
+                  <Ionicons name="checkmark-done" size={24} color="#2196F3" />
                 </View>
                 <Text style={styles.statValue}>{stats.deliveredOrders}</Text>
                 <Text style={styles.statLabel}>Delivered</Text>
@@ -140,9 +142,15 @@ export default function HardwareShopDashboardScreen() {
                     styles.actionButton,
                     pressed && { opacity: 0.7 },
                   ]}
-                  onPress={() => router.push("/(hardwareShop)/(tabs)/inventory")}
+                  onPress={() =>
+                    router.push("/(hardwareShop)/(tabs)/inventory")
+                  }
                 >
-                  <Ionicons name="add-circle" size={32} color={Colors.primary} />
+                  <Ionicons
+                    name="add-circle"
+                    size={32}
+                    color={Colors.primary}
+                  />
                   <Text style={styles.actionLabel}>Add Item</Text>
                 </Pressable>
 
@@ -162,7 +170,11 @@ export default function HardwareShopDashboardScreen() {
             {/* Info Section */}
             <View style={styles.infoSection}>
               <View style={styles.infoItem}>
-                <Ionicons name="information-circle" size={20} color={Colors.primary} />
+                <Ionicons
+                  name="information-circle"
+                  size={20}
+                  color={Colors.primary}
+                />
                 <Text style={styles.infoText}>
                   You have {stats.pendingOrders} pending orders to manage.
                 </Text>
@@ -190,6 +202,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  backBtn: {
+    padding: 4,
   },
   welcomeText: {
     fontSize: 14,
