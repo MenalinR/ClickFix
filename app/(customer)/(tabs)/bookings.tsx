@@ -9,6 +9,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
@@ -120,47 +121,49 @@ export default function BookingsScreen() {
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         ) : filteredBookings.length > 0 ? (
-          <View style={styles.tableWrap}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, styles.colDate]}>Date</Text>
-              <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
-              <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
-              <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
-              <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.horizontalScroll}>
+            <View style={styles.tableWrap}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, styles.colDate]}>Date</Text>
+                <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
+                <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
+                <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
+                <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
+              </View>
+              {filteredBookings.map((job) => {
+                const id = job._id || job.id;
+                const status = (job.status || "Pending") as string;
+                const colors = getStatusColor(status);
+                return (
+                  <View key={id} style={styles.tableRow}>
+                    <Text style={[styles.tableCell, styles.colDate]}>
+                      {formatDate(job.scheduledDate || job.createdAt)}
+                    </Text>
+                    <View style={[styles.colWorker, styles.cellWorker]}>
+                      <Image
+                        source={{ uri: workerImage(job) }}
+                        style={styles.tableWorkerImage}
+                      />
+                      <Text style={styles.tableCell}>
+                        {workerName(job)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.tableCell, styles.colService]}>
+                      {job.serviceType || "—"}
+                    </Text>
+                    <Text style={[styles.tableCell, styles.colAmount]}>
+                      {amount(job)} LKR
+                    </Text>
+                    <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.statusText, { color: colors.text }]}>
+                        {status}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
-            {filteredBookings.map((job) => {
-              const id = job._id || job.id;
-              const status = (job.status || "Pending") as string;
-              const colors = getStatusColor(status);
-              return (
-                <View key={id} style={styles.tableRow}>
-                  <Text style={[styles.tableCell, styles.colDate]} numberOfLines={1}>
-                    {formatDate(job.scheduledDate || job.createdAt)}
-                  </Text>
-                  <View style={[styles.colWorker, styles.cellWorker]}>
-                    <Image
-                      source={{ uri: workerImage(job) }}
-                      style={styles.tableWorkerImage}
-                    />
-                    <Text style={styles.tableCell} numberOfLines={1}>
-                      {workerName(job)}
-                    </Text>
-                  </View>
-                  <Text style={[styles.tableCell, styles.colService]} numberOfLines={1}>
-                    {job.serviceType || "—"}
-                  </Text>
-                  <Text style={[styles.tableCell, styles.colAmount]}>
-                    {amount(job)} LKR
-                  </Text>
-                  <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
-                    <Text style={[styles.statusText, { color: colors.text }]} numberOfLines={1}>
-                      {status}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={48} color={Colors.border} />
@@ -302,12 +305,15 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "flex-start",
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
   },
   actionRow: {
@@ -388,18 +394,23 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     alignItems: "center",
   },
+  horizontalScroll: {
+    marginHorizontal: -16,
+  },
   tableWrap: {
     backgroundColor: "white",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: "hidden",
+    minWidth: "100%",
   },
   tableHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     backgroundColor: Colors.lightBackground,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -409,31 +420,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textSecondary,
   },
-  colDate: { flex: 0.9, minWidth: 56 },
-  colWorker: { flex: 1.1, minWidth: 72 },
-  colService: { flex: 0.9, minWidth: 56 },
-  colAmount: { flex: 0.8, minWidth: 56 },
-  colStatus: { flex: 1, minWidth: 70 },
+  colDate: { width: 100, justifyContent: "center" },
+  colWorker: { width: 140, justifyContent: "center" },
+  colService: { width: 110, justifyContent: "center" },
+  colAmount: { width: 100, justifyContent: "center" },
+  colStatus: { width: 100, justifyContent: "center", alignItems: "center" },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   tableCell: {
     fontSize: 12,
     color: Colors.text,
+    lineHeight: 18,
+    flexWrap: "wrap",
   },
   cellWorker: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   tableWorkerImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    flexShrink: 0,
   },
 });
