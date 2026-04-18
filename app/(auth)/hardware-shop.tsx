@@ -130,6 +130,7 @@ export default function HardwareShopLoginScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.content}>
           <Text style={styles.title}>
@@ -391,6 +392,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   content: {
     padding: 24,
