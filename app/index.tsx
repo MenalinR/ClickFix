@@ -5,7 +5,6 @@ import {
     Dimensions,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -89,16 +88,9 @@ export default function LandingPage() {
             title="Hardware Shop"
             onPress={handleHardwareShopPress}
             variant="outline"
-            style={styles.hardwareBtn}
-            textStyle={styles.hardwareBtnText}
+            style={styles.workerBtn}
+            textStyle={styles.workerBtnText}
           />
-
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={handleCustomerPress}>
-              <Text style={styles.loginLink}>Log In</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </SafeAreaView>
     </View>
