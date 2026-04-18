@@ -1,5 +1,6 @@
+import { NegotiationBanner } from "@/components/NegotiationBanner";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -33,6 +34,8 @@ const autoResponses = [
 
 export default function CustomerChatPage() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ jobId?: string }>();
+  const jobId = typeof params.jobId === "string" ? params.jobId : "";
   const flatListRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -250,6 +253,8 @@ export default function CustomerChatPage() {
           <Ionicons name="call-outline" size={20} color={Colors.primary} />
         </TouchableOpacity>
       </View>
+
+      {!!jobId && <NegotiationBanner jobId={jobId} role="customer" />}
 
       <FlatList
         ref={flatListRef}

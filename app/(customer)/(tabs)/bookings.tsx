@@ -1,15 +1,17 @@
+import { JobReviewActions } from "@/components/JobReviewActions";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
-    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
@@ -19,9 +21,36 @@ type BookingFilter = "All" | "Pending" | "Completed" | "Cancelled";
 
 export default function BookingsScreen() {
   const router = useRouter();
-  const { jobs, fetchJobs, token } = useStore();
+  const { jobs, fetchJobs, token, customerRespondToJob } = useStore();
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
   const [loading, setLoading] = useState(true);
+  const [reviewJob, setReviewJob] = useState<any | null>(null);
+
+  const handleApprove = async (jobId: string) => {
+    await customerRespondToJob(jobId, "approve");
+    setReviewJob(null);
+  };
+  const handleDeny = async (jobId: string) => {
+    await customerRespondToJob(jobId, "deny");
+    setReviewJob(null);
+  };
+  const handleNegotiate = async (jobId: string, counterPrice?: number) => {
+    await customerRespondToJob(jobId, "negotiate", counterPrice);
+    const job: any = (jobs as any[]).find(
+      (j) => (j._id || j.id) === jobId,
+    );
+    setReviewJob(null);
+    router.push({
+      pathname: "/(customer)/chat",
+      params: {
+        jobId,
+        workerId:
+          (job?.workerId as any)?._id || (job?.workerId as any) || "",
+        customerId:
+          (job?.customerId as any)?._id || (job?.customerId as any) || "",
+      },
+    });
+  };
 
   useEffect(() => {
     if (token) {
@@ -41,10 +70,20 @@ export default function BookingsScreen() {
   const getStatusColor = (status: string) => {
     const s = (status || "").toLowerCase();
     if (s === "completed") return { background: "#E8F5E9", text: "#2E7D32" };
-    if (s === "cancelled" || s === "rejected") return { background: "#FFEBEE", text: "#C62828" };
+    if (s === "cancelled" || s === "rejected" || s === "denied")
+      return { background: "#FFEBEE", text: "#C62828" };
+    if (s === "worker accepted")
+      return { background: "#FFF8E1", text: "#F57F17" };
+    if (s === "negotiating")
+      return { background: "#E3F2FD", text: "#1565C0" };
     if (s === "pending" || s === "accepted" || s === "on the way" || s === "in progress")
       return { background: "#FFF3E0", text: "#E65100" };
     return { background: Colors.lightBackground, text: Colors.primary };
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === "Worker Accepted") return "Needs Review";
+    return status || "Pending";
   };
 
   const formatDate = (d: string | Date) => {
@@ -134,8 +173,14 @@ export default function BookingsScreen() {
                 const id = job._id || job.id;
                 const status = (job.status || "Pending") as string;
                 const colors = getStatusColor(status);
+                const needsReview = status === "Worker Accepted";
+                const RowWrap: any = needsReview ? TouchableOpacity : View;
                 return (
-                  <View key={id} style={styles.tableRow}>
+                  <RowWrap
+                    key={id}
+                    style={styles.tableRow}
+                    onPress={needsReview ? () => setReviewJob(job) : undefined}
+                  >
                     <Text style={[styles.tableCell, styles.colDate]}>
                       {formatDate((job as any).createdAt || (job as any).scheduledDate)}
                     </Text>
@@ -159,10 +204,10 @@ export default function BookingsScreen() {
                     </Text>
                     <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
                       <Text style={[styles.statusText, { color: colors.text }]}>
-                        {status}
+                        {getStatusLabel(status)}
                       </Text>
                     </View>
-                  </View>
+                  </RowWrap>
                 );
               })}
             </View>
@@ -180,6 +225,54 @@ export default function BookingsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!reviewJob}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReviewJob(null)}
+      >
+        <View style={styles.reviewOverlay}>
+          <View style={styles.reviewSheet}>
+            <View style={styles.reviewSheetHeader}>
+              <Text style={styles.reviewSheetTitle}>Review proposed price</Text>
+              <TouchableOpacity onPress={() => setReviewJob(null)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            {reviewJob && (
+              <>
+                <Text style={styles.reviewSheetWorker}>
+                  {workerName(reviewJob)} · {reviewJob.serviceType}
+                </Text>
+                {!!reviewJob.description && (
+                  <Text style={styles.reviewSheetDesc}>
+                    {reviewJob.description}
+                  </Text>
+                )}
+                <View style={styles.reviewSheetPriceBox}>
+                  <Text style={styles.reviewSheetPriceLabel}>
+                    Proposed price
+                  </Text>
+                  <Text style={styles.reviewSheetPriceValue}>
+                    {reviewJob.pricing?.proposedPrice ??
+                      reviewJob.pricing?.totalAmount ??
+                      reviewJob.pricing?.serviceCharge ??
+                      0}{" "}
+                    LKR
+                  </Text>
+                </View>
+                <JobReviewActions
+                  job={reviewJob}
+                  onApprove={handleApprove}
+                  onNegotiate={handleNegotiate}
+                  onDeny={handleDeny}
+                />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -392,6 +485,59 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 13,
     fontWeight: "600",
+  },
+  reviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  reviewSheet: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+    maxWidth: 400,
+  },
+  reviewSheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  reviewSheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  reviewSheetWorker: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  reviewSheetDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  reviewSheetPriceBox: {
+    backgroundColor: Colors.lightBackground,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  reviewSheetPriceLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  reviewSheetPriceValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.primary,
   },
   loadingWrap: {
     paddingVertical: 40,

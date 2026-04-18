@@ -115,7 +115,7 @@ exports.getJobs = async (req, res) => {
 
     const jobs = await Job.find(query)
       .populate("requestedWorkerId", "name phone category")
-      .populate("customerId", "name phone")
+      .populate("customerId", "name phone addresses")
       .populate("workerId", "name phone category rating")
       .sort("-createdAt");
 
@@ -160,7 +160,7 @@ exports.getAvailableJobs = async (req, res) => {
     }
 
     const jobs = await Job.find(query)
-      .populate("customerId", "name phone")
+      .populate("customerId", "name phone addresses")
       .sort("-createdAt");
 
     res.status(200).json({
@@ -266,15 +266,43 @@ exports.assignWorker = async (req, res) => {
       });
     }
 
+    const { price } = req.body || {};
+    const priceNum = Number(price);
+    if (price == null || isNaN(priceNum) || priceNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid price is required to accept a job",
+      });
+    }
+
     job.workerId = req.user._id;
-    job.status = "Accepted";
+    job.status = "Worker Accepted";
     job.pricing.hourlyRate = worker.hourlyRate || job.pricing.hourlyRate;
+    job.pricing.proposedPrice = priceNum;
+    job.pricing.serviceCharge = priceNum;
+    job.pricing.totalAmount = priceNum;
     job.timeline.push({
-      status: "Accepted",
+      status: "Worker Accepted",
       timestamp: new Date(),
+      note: `Worker proposed price: ${priceNum} LKR`,
     });
 
     await job.save();
+
+    // Notify customer that worker accepted with a proposed price
+    try {
+      await createNotification({
+        recipient: job.customerId,
+        recipientModel: "Customer",
+        type: "JOB_ASSIGNED",
+        title: "Worker proposed a price",
+        message: `Worker proposed ${priceNum} LKR for your ${job.serviceType} request. Review now.`,
+        data: { jobId: job._id, workerId: req.user._id },
+        actionUrl: "/(customer)/(tabs)/",
+      });
+    } catch (e) {
+      // non-fatal
+    }
 
     res.status(200).json({
       success: true,
@@ -285,6 +313,183 @@ exports.assignWorker = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Customer responds to worker's proposed price (approve/negotiate/deny)
+// @route   PUT /api/jobs/:id/customer-response
+// @access  Private (Customer only)
+exports.customerRespond = async (req, res) => {
+  try {
+    const { action, price } = req.body || {};
+    const validActions = ["approve", "negotiate", "deny"];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Must be approve, negotiate, or deny.",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (job.customerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (job.status !== "Worker Accepted" && action !== "deny") {
+      return res.status(400).json({
+        success: false,
+        message: "Job is not awaiting customer review",
+      });
+    }
+
+    if (action === "approve") {
+      job.status = "Accepted";
+      job.timeline.push({
+        status: "Accepted",
+        timestamp: new Date(),
+        note: "Customer approved proposed price",
+      });
+    } else if (action === "negotiate") {
+      job.status = "Negotiating";
+      const priceNum = Number(price);
+      if (!isNaN(priceNum) && priceNum > 0) {
+        job.pricing.negotiatedPrice = priceNum;
+      }
+      job.timeline.push({
+        status: "Negotiating",
+        timestamp: new Date(),
+        note:
+          !isNaN(priceNum) && priceNum > 0
+            ? `Customer proposed counter price: ${priceNum} LKR`
+            : "Customer initiated negotiation",
+      });
+    } else if (action === "deny") {
+      job.status = "Denied";
+      job.timeline.push({
+        status: "Denied",
+        timestamp: new Date(),
+        note: "Customer denied proposed price",
+      });
+    }
+
+    await job.save();
+
+    // Notify the worker about the customer's decision
+    if (job.workerId) {
+      const notifyMap = {
+        approve: {
+          title: "Customer approved your price",
+          message: `Customer approved your proposed price for the ${job.serviceType} job.`,
+        },
+        negotiate: {
+          title: "Customer wants to negotiate",
+          message: `Customer wants to negotiate on your ${job.serviceType} job.`,
+        },
+        deny: {
+          title: "Customer denied your price",
+          message: `Customer denied your proposed price for the ${job.serviceType} job.`,
+        },
+      };
+      try {
+        await createNotification({
+          recipient: job.workerId,
+          recipientModel: "Worker",
+          type: "JOB_ASSIGNED",
+          title: notifyMap[action].title,
+          message: notifyMap[action].message,
+          data: { jobId: job._id, customerId: job.customerId },
+          actionUrl: "/job-requests",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Finalize agreed price (called from chat negotiation when both sides agree)
+// @route   PUT /api/jobs/:id/finalize-price
+// @access  Private
+exports.finalizePrice = async (req, res) => {
+  try {
+    const { price } = req.body || {};
+    const priceNum = Number(price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid price is required",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    const isCustomer =
+      req.userType === "customer" &&
+      job.customerId.toString() === req.user._id.toString();
+    const isWorker =
+      req.userType === "worker" &&
+      job.workerId &&
+      job.workerId.toString() === req.user._id.toString();
+
+    if (!isCustomer && !isWorker) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (job.status !== "Negotiating" && job.status !== "Worker Accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Job is not in a negotiable state",
+      });
+    }
+
+    job.status = "Accepted";
+    job.pricing.serviceCharge = priceNum;
+    job.pricing.totalAmount = priceNum;
+    job.pricing.negotiatedPrice = priceNum;
+    job.timeline.push({
+      status: "Accepted",
+      timestamp: new Date(),
+      note: `Final agreed price: ${priceNum} LKR`,
+    });
+
+    await job.save();
+
+    // Notify the other party
+    const recipient = isCustomer ? job.workerId : job.customerId;
+    const recipientModel = isCustomer ? "Worker" : "Customer";
+    if (recipient) {
+      try {
+        await createNotification({
+          recipient,
+          recipientModel,
+          type: "JOB_ASSIGNED",
+          title: "Price agreed",
+          message: `Final price of ${priceNum} LKR has been agreed for the ${job.serviceType} job.`,
+          data: { jobId: job._id },
+          actionUrl:
+            recipientModel === "Worker"
+              ? "/job-requests"
+              : "/(customer)/(tabs)/bookings",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

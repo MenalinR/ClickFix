@@ -83,7 +83,13 @@ interface StoreState {
 
   // Create/Update
   createJob: (jobData: any) => Promise<Job>;
-  acceptJob: (jobId: string) => Promise<void>;
+  acceptJob: (jobId: string, price?: number) => Promise<void>;
+  customerRespondToJob: (
+    jobId: string,
+    action: "approve" | "negotiate" | "deny",
+    price?: number,
+  ) => Promise<void>;
+  finalizeJobPrice: (jobId: string, price: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: string) => Promise<void>;
 }
 
@@ -373,7 +379,7 @@ export const useStore = create<StoreState>()(
     }
   },
 
-  acceptJob: async (jobId: string) => {
+  acceptJob: async (jobId: string, price?: number) => {
     set({ loading: true, error: null });
     const { token, availableJobs } = get();
 
@@ -385,7 +391,7 @@ export const useStore = create<StoreState>()(
       const response = await apiCall(
         api.jobs.assignWorker(jobId),
         "PUT",
-        {},
+        price != null ? { price } : {},
         token,
       );
 
@@ -405,6 +411,72 @@ export const useStore = create<StoreState>()(
         ),
         jobs: updatedJobs,
       });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  customerRespondToJob: async (
+    jobId: string,
+    action: "approve" | "negotiate" | "deny",
+    price?: number,
+  ) => {
+    set({ loading: true, error: null });
+    const { token, jobs } = get();
+
+    if (!token) {
+      throw new Error("Not logged in");
+    }
+
+    try {
+      const body: any = { action };
+      if (price != null) body.price = price;
+      const response = await apiCall(
+        api.jobs.customerRespond(jobId),
+        "PUT",
+        body,
+        token,
+      );
+
+      const updatedJobs = jobs.map((j) =>
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data }
+          : j,
+      );
+      set({ jobs: updatedJobs });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  finalizeJobPrice: async (jobId: string, price: number) => {
+    set({ loading: true, error: null });
+    const { token, jobs } = get();
+
+    if (!token) {
+      throw new Error("Not logged in");
+    }
+
+    try {
+      const response = await apiCall(
+        api.jobs.finalizePrice(jobId),
+        "PUT",
+        { price },
+        token,
+      );
+
+      const updatedJobs = jobs.map((j) =>
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data }
+          : j,
+      );
+      set({ jobs: updatedJobs });
     } catch (error: any) {
       set({ error: error.message });
       throw error;

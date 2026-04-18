@@ -1,3 +1,4 @@
+import { NegotiationBanner } from "@/components/NegotiationBanner";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -199,6 +200,13 @@ export default function ChatPage() {
             <Ionicons name="call-outline" size={20} color={Colors.primary} />
           </TouchableOpacity>
         </View>
+
+        {!!jobId && (
+          <NegotiationBanner
+            jobId={Array.isArray(jobId) ? jobId[0] : (jobId as string)}
+            role="worker"
+          />
+        )}
 
         {/* Messages */}
         <FlatList

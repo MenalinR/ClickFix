@@ -61,7 +61,10 @@ const jobSchema = new mongoose.Schema(
       type: String,
       enum: [
         "Pending",
+        "Worker Accepted",
+        "Negotiating",
         "Accepted",
+        "Denied",
         "On the way",
         "In progress",
         "Completed",
@@ -77,6 +80,8 @@ const jobSchema = new mongoose.Schema(
       platformFee: { type: Number, default: 300 },
       hardwareCost: { type: Number, default: 0 },
       totalAmount: { type: Number, default: 0 },
+      proposedPrice: { type: Number, default: 0 },
+      negotiatedPrice: { type: Number, default: 0 },
     },
     hardwareItems: [
       {
@@ -131,12 +136,19 @@ jobSchema.index({ location: "2dsphere" });
 // Calculate total amount
 jobSchema.pre("save", function (next) {
   if (this.pricing) {
-    const serviceTotal =
-      (this.pricing.hourlyRate || 0) * (this.pricing.estimatedHours || 2);
-    this.pricing.totalAmount =
-      serviceTotal +
-      (this.pricing.platformFee || 0) +
-      (this.pricing.hardwareCost || 0);
+    // Only auto-calculate when no explicit price has been proposed/agreed yet
+    const hasExplicitPrice =
+      (this.pricing.serviceCharge || 0) > 0 ||
+      (this.pricing.proposedPrice || 0) > 0 ||
+      (this.pricing.negotiatedPrice || 0) > 0;
+    if (!hasExplicitPrice) {
+      const serviceTotal =
+        (this.pricing.hourlyRate || 0) * (this.pricing.estimatedHours || 2);
+      this.pricing.totalAmount =
+        serviceTotal +
+        (this.pricing.platformFee || 0) +
+        (this.pricing.hardwareCost || 0);
+    }
   }
   next();
 });

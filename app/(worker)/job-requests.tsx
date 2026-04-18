@@ -9,6 +9,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -24,6 +25,7 @@ export default function JobRequestsPage() {
   const workerId = user?._id || (user as any)?.id;
   const [filter, setFilter] = useState<"all" | "new" | "accepted">("all");
   const [loading, setLoading] = useState(true);
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (token) {
@@ -33,25 +35,42 @@ export default function JobRequestsPage() {
   }, [token]);
 
   const jobList = Array.isArray(jobs) ? jobs : [];
-  const pendingJobs = jobList.filter((j) => (j.status || "").toLowerCase() === "pending");
-  const acceptedJobs = jobList.filter(
+  const statusOf = (j: any) => (j.status || "").toLowerCase();
+  const isMine = (j: any) =>
+    j.workerId?._id === workerId || j.workerId === workerId;
+  const pendingJobs = jobList.filter((j) => statusOf(j) === "pending");
+  const awaitingCustomerJobs = jobList.filter(
     (j) =>
-      (j.status || "").toLowerCase() === "accepted" &&
-      (j.workerId?._id === workerId || j.workerId === workerId),
+      (statusOf(j) === "worker accepted" || statusOf(j) === "negotiating") &&
+      isMine(j),
+  );
+  const acceptedJobs = jobList.filter(
+    (j) => statusOf(j) === "accepted" && isMine(j),
   );
 
   const displayedJobs =
     filter === "new"
       ? pendingJobs
       : filter === "accepted"
-        ? acceptedJobs
-        : [...pendingJobs, ...acceptedJobs];
+        ? [...awaitingCustomerJobs, ...acceptedJobs]
+        : [...pendingJobs, ...awaitingCustomerJobs, ...acceptedJobs];
 
   const jobId = (j: any) => j._id || j.id;
 
   const handleAcceptJob = async (id: string) => {
+    const raw = (priceInputs[id] || "").trim();
+    const price = Number(raw);
+    if (!raw || isNaN(price) || price <= 0) {
+      Alert.alert("Price required", "Please enter a price before accepting.");
+      return;
+    }
     try {
-      await acceptJob(id);
+      await acceptJob(id, price);
+      setPriceInputs((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       Alert.alert("Success", "Job accepted! You can now chat with the customer.");
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to accept job.");
@@ -161,13 +180,35 @@ export default function JobRequestsPage() {
         ) : (
           displayedJobs.map((job) => {
             const id = jobId(job);
-            const isPending = (job.status || "").toLowerCase() === "pending";
-            const isAccepted = (job.status || "").toLowerCase() === "accepted";
-            const customerName = job.customerId?.name || "Customer";
-            const location = job.location?.address || "Address to be confirmed";
-            const requestedDate = formatDate(job.scheduledDate || job.createdAt);
-            const duration = job.estimatedDuration != null ? `${job.estimatedDuration} min` : "—";
-            const price = job.pricing?.totalAmount ?? job.pricing?.serviceCharge ?? 0;
+            const status = (job.status || "").toLowerCase();
+            const isPending = status === "pending";
+            const isAccepted = status === "accepted";
+            const isAwaiting = status === "worker accepted";
+            const isNegotiating = status === "negotiating";
+            const j = job as any;
+            const customerName = j.customerId?.name || "Customer";
+            const customerAddress =
+              j.customerId?.addresses?.[0]?.address ||
+              j.location?.address ||
+              "Address to be confirmed";
+            const requestedDate = formatDate(j.createdAt || j.scheduledDate);
+            const duration = j.estimatedDuration != null ? `${j.estimatedDuration} min` : "—";
+            const acceptedPrice =
+              j.pricing?.totalAmount ?? j.pricing?.serviceCharge ?? 0;
+            const proposedPrice = j.pricing?.proposedPrice ?? acceptedPrice;
+            const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
+            let badgeColor = "#FFA500";
+            let badgeLabel = "🔔 New";
+            if (isAccepted) {
+              badgeColor = "#4CAF50";
+              badgeLabel = "✓ Accepted";
+            } else if (isAwaiting) {
+              badgeColor = "#F57F17";
+              badgeLabel = "⏳ Awaiting Customer";
+            } else if (isNegotiating) {
+              badgeColor = "#1565C0";
+              badgeLabel = "💬 Negotiating";
+            }
             return (
               <TouchableOpacity
                 key={id}
@@ -175,21 +216,19 @@ export default function JobRequestsPage() {
                 onPress={() => handleViewDetails(id)}
               >
                 <View style={styles.jobCardHeader}>
-                  <View>
+                  <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={styles.customerName}>{customerName}</Text>
-                    <Text style={styles.serviceType}>{job.serviceType}</Text>
+                    <Text style={styles.serviceType} numberOfLines={2}>
+                      {customerAddress}
+                    </Text>
                   </View>
                   <View
                     style={[
                       styles.statusBadge,
-                      {
-                        backgroundColor: isPending ? "#FFA500" : "#4CAF50",
-                      },
+                      { backgroundColor: badgeColor },
                     ]}
                   >
-                    <Text style={styles.statusText}>
-                      {isPending ? "🔔 New" : "✓ Accepted"}
-                    </Text>
+                    <Text style={styles.statusText}>{badgeLabel}</Text>
                   </View>
                 </View>
 
@@ -198,14 +237,6 @@ export default function JobRequestsPage() {
                 </Text>
 
                 <View style={styles.jobDetails}>
-                  <View style={styles.detailItem}>
-                    <Ionicons
-                      name="location-outline"
-                      size={16}
-                      color={Colors.primary}
-                    />
-                    <Text style={styles.detailText}>{location}</Text>
-                  </View>
                   <View style={styles.detailItem}>
                     <Ionicons
                       name="calendar-outline"
@@ -243,10 +274,46 @@ export default function JobRequestsPage() {
                   </View>
                 )}
 
-                <View style={styles.priceContainer}>
-                  <Text style={styles.priceLabel}>Estimated Price:</Text>
-                  <Text style={styles.priceValue}>{price} LKR</Text>
-                </View>
+                {isPending ? (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceLabel}>Your Price:</Text>
+                    <View style={styles.priceInputWrap}>
+                      <TextInput
+                        style={styles.priceInput}
+                        placeholder="0"
+                        placeholderTextColor={Colors.textSecondary}
+                        keyboardType="numeric"
+                        value={priceInputs[id] || ""}
+                        onChangeText={(text) =>
+                          setPriceInputs((prev) => ({
+                            ...prev,
+                            [id]: text.replace(/[^0-9.]/g, ""),
+                          }))
+                        }
+                      />
+                      <Text style={styles.priceCurrency}>LKR</Text>
+                    </View>
+                  </View>
+                ) : isAwaiting ? (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceLabel}>You proposed:</Text>
+                    <Text style={styles.priceValue}>{proposedPrice} LKR</Text>
+                  </View>
+                ) : isNegotiating ? (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceLabel}>
+                      {negotiatedPrice ? "Customer offered:" : "You proposed:"}
+                    </Text>
+                    <Text style={styles.priceValue}>
+                      {(negotiatedPrice || proposedPrice) + " LKR"}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceLabel}>Agreed Price:</Text>
+                    <Text style={styles.priceValue}>{acceptedPrice} LKR</Text>
+                  </View>
+                )}
 
                 {isPending && (
                   <View style={styles.actionButtons}>
@@ -271,6 +338,31 @@ export default function JobRequestsPage() {
                         color="white"
                       />
                       <Text style={styles.acceptButtonText}>Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {(isAwaiting || isNegotiating) && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.chatButton]}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/chat",
+                          params: {
+                            jobId: id,
+                            customerId:
+                              j.customerId?._id || j.customerId || "",
+                          },
+                        } as any)
+                      }
+                    >
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.chatButtonText}>Open Chat</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -471,6 +563,29 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 16,
     fontWeight: "bold",
+    color: Colors.primary,
+  },
+  priceInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    minWidth: 120,
+  },
+  priceInput: {
+    flex: 1,
+    paddingVertical: 6,
+    fontSize: 14,
+    color: Colors.text,
+    textAlign: "right",
+  },
+  priceCurrency: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: "600",
     color: Colors.primary,
   },
   actionButtons: {
