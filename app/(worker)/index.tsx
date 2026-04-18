@@ -16,7 +16,7 @@ import { useStore } from "../../constants/Store";
 
 export default function WorkerDashboard() {
   const router = useRouter();
-  const { jobs, updateJobStatus, user, token, fetchJobs } = useStore();
+  const { jobs, updateJobStatus, user, token, fetchJobs, logout } = useStore();
   const workerId = user?.id || user?._id || "1"; // Get logged-in worker's id
   const workerName = user?.name || "Professional";
   const workerCategory = (user as any)?.category || "Worker";
@@ -61,6 +61,11 @@ export default function WorkerDashboard() {
     return () => clearInterval(interval);
   }, [token, fetchUnreadCount]);
 
+  const handleBack = () => {
+    logout();
+    router.replace({ pathname: "/(auth)/login", params: { role: "worker" } });
+  };
+
   const handleOpenNotifications = async () => {
     if (token) {
       try {
@@ -91,7 +96,12 @@ export default function WorkerDashboard() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
-          <Text style={styles.heading}>Dashboard</Text>
+          <View style={styles.headingLeft}>
+            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.heading}>Dashboard</Text>
+          </View>
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={handleOpenNotifications}
@@ -303,6 +313,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: Colors.text,
+  },
+  headingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  backBtn: {
+    padding: 4,
   },
   notificationButton: {
     padding: 8,
