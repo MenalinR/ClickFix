@@ -1,4 +1,3 @@
-import { api, apiCall } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
@@ -120,50 +119,31 @@ export default function HardwareShopLoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/")} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => router.replace("/")}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>Hardware Shop</Text>
-
-          {/* Tab Toggle */}
-          <View style={styles.tabToggle}>
-            <Pressable
-              style={[styles.tab, isLogin && styles.tabActive]}
-              onPress={() => setIsLogin(true)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  isLogin && styles.tabTextActive,
-                ]}
-              >
-                Login
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tab, !isLogin && styles.tabActive]}
-              onPress={() => setIsLogin(false)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  !isLogin && styles.tabTextActive,
-                ]}
-              >
-                Create Account
-              </Text>
-            </Pressable>
-          </View>
+          <Text style={styles.title}>
+            {isLogin ? "Welcome Back" : "Hardware Shop"}
+          </Text>
+          <Text style={styles.subtitle}>
+            {isLogin
+              ? "Login as Hardware Shop"
+              : "Create Hardware Shop Account"}
+          </Text>
 
           {/* Login Form */}
           {isLogin ? (
             <View style={styles.form}>
-              <Text style={styles.subtitle}>Login as Hardware Shop</Text>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
                 <TextInput
@@ -222,12 +202,18 @@ export default function HardwareShopLoginScreen() {
                   <Text style={styles.buttonText}>Log In</Text>
                 )}
               </Pressable>
+
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => setIsLogin(false)}
+                disabled={loading}
+              >
+                <Text style={styles.switchText}>Create Account</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             // Registration Form
             <View style={styles.form}>
-              <Text style={styles.subtitle}>Create Hardware Shop Account</Text>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Shop Name</Text>
                 <TextInput
@@ -373,6 +359,16 @@ export default function HardwareShopLoginScreen() {
                   <Text style={styles.buttonText}>Create Account</Text>
                 )}
               </Pressable>
+
+              <TouchableOpacity
+                style={styles.switchButton}
+                onPress={() => setIsLogin(true)}
+                disabled={loading}
+              >
+                <Text style={styles.switchText}>
+                  Already have an account? Log In
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -412,29 +408,14 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 24,
   },
-  tabToggle: {
-    flexDirection: "row",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 24,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
+  switchButton: {
     alignItems: "center",
-    borderRadius: 6,
+    marginTop: 16,
   },
-  tabActive: {
-    backgroundColor: "white",
-  },
-  tabText: {
+  switchText: {
+    color: Colors.primary,
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    color: "#999",
-  },
-  tabTextActive: {
-    color: Colors.primary,
   },
   form: {
     gap: 20,
