@@ -1,6 +1,7 @@
+import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -15,10 +16,11 @@ import { useStore } from "../../constants/Store";
 
 export default function WorkerDashboard() {
   const router = useRouter();
-  const { jobs, updateJobStatus, user } = useStore();
+  const { jobs, updateJobStatus, user, token, fetchJobs } = useStore();
   const workerId = user?.id || user?._id || "1"; // Get logged-in worker's id
   const workerName = user?.name || "Professional";
   const workerCategory = (user as any)?.category || "Worker";
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const pendingJobs = jobs.filter((j) => j.status === "pending");
   const acceptedJobs = jobs.filter(
@@ -31,7 +33,52 @@ export default function WorkerDashboard() {
     (j) => j.status === "completed" && j.workerId === workerId,
   ).length;
 
-  // Notification for new job requests
+  const fetchUnreadCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await apiCall(
+        api.notifications.getUnreadCount,
+        "GET",
+        undefined,
+        token,
+      );
+      setUnreadCount(response.count || 0);
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+      if (token) fetchJobs();
+    }, [token, fetchUnreadCount]),
+  );
+
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [token, fetchUnreadCount]);
+
+  const handleOpenNotifications = async () => {
+    if (token) {
+      try {
+        await apiCall(
+          api.notifications.markAllAsRead,
+          "PUT",
+          undefined,
+          token,
+        );
+        setUnreadCount(0);
+      } catch (error) {
+        console.error("Error marking notifications read:", error);
+      }
+    }
+    router.push("/job-requests");
+  };
+
+  // Local alert when new job request arrives during this session
   const prevPendingCount = useRef(pendingJobs.length);
   useEffect(() => {
     if (pendingJobs.length > prevPendingCount.current) {
@@ -45,13 +92,22 @@ export default function WorkerDashboard() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <Text style={styles.heading}>Dashboard</Text>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={handleOpenNotifications}
+          >
             <Ionicons
               name="notifications-outline"
               size={24}
               color={Colors.primary}
             />
-            {pendingJobs.length > 0 && <View style={styles.badge} />}
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -256,10 +312,18 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   welcomeCard: {
     flexDirection: "row",
