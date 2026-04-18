@@ -110,12 +110,6 @@ export default function AdminLoginScreen() {
             </View>
           </View>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Test Credentials:</Text>
-            <Text style={styles.infoText}>Email: admin@clickfix.com</Text>
-            <Text style={styles.infoText}>Password: admin123</Text>
-          </View>
-
           <Pressable
             style={({ pressed }) => [
               styles.loginButton,
@@ -204,23 +198,6 @@ const styles = StyleSheet.create({
   eyeIcon: {
     paddingHorizontal: 12,
     paddingVertical: 16,
-  },
-  infoBox: {
-    backgroundColor: "#F0F8FF",
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 4,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: "#666",
-    marginBottom: 6,
-  },
-  infoText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#666",
   },
   loginButton: {
     backgroundColor: Colors.primary,

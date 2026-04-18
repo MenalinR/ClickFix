@@ -116,17 +116,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Demo Credentials Info */}
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Test Credentials:</Text>
-            <Text style={styles.infoText}>
-              {role === "worker"
-                ? "Email: john@test.com"
-                : "Email: customer@test.com"}
-            </Text>
-            <Text style={styles.infoText}>Password: password123</Text>
-          </View>
-
           <Pressable
             style={({ pressed }) => [
               {
@@ -237,23 +226,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-  },
-  infoBox: {
-    backgroundColor: "#F0F8FF",
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 12,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: "#666",
-    marginBottom: 6,
-  },
-  infoText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#666",
   },
   backBtn: {
     marginBottom: 24,

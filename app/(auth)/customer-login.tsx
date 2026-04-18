@@ -123,13 +123,6 @@ export default function CustomerLoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Demo Credentials */}
-        <View style={styles.demoBox}>
-          <Text style={styles.demoTitle}>Test Credentials:</Text>
-          <Text style={styles.demoText}>Email: customer@test.com</Text>
-          <Text style={styles.demoText}>Password: password123</Text>
-        </View>
-
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
@@ -232,26 +225,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 14,
     fontWeight: "500",
-  },
-  demoBox: {
-    backgroundColor: "#f0f7ff",
-    borderRadius: 8,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-    marginBottom: 20,
-  },
-  demoTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 12,
-    color: "#333",
-    marginBottom: 4,
-    fontFamily: "Courier New",
   },
   footer: {
     flexDirection: "row",
