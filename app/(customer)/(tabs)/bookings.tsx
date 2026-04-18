@@ -127,7 +127,7 @@ export default function BookingsScreen() {
                 <Text style={[styles.tableHeaderText, styles.colDate]}>Date</Text>
                 <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
                 <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
-                <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
+                <Text style={[styles.tableHeaderText, styles.colIssue]}>Issue</Text>
                 <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
               </View>
               {filteredBookings.map((job) => {
@@ -137,7 +137,7 @@ export default function BookingsScreen() {
                 return (
                   <View key={id} style={styles.tableRow}>
                     <Text style={[styles.tableCell, styles.colDate]}>
-                      {formatDate(job.scheduledDate || job.createdAt)}
+                      {formatDate((job as any).createdAt || (job as any).scheduledDate)}
                     </Text>
                     <View style={[styles.colWorker, styles.cellWorker]}>
                       <Image
@@ -151,8 +151,11 @@ export default function BookingsScreen() {
                     <Text style={[styles.tableCell, styles.colService]}>
                       {job.serviceType || "—"}
                     </Text>
-                    <Text style={[styles.tableCell, styles.colAmount]}>
-                      {amount(job)} LKR
+                    <Text
+                      style={[styles.tableCell, styles.colIssue]}
+                      numberOfLines={2}
+                    >
+                      {(job as any).description || "—"}
                     </Text>
                     <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
                       <Text style={[styles.statusText, { color: colors.text }]}>
@@ -424,6 +427,7 @@ const styles = StyleSheet.create({
   colWorker: { width: 140, justifyContent: "center" },
   colService: { width: 110, justifyContent: "center" },
   colAmount: { width: 100, justifyContent: "center" },
+  colIssue: { width: 160, justifyContent: "center" },
   colStatus: { width: 100, justifyContent: "center", alignItems: "center" },
   tableRow: {
     flexDirection: "row",
