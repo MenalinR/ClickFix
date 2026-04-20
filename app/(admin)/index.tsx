@@ -3,12 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
@@ -23,6 +23,12 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     logout();
     router.replace("/(auth)/admin-login" as any);
+  };
+
+  const handleGoLanding = () => {
+    logout();
+    router.dismissAll();
+    router.replace("/");
   };
 
   const totalWorkers = workers.length;
@@ -115,12 +121,24 @@ export default function AdminDashboard() {
             <Text style={styles.heading}>Admin Dashboard</Text>
             <Text style={styles.subheading}>Welcome back, Admin</Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.logoutButton}
-          >
-            <Ionicons name="log-out-outline" size={24} color={Colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              onPress={handleGoLanding}
+              style={styles.homeIconBtn}
+            >
+              <Ionicons name="home" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={24}
+                color={Colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Grid */}
@@ -277,6 +295,14 @@ const styles = StyleSheet.create({
   subheading: {
     fontSize: 14,
     color: Colors.textSecondary,
+  },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  homeIconBtn: {
+    padding: 4,
   },
   logoutButton: {
     width: 44,

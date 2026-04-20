@@ -66,6 +66,12 @@ export default function WorkerDashboard() {
     router.replace({ pathname: "/(auth)/login", params: { role: "worker" } });
   };
 
+  const handleGoLanding = () => {
+    logout();
+    router.dismissAll();
+    router.replace("/");
+  };
+
   const handleOpenNotifications = async () => {
     if (token) {
       try {
@@ -102,6 +108,13 @@ export default function WorkerDashboard() {
             </TouchableOpacity>
             <Text style={styles.heading}>Dashboard</Text>
           </View>
+          <View style={styles.headerIcons}>
+          <TouchableOpacity
+            style={styles.homeIconBtn}
+            onPress={handleGoLanding}
+          >
+            <Ionicons name="home" size={24} color={Colors.primary} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={handleOpenNotifications}
@@ -119,6 +132,7 @@ export default function WorkerDashboard() {
               </View>
             )}
           </TouchableOpacity>
+          </View>
         </View>
 
         {/* Welcome Message */}
@@ -325,6 +339,14 @@ const styles = StyleSheet.create({
   notificationButton: {
     padding: 8,
     position: "relative",
+  },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  homeIconBtn: {
+    padding: 4,
   },
   badge: {
     position: "absolute",

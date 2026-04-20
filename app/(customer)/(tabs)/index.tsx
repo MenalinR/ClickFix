@@ -18,7 +18,12 @@ import { useStore } from "../../../constants/Store";
 
 export default function CustomerHome() {
   const router = useRouter();
-  const { jobs, fetchJobs, token, customerRespondToJob, user } = useStore();
+  const { jobs, fetchJobs, token, customerRespondToJob, user, logout } = useStore();
+  const handleGoLanding = () => {
+    logout();
+    router.dismissAll();
+    router.replace("/");
+  };
   const customerName = (user as any)?.name || "there";
   const firstName = String(customerName).split(" ")[0];
   const [workers, setWorkers] = useState<any[]>([]);
@@ -104,13 +109,13 @@ export default function CustomerHome() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => router.dismissAll()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-          </TouchableOpacity>
           <Text style={styles.heading}>Find Services</Text>
+          <TouchableOpacity
+            onPress={handleGoLanding}
+            style={styles.homeIconBtn}
+          >
+            <Ionicons name="home" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.welcomeBlock}>
@@ -274,7 +279,15 @@ export default function CustomerHome() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 24, paddingBottom: 100 },
-  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  homeIconBtn: {
+    padding: 4,
+  },
   welcomeBlock: { marginBottom: 20 },
   welcomeGreeting: {
     fontSize: 14,

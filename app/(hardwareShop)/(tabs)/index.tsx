@@ -69,6 +69,12 @@ export default function HardwareShopDashboardScreen() {
     router.replace("/(auth)/hardware-shop");
   };
 
+  const handleGoLanding = () => {
+    logout();
+    router.dismissAll();
+    router.replace("/");
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -89,7 +95,15 @@ export default function HardwareShopDashboardScreen() {
               </Text>
             </View>
           </View>
-          <Ionicons name="storefront" size={32} color={Colors.primary} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.homeIconBtn}
+              onPress={handleGoLanding}
+            >
+              <Ionicons name="home" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+            <Ionicons name="storefront" size={32} color={Colors.primary} />
+          </View>
         </View>
 
         {/* Stats Grid */}
@@ -210,6 +224,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backBtn: {
+    padding: 4,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  homeIconBtn: {
     padding: 4,
   },
   welcomeText: {
