@@ -1,3 +1,5 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -5,6 +7,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
@@ -29,6 +31,9 @@ export default function WorkerProfile() {
   const [workerData, setWorkerData] = useState<any>(null);
   const [workerExperience, setWorkerExperience] = useState<number>(0);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Find the worker by id from the store
   const worker = workerData || workers.find((w) => String(w.id) === String(id));
@@ -91,13 +96,17 @@ export default function WorkerProfile() {
       Alert.alert("Error", "Please log in to book.");
       return;
     }
+    if (scheduledAt.getTime() < Date.now()) {
+      Alert.alert("Invalid time", "Please pick a date and time in the future.");
+      return;
+    }
     try {
       const workerId = worker._id || worker.id;
       const job = await createJob({
         serviceType: worker.category || "Other",
         description: description.trim(),
         requestedWorkerId: workerId,
-        scheduledDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        scheduledDate: scheduledAt.toISOString(),
         location: {
           type: "Point",
           coordinates: [79.8612, 6.9271],
@@ -107,11 +116,45 @@ export default function WorkerProfile() {
       setModalVisible(false);
       setDescription("");
       setMedia([]);
+      setScheduledAt(new Date());
       Alert.alert("Booking confirmed", "The worker will be notified and can accept your request.", [
         { text: "OK", onPress: () => router.push("/(customer)/(tabs)/bookings") },
       ]);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to create booking.");
+    }
+  };
+
+  const formatScheduledDate = (d: Date) =>
+    d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  const formatScheduledTime = (d: Date) =>
+    d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const handleDateChange = (_event: any, selected?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selected) {
+      const next = new Date(scheduledAt);
+      next.setFullYear(
+        selected.getFullYear(),
+        selected.getMonth(),
+        selected.getDate(),
+      );
+      setScheduledAt(next);
+    }
+  };
+  const handleTimeChange = (_event: any, selected?: Date) => {
+    setShowTimePicker(Platform.OS === "ios");
+    if (selected) {
+      const next = new Date(scheduledAt);
+      next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+      setScheduledAt(next);
     }
   };
 
@@ -337,7 +380,13 @@ export default function WorkerProfile() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button title="Book Now" onPress={() => setModalVisible(true)} />
+        <Button
+          title="Book Now"
+          onPress={() => {
+            setScheduledAt(new Date());
+            setModalVisible(true);
+          }}
+        />
       </View>
 
       {/* Booking Modal */}
@@ -359,6 +408,52 @@ export default function WorkerProfile() {
               }}
               multiline
             />
+
+            {/* When do you need the service */}
+            <Text style={styles.sectionHeader}>When do you need it?</Text>
+            <View style={styles.scheduleRow}>
+              <TouchableOpacity
+                style={styles.scheduleBtn}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <Text style={styles.scheduleBtnText}>
+                  {formatScheduledDate(scheduledAt)}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.scheduleBtn}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <Text style={styles.scheduleBtnText}>
+                  {formatScheduledTime(scheduledAt)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={scheduledAt}
+                mode="date"
+                minimumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            )}
+            {showTimePicker && (
+              <DateTimePicker
+                value={scheduledAt}
+                mode="time"
+                onChange={handleTimeChange}
+              />
+            )}
 
             {/* Photos/Videos */}
             <View style={{ marginBottom: 24 }}>
@@ -614,6 +709,29 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginTop: 12,
     fontSize: 12,
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
+  scheduleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    backgroundColor: "#f9f9f9",
+  },
+  scheduleBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.text,
   },
   // New styles for Android picker buttons
   pickerButton: {

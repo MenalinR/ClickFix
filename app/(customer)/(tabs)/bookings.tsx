@@ -89,7 +89,13 @@ export default function BookingsScreen() {
   const formatDate = (d: string | Date) => {
     if (!d) return "—";
     const date = typeof d === "string" ? new Date(d) : d;
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const workerName = (job: any) =>
@@ -182,7 +188,7 @@ export default function BookingsScreen() {
                     onPress={needsReview ? () => setReviewJob(job) : undefined}
                   >
                     <Text style={[styles.tableCell, styles.colDate]}>
-                      {formatDate((job as any).createdAt || (job as any).scheduledDate)}
+                      {formatDate((job as any).scheduledDate || (job as any).createdAt)}
                     </Text>
                     <View style={[styles.colWorker, styles.cellWorker]}>
                       <Image
@@ -569,7 +575,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textSecondary,
   },
-  colDate: { width: 100, justifyContent: "center" },
+  colDate: { width: 150, justifyContent: "center" },
   colWorker: { width: 140, justifyContent: "center" },
   colService: { width: 110, justifyContent: "center" },
   colAmount: { width: 100, justifyContent: "center" },

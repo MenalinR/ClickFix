@@ -92,7 +92,13 @@ export default function JobRequestsPage() {
   const formatDate = (d: string | Date) => {
     if (!d) return "—";
     const date = typeof d === "string" ? new Date(d) : d;
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -191,8 +197,7 @@ export default function JobRequestsPage() {
               j.customerId?.addresses?.[0]?.address ||
               j.location?.address ||
               "Address to be confirmed";
-            const requestedDate = formatDate(j.createdAt || j.scheduledDate);
-            const duration = j.estimatedDuration != null ? `${j.estimatedDuration} min` : "—";
+            const requestedDate = formatDate(j.scheduledDate || j.createdAt);
             const acceptedPrice =
               j.pricing?.totalAmount ?? j.pricing?.serviceCharge ?? 0;
             const proposedPrice = j.pricing?.proposedPrice ?? acceptedPrice;
@@ -243,15 +248,10 @@ export default function JobRequestsPage() {
                       size={16}
                       color={Colors.primary}
                     />
-                    <Text style={styles.detailText}>{requestedDate}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons
-                      name="time-outline"
-                      size={16}
-                      color={Colors.primary}
-                    />
-                    <Text style={styles.detailText}>{duration}</Text>
+                    <Text style={styles.detailText}>
+                      <Text style={styles.detailLabel}>Booked for: </Text>
+                      {requestedDate}
+                    </Text>
                   </View>
                 </View>
 
@@ -521,6 +521,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.text,
     marginLeft: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
   },
   imagesContainer: {
     flexDirection: "row",

@@ -63,16 +63,25 @@ exports.createJob = async (req, res) => {
         const customer = await Customer.findById(req.user._id).select("name");
         const worker = await Worker.findById(requestedWorkerId).select("name");
         if (worker) {
+          const when = new Date(job.scheduledDate).toLocaleString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const shortDesc = (description || "").slice(0, 60) + (description && description.length > 60 ? "…" : "");
           await createNotification({
             recipient: requestedWorkerId,
             recipientModel: "Worker",
             type: "JOB_REQUESTED",
             title: "New booking request",
-            message: `${customer?.name || "A customer"} requested you for ${serviceType}: ${(description || "").slice(0, 60)}${description && description.length > 60 ? "…" : ""}`,
+            message: `${customer?.name || "A customer"} booked ${serviceType} for ${when}: ${shortDesc}`,
             data: {
               jobId: job._id.toString(),
               customerId: req.user._id.toString(),
               workerId: requestedWorkerId,
+              scheduledDate: job.scheduledDate,
             },
             actionUrl: "/worker/job-requests",
           });
