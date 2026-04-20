@@ -64,11 +64,6 @@ export default function HardwareShopDashboardScreen() {
     return name || "Your Shop";
   };
 
-  const handleBack = () => {
-    logout();
-    router.replace("/(auth)/hardware-shop");
-  };
-
   const handleGoLanding = () => {
     logout();
     router.dismissAll();
@@ -85,9 +80,6 @@ export default function HardwareShopDashboardScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color={Colors.text} />
-            </TouchableOpacity>
             <View>
               <Text style={styles.welcomeText}>Welcome Back,</Text>
               <Text style={styles.shopName}>
@@ -95,15 +87,12 @@ export default function HardwareShopDashboardScreen() {
               </Text>
             </View>
           </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.homeIconBtn}
-              onPress={handleGoLanding}
-            >
-              <Ionicons name="home" size={24} color={Colors.primary} />
-            </TouchableOpacity>
-            <Ionicons name="storefront" size={32} color={Colors.primary} />
-          </View>
+          <TouchableOpacity
+            style={styles.homeIconBtn}
+            onPress={handleGoLanding}
+          >
+            <Ionicons name="home" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Stats Grid */}

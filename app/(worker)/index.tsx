@@ -61,11 +61,6 @@ export default function WorkerDashboard() {
     return () => clearInterval(interval);
   }, [token, fetchUnreadCount]);
 
-  const handleBack = () => {
-    logout();
-    router.replace({ pathname: "/(auth)/login", params: { role: "worker" } });
-  };
-
   const handleGoLanding = () => {
     logout();
     router.dismissAll();
@@ -103,9 +98,6 @@ export default function WorkerDashboard() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={styles.headingLeft}>
-            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color={Colors.text} />
-            </TouchableOpacity>
             <Text style={styles.heading}>Dashboard</Text>
           </View>
           <View style={styles.headerIcons}>
