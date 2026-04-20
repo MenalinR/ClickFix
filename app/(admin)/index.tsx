@@ -20,11 +20,6 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/(auth)/admin-login" as any);
-  };
-
   const handleGoLanding = () => {
     logout();
     router.dismissAll();
@@ -121,24 +116,12 @@ export default function AdminDashboard() {
             <Text style={styles.heading}>Admin Dashboard</Text>
             <Text style={styles.subheading}>Welcome back, Admin</Text>
           </View>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity
-              onPress={handleGoLanding}
-              style={styles.homeIconBtn}
-            >
-              <Ionicons name="home" size={24} color={Colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.logoutButton}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={24}
-                color={Colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleGoLanding}
+            style={styles.homeIconBtn}
+          >
+            <Ionicons name="home" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Stats Grid */}
