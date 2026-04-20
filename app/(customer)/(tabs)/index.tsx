@@ -18,7 +18,9 @@ import { useStore } from "../../../constants/Store";
 
 export default function CustomerHome() {
   const router = useRouter();
-  const { jobs, fetchJobs, token, customerRespondToJob } = useStore();
+  const { jobs, fetchJobs, token, customerRespondToJob, user } = useStore();
+  const customerName = (user as any)?.name || "there";
+  const firstName = String(customerName).split(" ")[0];
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
@@ -109,6 +111,11 @@ export default function CustomerHome() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.heading}>Find Services</Text>
+        </View>
+
+        <View style={styles.welcomeBlock}>
+          <Text style={styles.welcomeGreeting}>Welcome back,</Text>
+          <Text style={styles.welcomeName}>{firstName} 👋</Text>
         </View>
 
         {/* Search */}
@@ -268,6 +275,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 24, paddingBottom: 100 },
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  welcomeBlock: { marginBottom: 20 },
+  welcomeGreeting: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+  },
+  welcomeName: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    marginTop: 2,
+  },
   backButton: { marginRight: 16 },
   heading: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.primary },
   searchBox: {
