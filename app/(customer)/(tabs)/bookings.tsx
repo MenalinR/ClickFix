@@ -175,6 +175,11 @@ export default function BookingsScreen() {
                 <Text style={[styles.tableHeaderText, styles.colIssue]}>Issue</Text>
                 <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
               </View>
+              <ScrollView
+                style={styles.tableBody}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+              >
               {filteredBookings.map((job) => {
                 const id = job._id || job.id;
                 const status = (job.status || "Pending") as string;
@@ -216,6 +221,7 @@ export default function BookingsScreen() {
                   </RowWrap>
                 );
               })}
+              </ScrollView>
             </View>
           </ScrollView>
         ) : (
@@ -559,6 +565,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: "hidden",
     minWidth: "100%",
+  },
+  tableBody: {
+    maxHeight: 680,
   },
   tableHeader: {
     flexDirection: "row",
