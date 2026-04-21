@@ -42,6 +42,7 @@ export default function WorkerProfile() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [dateDetailFor, setDateDetailFor] = useState<Date | null>(null);
+  const [booking, setBooking] = useState(false);
 
   // Find the worker by id from the store
   const worker = workerData || workers.find((w) => String(w.id) === String(id));
@@ -120,6 +121,7 @@ export default function WorkerProfile() {
   }
 
   const handleBook = async () => {
+    if (booking) return;
     if (!description.trim()) {
       Alert.alert("Description required", "Please describe your issue.");
       return;
@@ -132,6 +134,7 @@ export default function WorkerProfile() {
       Alert.alert("Invalid time", "Please pick a date and time in the future.");
       return;
     }
+    setBooking(true);
     try {
       const workerId = worker._id || worker.id;
 
@@ -181,6 +184,8 @@ export default function WorkerProfile() {
       ]);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to create booking.");
+    } finally {
+      setBooking(false);
     }
   };
 
@@ -734,11 +739,14 @@ export default function WorkerProfile() {
                 variant="ghost"
                 onPress={resetForm}
                 style={{ flex: 1 }}
+                disabled={booking}
               />
               <Button
-                title="Confirm"
+                title={booking ? "Booking..." : "Confirm"}
                 onPress={handleBook}
                 style={{ flex: 1 }}
+                loading={booking}
+                disabled={booking}
               />
             </View>
           </View>
