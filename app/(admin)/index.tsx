@@ -21,9 +21,9 @@ export default function AdminDashboard() {
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
   const handleGoLanding = () => {
-    logout();
     router.dismissAll();
     router.replace("/");
+    logout();
   };
 
   const totalWorkers = workers.length;

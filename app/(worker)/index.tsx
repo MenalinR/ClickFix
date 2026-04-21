@@ -62,9 +62,9 @@ export default function WorkerDashboard() {
   }, [token, fetchUnreadCount]);
 
   const handleGoLanding = () => {
-    logout();
     router.dismissAll();
     router.replace("/");
+    logout();
   };
 
   const handleOpenNotifications = async () => {

@@ -65,9 +65,9 @@ export default function HardwareShopDashboardScreen() {
   };
 
   const handleGoLanding = () => {
-    logout();
     router.dismissAll();
     router.replace("/");
+    logout();
   };
 
   return (

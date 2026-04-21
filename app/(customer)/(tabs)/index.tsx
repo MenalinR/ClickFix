@@ -20,9 +20,9 @@ export default function CustomerHome() {
   const router = useRouter();
   const { jobs, fetchJobs, token, customerRespondToJob, user, logout } = useStore();
   const handleGoLanding = () => {
-    logout();
     router.dismissAll();
     router.replace("/");
+    logout();
   };
   const customerName = (user as any)?.name || "there";
   const firstName = String(customerName).split(" ")[0];
