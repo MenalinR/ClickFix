@@ -1,6 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { Colors } from "../../../constants/Colors";
+import { useChatList } from "../../../hooks/useChatList";
+
+function ChatsIcon({ color, size }: { color: string; size: number }) {
+  const { totalUnread } = useChatList();
+  return (
+    <View>
+      <Ionicons name="chatbubbles-outline" size={size} color={color} />
+      {totalUnread > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {totalUnread > 9 ? "9+" : totalUnread}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function CustomerTabsLayout() {
   return (
@@ -36,6 +55,13 @@ export default function CustomerTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="chats"
+        options={{
+          title: "Chats",
+          tabBarIcon: ChatsIcon,
+        }}
+      />
+      <Tabs.Screen
         name="hardware"
         options={{
           title: "Hardware",
@@ -56,3 +82,19 @@ export default function CustomerTabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 9,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: { color: "white", fontSize: 9, fontWeight: "700" },
+});
