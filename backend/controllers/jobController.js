@@ -502,6 +502,43 @@ exports.finalizePrice = async (req, res) => {
   }
 };
 
+// @desc    Get a worker's busy (scheduled) time slots
+// @route   GET /api/jobs/worker/:workerId/busy
+// @access  Private
+exports.getWorkerBusySlots = async (req, res) => {
+  try {
+    const { workerId } = req.params;
+    const { from, to } = req.query;
+
+    const query = {
+      $or: [{ workerId }, { requestedWorkerId: workerId }],
+      status: {
+        $nin: ["Completed", "Cancelled", "Rejected", "Denied"],
+      },
+    };
+
+    if (from || to) {
+      query.scheduledDate = {};
+      if (from) query.scheduledDate.$gte = new Date(from);
+      if (to) query.scheduledDate.$lte = new Date(to);
+    }
+
+    const jobs = await Job.find(query).select(
+      "scheduledDate estimatedDuration status",
+    );
+
+    const slots = jobs.map((j) => ({
+      start: j.scheduledDate,
+      durationMinutes: j.estimatedDuration || 120,
+      status: j.status,
+    }));
+
+    res.status(200).json({ success: true, count: slots.length, data: slots });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Update job status
 // @route   PUT /api/jobs/:id/status
 // @access  Private

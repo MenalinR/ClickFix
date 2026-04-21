@@ -34,6 +34,9 @@ export default function WorkerProfile() {
   const [scheduledAt, setScheduledAt] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [busySlots, setBusySlots] = useState<
+    { start: string; durationMinutes: number; status: string }[]
+  >([]);
 
   // Find the worker by id from the store
   const worker = workerData || workers.find((w) => String(w.id) === String(id));
@@ -78,6 +81,30 @@ export default function WorkerProfile() {
 
     loadWorker();
   }, [id]);
+
+  const loadBusySlots = React.useCallback(async () => {
+    try {
+      const workerId =
+        (workerData as any)?._id ||
+        (workerData as any)?.id ||
+        worker?._id ||
+        worker?.id;
+      if (!workerId) return;
+      const response = await apiCall(
+        api.jobs.workerBusy(String(workerId)),
+        "GET",
+        undefined,
+        token || undefined,
+      );
+      setBusySlots(response?.data || []);
+    } catch (e) {
+      setBusySlots([]);
+    }
+  }, [workerData, worker, token]);
+
+  useEffect(() => {
+    if (modalVisible) loadBusySlots();
+  }, [modalVisible, loadBusySlots]);
 
   if (!worker) {
     return (
@@ -149,6 +176,54 @@ export default function WorkerProfile() {
       setScheduledAt(next);
     }
   };
+  const slotsOnSelectedDate = busySlots.filter((s) => {
+    const d = new Date(s.start);
+    return (
+      d.getFullYear() === scheduledAt.getFullYear() &&
+      d.getMonth() === scheduledAt.getMonth() &&
+      d.getDate() === scheduledAt.getDate()
+    );
+  });
+
+  const SLOT_HOURS = [8, 10, 12, 14, 16, 18];
+  const SLOT_DURATION_MIN = 120;
+  const fmtSlot = (h: number) => {
+    const end = h + 2;
+    const fmt = (n: number) => {
+      const hour = ((n + 11) % 12) + 1;
+      const ap = n < 12 ? "AM" : "PM";
+      return `${hour}${ap}`;
+    };
+    return `${fmt(h)} - ${fmt(end)}`;
+  };
+  const timeSlotsForSelectedDate = SLOT_HOURS.map((h) => {
+    const slotStart = new Date(
+      scheduledAt.getFullYear(),
+      scheduledAt.getMonth(),
+      scheduledAt.getDate(),
+      h,
+      0,
+      0,
+      0,
+    ).getTime();
+    const slotEnd = slotStart + SLOT_DURATION_MIN * 60000;
+    let hasPending = false;
+    let hasBusy = false;
+    for (const s of slotsOnSelectedDate) {
+      const bStart = new Date(s.start).getTime();
+      const bEnd = bStart + (s.durationMinutes || 120) * 60000;
+      const overlaps = bStart < slotEnd && bEnd > slotStart;
+      if (!overlaps) continue;
+      const st = (s.status || "").toLowerCase();
+      if (st === "pending") hasPending = true;
+      else hasBusy = true;
+    }
+    const isPast = slotEnd <= Date.now();
+    const status: "available" | "pending" | "busy" =
+      hasBusy || isPast ? "busy" : hasPending ? "pending" : "available";
+    return { hour: h, label: fmtSlot(h), status };
+  });
+
   const handleTimeChange = (_event: any, selected?: Date) => {
     setShowTimePicker(Platform.OS === "ios");
     if (selected) {
@@ -455,6 +530,70 @@ export default function WorkerProfile() {
               />
             )}
 
+            {/* Time slot selector */}
+            <Text style={styles.slotsHeader}>
+              Available slots on{" "}
+              {scheduledAt.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </Text>
+            <View style={styles.slotLegend}>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: "#4CAF50" }]}
+                />
+                <Text style={styles.legendText}>Available</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: "#FFA500" }]}
+                />
+                <Text style={styles.legendText}>Pending</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: "#C62828" }]}
+                />
+                <Text style={styles.legendText}>Busy</Text>
+              </View>
+            </View>
+            <View style={styles.slotGrid}>
+              {timeSlotsForSelectedDate.map((slot, i) => {
+                const isSelected =
+                  scheduledAt.getHours() === slot.hour &&
+                  slot.status !== "busy";
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    disabled={slot.status === "busy"}
+                    style={[
+                      styles.slotPill,
+                      slot.status === "available" && styles.slotAvailable,
+                      slot.status === "pending" && styles.slotPending,
+                      slot.status === "busy" && styles.slotBusy,
+                      isSelected && styles.slotSelected,
+                    ]}
+                    onPress={() => {
+                      const next = new Date(scheduledAt);
+                      next.setHours(slot.hour, 0, 0, 0);
+                      setScheduledAt(next);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.slotPillText,
+                        slot.status === "busy" && styles.slotBusyText,
+                        isSelected && styles.slotSelectedText,
+                      ]}
+                    >
+                      {slot.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             {/* Photos/Videos */}
             <View style={{ marginBottom: 24 }}>
               <Text style={styles.sectionHeader}>Photos/Videos (Optional)</Text>
@@ -732,6 +871,71 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: Colors.text,
+  },
+  slotsHeader: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  slotLegend: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 10,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  slotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  slotPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  slotAvailable: {
+    backgroundColor: "#E8F5E9",
+    borderColor: "#4CAF50",
+  },
+  slotPending: {
+    backgroundColor: "#FFF8E1",
+    borderColor: "#FFA500",
+  },
+  slotBusy: {
+    backgroundColor: "#FFEBEE",
+    borderColor: "#C62828",
+  },
+  slotSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  slotPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  slotBusyText: {
+    color: "#C62828",
+    textDecorationLine: "line-through",
+  },
+  slotSelectedText: {
+    color: "white",
   },
   // New styles for Android picker buttons
   pickerButton: {

@@ -9,6 +9,7 @@ const {
   cancelJob,
   customerRespond,
   finalizePrice,
+  getWorkerBusySlots,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
 
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post("/", protect, authorize("customer"), createJob);
 router.get("/", protect, getJobs);
 router.get("/available", protect, authorize("worker"), getAvailableJobs);
+router.get("/worker/:workerId/busy", protect, getWorkerBusySlots);
 router.get("/:id", protect, getJob);
 router.put("/:id/assign", protect, authorize("worker"), assignWorker);
 router.put("/:id/customer-response", protect, authorize("customer"), customerRespond);
