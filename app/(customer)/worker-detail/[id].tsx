@@ -37,6 +37,11 @@ export default function WorkerProfile() {
   const [busySlots, setBusySlots] = useState<
     { start: string; durationMinutes: number; status: string }[]
   >([]);
+  const [calendarCursor, setCalendarCursor] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [dateDetailFor, setDateDetailFor] = useState<Date | null>(null);
 
   // Find the worker by id from the store
   const worker = workerData || workers.find((w) => String(w.id) === String(id));
@@ -530,68 +535,141 @@ export default function WorkerProfile() {
               />
             )}
 
-            {/* Time slot selector */}
+            {/* Worker's schedule calendar */}
             <Text style={styles.slotsHeader}>
-              Available slots on{" "}
-              {scheduledAt.toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-              })}
+              Worker's schedule — tap a day to see times
             </Text>
-            <View style={styles.slotLegend}>
-              <View style={styles.legendItem}>
+            <View style={styles.calLegend}>
+              <View style={styles.calLegendItem}>
                 <View
-                  style={[styles.legendDot, { backgroundColor: "#4CAF50" }]}
+                  style={[
+                    styles.calLegendSwatch,
+                    { backgroundColor: "#FFF8E1" },
+                  ]}
                 />
-                <Text style={styles.legendText}>Available</Text>
+                <Text style={styles.calLegendText}>Pending</Text>
               </View>
-              <View style={styles.legendItem}>
+              <View style={styles.calLegendItem}>
                 <View
-                  style={[styles.legendDot, { backgroundColor: "#FFA500" }]}
+                  style={[
+                    styles.calLegendSwatch,
+                    { backgroundColor: "#FFEBEE" },
+                  ]}
                 />
-                <Text style={styles.legendText}>Pending</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View
-                  style={[styles.legendDot, { backgroundColor: "#C62828" }]}
-                />
-                <Text style={styles.legendText}>Busy</Text>
+                <Text style={styles.calLegendText}>Busy</Text>
               </View>
             </View>
-            <View style={styles.slotGrid}>
-              {timeSlotsForSelectedDate.map((slot, i) => {
-                const isSelected =
-                  scheduledAt.getHours() === slot.hour &&
-                  slot.status !== "busy";
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    disabled={slot.status === "busy"}
-                    style={[
-                      styles.slotPill,
-                      slot.status === "available" && styles.slotAvailable,
-                      slot.status === "pending" && styles.slotPending,
-                      slot.status === "busy" && styles.slotBusy,
-                      isSelected && styles.slotSelected,
-                    ]}
-                    onPress={() => {
-                      const next = new Date(scheduledAt);
-                      next.setHours(slot.hour, 0, 0, 0);
-                      setScheduledAt(next);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.slotPillText,
-                        slot.status === "busy" && styles.slotBusyText,
-                        isSelected && styles.slotSelectedText,
-                      ]}
-                    >
-                      {slot.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={styles.bookingCalendar}>
+              <View style={styles.calMonthRow}>
+                <TouchableOpacity
+                  style={styles.calNavBtn}
+                  onPress={() =>
+                    setCalendarCursor(
+                      new Date(
+                        calendarCursor.getFullYear(),
+                        calendarCursor.getMonth() - 1,
+                        1,
+                      ),
+                    )
+                  }
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.calMonthLabel}>
+                  {calendarCursor.toLocaleString("en-GB", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </Text>
+                <TouchableOpacity
+                  style={styles.calNavBtn}
+                  onPress={() =>
+                    setCalendarCursor(
+                      new Date(
+                        calendarCursor.getFullYear(),
+                        calendarCursor.getMonth() + 1,
+                        1,
+                      ),
+                    )
+                  }
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.calDaysRow}>
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                  <Text key={i} style={styles.calDayLabel}>
+                    {d}
+                  </Text>
+                ))}
+              </View>
+              <View style={styles.calGrid}>
+                {(() => {
+                  const firstDow = new Date(
+                    calendarCursor.getFullYear(),
+                    calendarCursor.getMonth(),
+                    1,
+                  ).getDay();
+                  const daysInMonth = new Date(
+                    calendarCursor.getFullYear(),
+                    calendarCursor.getMonth() + 1,
+                    0,
+                  ).getDate();
+                  const cells: (Date | null)[] = [];
+                  for (let i = 0; i < firstDow; i++) cells.push(null);
+                  for (let d = 1; d <= daysInMonth; d++)
+                    cells.push(
+                      new Date(
+                        calendarCursor.getFullYear(),
+                        calendarCursor.getMonth(),
+                        d,
+                      ),
+                    );
+                  while (cells.length % 7 !== 0) cells.push(null);
+                  return cells.map((cell, idx) => {
+                    if (!cell)
+                      return <View key={idx} style={styles.calCell} />;
+                    const dayBusy = busySlots.filter((s) => {
+                      const d = new Date(s.start);
+                      return (
+                        d.getFullYear() === cell.getFullYear() &&
+                        d.getMonth() === cell.getMonth() &&
+                        d.getDate() === cell.getDate()
+                      );
+                    });
+                    const hasBusy = dayBusy.some(
+                      (s) => (s.status || "").toLowerCase() !== "pending",
+                    );
+                    const hasPending = dayBusy.some(
+                      (s) => (s.status || "").toLowerCase() === "pending",
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        disabled={dayBusy.length === 0}
+                        style={[
+                          styles.calCell,
+                          hasPending && !hasBusy && styles.calCellPending,
+                          hasBusy && styles.calCellBusy,
+                        ]}
+                        onPress={() => setDateDetailFor(cell)}
+                      >
+                        <Text style={styles.calCellText}>
+                          {cell.getDate()}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
             </View>
 
             {/* Photos/Videos */}
@@ -636,6 +714,80 @@ export default function WorkerProfile() {
                 style={{ flex: 1 }}
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!dateDetailFor}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDateDetailFor(null)}
+      >
+        <View style={styles.dateDetailOverlay}>
+          <View style={styles.dateDetailSheet}>
+            <View style={styles.dateDetailHeader}>
+              <Text style={styles.dateDetailTitle}>
+                {dateDetailFor?.toLocaleDateString("en-GB", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </Text>
+              <TouchableOpacity onPress={() => setDateDetailFor(null)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            {(dateDetailFor
+              ? busySlots.filter((s) => {
+                  const d = new Date(s.start);
+                  return (
+                    d.getFullYear() === dateDetailFor.getFullYear() &&
+                    d.getMonth() === dateDetailFor.getMonth() &&
+                    d.getDate() === dateDetailFor.getDate()
+                  );
+                })
+              : []
+            )
+              .sort(
+                (a, b) =>
+                  new Date(a.start).getTime() - new Date(b.start).getTime(),
+              )
+              .map((s, i) => {
+                const start = new Date(s.start);
+                const isPending =
+                  (s.status || "").toLowerCase() === "pending";
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dateDetailRow,
+                      {
+                        backgroundColor: isPending ? "#FFF8E1" : "#FFEBEE",
+                        borderLeftColor: isPending ? "#FFA500" : "#C62828",
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        isPending ? "time-outline" : "lock-closed-outline"
+                      }
+                      size={16}
+                      color={isPending ? "#F57F17" : "#C62828"}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dateDetailTime}>
+                        {start.toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </Text>
+                      <Text style={styles.dateDetailStatus}>{s.status}</Text>
+                    </View>
+                  </View>
+                );
+              })}
           </View>
         </View>
       </Modal>
@@ -936,6 +1088,113 @@ const styles = StyleSheet.create({
   },
   slotSelectedText: {
     color: "white",
+  },
+  calLegend: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
+  calLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  calLegendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  calLegendText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  bookingCalendar: {
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  calMonthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  calNavBtn: { padding: 4 },
+  calMonthLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  calDaysRow: { flexDirection: "row", paddingBottom: 4 },
+  calDayLabel: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: {
+    width: `${100 / 7}%`,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+  },
+  calCellBusy: { backgroundColor: "#FFEBEE" },
+  calCellPending: { backgroundColor: "#FFF8E1" },
+  calCellText: { fontSize: 11, color: Colors.text },
+  dateDetailOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  dateDetailSheet: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 18,
+    width: "100%",
+    maxWidth: 380,
+  },
+  dateDetailHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  dateDetailTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  dateDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderLeftWidth: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  dateDetailTime: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  dateDetailStatus: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textTransform: "uppercase",
   },
   // New styles for Android picker buttons
   pickerButton: {
