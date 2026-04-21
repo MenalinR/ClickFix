@@ -26,6 +26,7 @@ export default function JobRequestsPage() {
   const [filter, setFilter] = useState<"all" | "new" | "accepted">("all");
   const [loading, setLoading] = useState(true);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -58,6 +59,7 @@ export default function JobRequestsPage() {
   const jobId = (j: any) => j._id || j.id;
 
   const handleAcceptJob = async (id: string) => {
+    if (acceptingId) return;
     const raw = (priceInputs[id] || "").trim();
     const price = Number(raw);
     if (!raw || isNaN(price) || price <= 0) {
@@ -65,6 +67,7 @@ export default function JobRequestsPage() {
       return;
     }
     try {
+      setAcceptingId(id);
       await acceptJob(id, price);
       setPriceInputs((prev) => {
         const next = { ...prev };
@@ -73,7 +76,19 @@ export default function JobRequestsPage() {
       });
       Alert.alert("Success", "Job accepted! You can now chat with the customer.");
     } catch (e: any) {
-      Alert.alert("Error", e?.message || "Failed to accept job.");
+      const msg = e?.message || "Failed to accept job.";
+      if (msg.toLowerCase().includes("already assigned")) {
+        // Someone else took it or we already accepted — resync silently
+        await fetchJobs();
+        Alert.alert(
+          "Job no longer available",
+          "This job was already assigned. The list has been refreshed.",
+        );
+      } else {
+        Alert.alert("Error", msg);
+      }
+    } finally {
+      setAcceptingId(null);
     }
   };
 
@@ -329,8 +344,13 @@ export default function JobRequestsPage() {
                       <Text style={styles.rejectButtonText}>Reject</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.button, styles.acceptButton]}
+                      style={[
+                        styles.button,
+                        styles.acceptButton,
+                        acceptingId === id && { opacity: 0.6 },
+                      ]}
                       onPress={() => handleAcceptJob(id)}
+                      disabled={acceptingId !== null}
                     >
                       <Ionicons
                         name="checkmark-circle-outline"
