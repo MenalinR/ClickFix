@@ -87,6 +87,7 @@ export const api = {
     cancel: (id: string) => `${API_URL}/jobs/${id}/cancel`,
     workerBusy: (workerId: string) =>
       `${API_URL}/jobs/worker/${workerId}/busy`,
+    uploadImage: `${API_URL}/jobs/upload-image`,
   },
 
   // Chat

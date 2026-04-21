@@ -502,6 +502,34 @@ exports.finalizePrice = async (req, res) => {
   }
 };
 
+// @desc    Upload an image for a job (used by customer when creating bookings)
+// @route   POST /api/jobs/upload-image
+// @access  Private (Customer)
+exports.uploadJobImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an image file",
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    res.status(200).json({
+      success: true,
+      data: { url: imageUrl },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get a worker's busy (scheduled) time slots
 // @route   GET /api/jobs/worker/:workerId/busy
 // @access  Private

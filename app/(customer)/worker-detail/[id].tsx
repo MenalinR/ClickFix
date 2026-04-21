@@ -18,7 +18,7 @@ import {
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
-import { api, apiCall } from "../../../constants/api";
+import { api, apiCall, apiUpload } from "../../../constants/api";
 
 export default function WorkerProfile() {
   const router = useRouter();
@@ -134,11 +134,38 @@ export default function WorkerProfile() {
     }
     try {
       const workerId = worker._id || worker.id;
+
+      // Upload any selected photos, collect their URLs
+      const imageUrls: string[] = [];
+      for (const uri of media as string[]) {
+        try {
+          const filename = uri.split("/").pop() || `photo-${Date.now()}.jpg`;
+          const match = /\.(\w+)$/.exec(filename);
+          const ext = (match?.[1] || "jpg").toLowerCase();
+          const mime = ext === "png" ? "image/png" : "image/jpeg";
+          const formData = new FormData();
+          formData.append("document", {
+            uri,
+            name: filename,
+            type: mime,
+          } as any);
+          const up = await apiUpload(
+            api.jobs.uploadImage,
+            formData,
+            token || undefined,
+          );
+          if (up?.data?.url) imageUrls.push(up.data.url);
+        } catch (upErr) {
+          console.error("Image upload failed:", upErr);
+        }
+      }
+
       const job = await createJob({
         serviceType: worker.category || "Other",
         description: description.trim(),
         requestedWorkerId: workerId,
         scheduledDate: scheduledAt.toISOString(),
+        images: imageUrls,
         location: {
           type: "Point",
           coordinates: [79.8612, 6.9271],

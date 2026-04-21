@@ -10,12 +10,25 @@ const {
   customerRespond,
   finalizePrice,
   getWorkerBusySlots,
+  uploadJobImage,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
+const { uploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
 router.post("/", protect, authorize("customer"), createJob);
+router.post(
+  "/upload-image",
+  protect,
+  authorize("customer"),
+  (req, res, next) => {
+    req.uploadFolder = "job-images";
+    next();
+  },
+  uploadDocument,
+  uploadJobImage,
+);
 router.get("/", protect, getJobs);
 router.get("/available", protect, authorize("worker"), getAvailableJobs);
 router.get("/worker/:workerId/busy", protect, getWorkerBusySlots);
