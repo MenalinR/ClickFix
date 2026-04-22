@@ -221,12 +221,16 @@ function UserDetail({ user }: { user: UserRow }) {
         { icon: 'location-outline', label: 'Address', value: address },
     ];
     if (user.role === 'worker') {
+        const isVerified =
+            u.verified ||
+            u.nicVerified ||
+            u.idProof?.verificationStatus === 'Verified';
         rows.push(
             { icon: 'briefcase-outline', label: 'Category', value: u.category || '—' },
             { icon: 'time-outline', label: 'Experience', value: u.experience ? `${u.experience} years` : '—' },
             { icon: 'star-outline', label: 'Rating', value: String(u.rating ?? 0) },
             { icon: 'checkmark-done-outline', label: 'Jobs Done', value: String(u.jobsCompleted ?? 0) },
-            { icon: 'shield-checkmark-outline', label: 'Verified', value: u.verified ? 'Yes' : 'No' },
+            { icon: 'shield-checkmark-outline', label: 'Verified', value: isVerified ? 'Yes' : 'No' },
         );
     }
     return (
