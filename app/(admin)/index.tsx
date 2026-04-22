@@ -16,7 +16,7 @@ import { useStore } from "../../constants/Store";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { workers, bookings, token, logout } = useStore();
+  const { workers, jobs, token, logout, fetchWorkers, fetchJobs } = useStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
@@ -26,13 +26,23 @@ export default function AdminDashboard() {
     logout();
   };
 
+  useEffect(() => {
+    if (!token) return;
+    fetchWorkers();
+    fetchJobs();
+  }, [token, fetchWorkers, fetchJobs]);
+
+  const statusOf = (b: any) => (b.status || "").toLowerCase();
   const totalWorkers = workers.length;
-  const totalBookings = bookings?.length || 0;
+  const totalBookings = jobs?.length || 0;
   const activeBookings =
-    bookings?.filter((b) => b.status === "pending" || b.status === "confirmed")
-      .length || 0;
+    jobs?.filter((b: any) =>
+      ["pending", "worker accepted", "negotiating", "accepted", "on the way", "in progress"].includes(
+        statusOf(b),
+      ),
+    ).length || 0;
   const completedBookings =
-    bookings?.filter((b) => b.status === "completed").length || 0;
+    jobs?.filter((b: any) => statusOf(b) === "completed").length || 0;
 
   const stats = [
     {
@@ -154,11 +164,11 @@ export default function AdminDashboard() {
             onPress={() => router.push("/(admin)/users")}
           >
             <Ionicons
-              name="person-add-outline"
+              name="people-outline"
               size={32}
               color={Colors.primary}
             />
-            <Text style={styles.actionText}>Add Worker</Text>
+            <Text style={styles.actionText}>Users</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
