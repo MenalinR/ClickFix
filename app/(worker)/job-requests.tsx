@@ -379,6 +379,7 @@ export default function JobRequestsPage() {
                             jobId: id,
                             customerId:
                               j.customerId?._id || j.customerId || "",
+                            customerName,
                           },
                         } as any)
                       }
@@ -400,7 +401,13 @@ export default function JobRequestsPage() {
                       onPress={() =>
                         router.push({
                           pathname: "/chat",
-                          params: { jobId: id, customerId: (job.customerId?._id || job.customerId)?.toString?.() || job.customerId },
+                          params: {
+                            jobId: id,
+                            customerId:
+                              (j.customerId?._id || j.customerId)?.toString?.() ||
+                              j.customerId,
+                            customerName,
+                          },
                         } as any)
                       }
                     >
