@@ -151,7 +151,9 @@ export default function JobDetailsPage() {
                 color={Colors.primary}
               />
               <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{job.location}</Text>
+              <Text style={styles.infoValue}>
+                {(job.location as any)?.address || "—"}
+              </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>

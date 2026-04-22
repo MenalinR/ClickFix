@@ -1,9 +1,8 @@
 import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,15 +21,27 @@ export default function WorkerDashboard() {
   const workerCategory = (user as any)?.category || "Worker";
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const pendingJobs = jobs.filter((j) => j.status === "pending");
+  const statusOf = (j: any) => (j.status || "").toLowerCase();
+  const isMine = (j: any) =>
+    (j.workerId as any)?._id === workerId ||
+    (j.workerId as any) === workerId;
+  const pendingJobs = jobs.filter((j) => statusOf(j) === "pending");
   const acceptedJobs = jobs.filter(
-    (j) => j.status === "accepted" && j.workerId === workerId,
+    (j) => statusOf(j) === "accepted" && isMine(j),
   );
   const earnings = jobs
-    .filter((j) => j.status === "completed" && j.workerId === workerId)
-    .reduce((acc, j) => acc + ((j as any).price || 0), 0);
+    .filter((j) => statusOf(j) === "completed" && isMine(j))
+    .reduce(
+      (acc, j) =>
+        acc +
+        ((j as any).pricing?.totalAmount ??
+          (j as any).pricing?.serviceCharge ??
+          (j as any).price ??
+          0),
+      0,
+    );
   const completedCount = jobs.filter(
-    (j) => j.status === "completed" && j.workerId === workerId,
+    (j) => statusOf(j) === "completed" && isMine(j),
   ).length;
 
   const fetchUnreadCount = useCallback(async () => {
@@ -81,14 +92,6 @@ export default function WorkerDashboard() {
     router.push("/job-requests");
   };
 
-  // Local alert when new job request arrives during this session
-  const prevPendingCount = useRef(pendingJobs.length);
-  useEffect(() => {
-    if (pendingJobs.length > prevPendingCount.current) {
-      Alert.alert("New Booking", "You have a new job request!");
-    }
-    prevPendingCount.current = pendingJobs.length;
-  }, [pendingJobs.length]);
 
   return (
     <SafeAreaView style={styles.container}>
