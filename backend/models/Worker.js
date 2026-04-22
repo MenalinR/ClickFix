@@ -61,7 +61,7 @@ const workerSchema = new mongoose.Schema(
     },
     hourlyRate: {
       type: Number,
-      required: [true, "Hourly rate is required"],
+      default: 0,
       min: 0,
     },
     location: {
