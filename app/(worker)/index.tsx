@@ -176,7 +176,7 @@ export default function WorkerDashboard() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push("/chat")}
+            onPress={() => router.push("/(worker)/chats" as any)}
           >
             <View style={[styles.actionIcon, { backgroundColor: "#F3E5F5" }]}>
               <Ionicons name="chatbubble-outline" size={28} color="#9C27B0" />
