@@ -39,10 +39,31 @@ interface PendingDocument {
   uploadedAt: string;
 }
 
+interface VerifiedDocument {
+  workerId: string;
+  workerName: string;
+  workerEmail: string;
+  workerPhone: string;
+  category: string;
+  documentType: string;
+  document: {
+    _id?: string;
+    url: string;
+    documentType?: string;
+    issueDate?: string;
+    expiryDate?: string;
+    verificationNotes?: string;
+  };
+  verifiedAt: string;
+}
+
 export default function DocumentVerificationScreen() {
   const { token } = useStore();
   const [loading, setLoading] = useState(false);
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>(
+    [],
+  );
+  const [verifiedDocuments, setVerifiedDocuments] = useState<VerifiedDocument[]>(
     [],
   );
   const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -56,9 +77,24 @@ export default function DocumentVerificationScreen() {
 
   useEffect(() => {
     fetchPendingDocuments();
+    fetchVerifiedDocuments();
     // Mark all document notifications as read when page opens
     markAllDocumentNotificationsAsRead();
   }, []);
+
+  const fetchVerifiedDocuments = async () => {
+    try {
+      const response = await apiCall(
+        api.admin.getVerifiedDocuments,
+        "GET",
+        undefined,
+        token!,
+      );
+      setVerifiedDocuments(response.data || []);
+    } catch (error) {
+      console.error("Error fetching verified documents:", error);
+    }
+  };
 
   const markAllDocumentNotificationsAsRead = async () => {
     try {
@@ -205,6 +241,7 @@ export default function DocumentVerificationScreen() {
 
       Alert.alert("Success", `${doc.documentType} approved!`);
       fetchPendingDocuments();
+      fetchVerifiedDocuments();
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {
@@ -242,6 +279,7 @@ export default function DocumentVerificationScreen() {
       delete newNotes[`${doc.workerId}-${doc.documentType}`];
       setRejectionNotes(newNotes);
       fetchPendingDocuments();
+      fetchVerifiedDocuments();
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {
@@ -474,6 +512,13 @@ export default function DocumentVerificationScreen() {
             </ThemedText>
             <ThemedText style={styles.summaryLabel}>Pending</ThemedText>
           </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}>
+            <ThemedText style={[styles.summaryNumber, { color: "#10B981" }]}>
+              {verifiedDocuments.length}
+            </ThemedText>
+            <ThemedText style={styles.summaryLabel}>Verified</ThemedText>
+          </View>
         </View>
 
         {/* Documents List */}
@@ -499,6 +544,59 @@ export default function DocumentVerificationScreen() {
             <ThemedText style={styles.emptyText}>
               No pending documents to review
             </ThemedText>
+          </View>
+        )}
+
+        {/* Verified Documents */}
+        {verifiedDocuments.length > 0 && (
+          <View style={styles.verifiedSection}>
+            <ThemedText style={styles.verifiedSectionTitle}>
+              Verified Documents
+            </ThemedText>
+            {verifiedDocuments.map((item) => (
+              <View
+                key={`${item.workerId}-${item.documentType}`}
+                style={styles.verifiedItem}
+              >
+                <View style={styles.verifiedItemHeader}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={styles.verifiedWorkerName}>
+                      {item.workerName}
+                    </ThemedText>
+                    <ThemedText style={styles.verifiedMeta}>
+                      {item.category} · {item.documentType}
+                    </ThemedText>
+                    {!!item.verifiedAt && (
+                      <ThemedText style={styles.verifiedDate}>
+                        Verified{" "}
+                        {new Date(item.verifiedAt).toLocaleDateString()}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color="#10B981"
+                    />
+                    <ThemedText style={styles.verifiedBadgeText}>
+                      Verified
+                    </ThemedText>
+                  </View>
+                </View>
+                {!!item.document?.url && (
+                  <TouchableOpacity
+                    style={styles.viewDocButton}
+                    onPress={() => openDocument(item.document.url)}
+                  >
+                    <Ionicons name="open-outline" size={16} color="#0066CC" />
+                    <ThemedText style={styles.viewDocButtonText}>
+                      View Document
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -714,5 +812,59 @@ const styles = StyleSheet.create({
   fullImage: {
     width: Dimensions.get("window").width,
     height: Dimensions.get("window").height * 0.8,
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 8,
+  },
+  verifiedSection: {
+    marginTop: 8,
+  },
+  verifiedSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  verifiedItem: {
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    backgroundColor: "#F0FDF4",
+  },
+  verifiedItemHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  verifiedWorkerName: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  verifiedMeta: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 2,
+  },
+  verifiedDate: {
+    fontSize: 11,
+    opacity: 0.5,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "#D1FAE5",
+    borderRadius: 12,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#10B981",
   },
 });

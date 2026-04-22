@@ -1016,6 +1016,40 @@ exports.getPendingDocuments = async (req, res) => {
   }
 };
 
+// @desc    Get workers with verified ID proofs (admin)
+// @route   GET /api/workers/admin/verified
+// @access  Private (Admin only)
+exports.getVerifiedDocuments = async (req, res) => {
+  try {
+    const workers = await Worker.find({
+      "idProof.verificationStatus": "Verified",
+    })
+      .select("name email phone category idProof")
+      .sort({ "idProof.verifiedAt": -1, updatedAt: -1 });
+
+    const verifiedDocs = workers
+      .filter((w) => w.idProof?.verificationStatus === "Verified")
+      .map((worker) => ({
+        workerId: worker._id,
+        workerName: worker.name,
+        workerEmail: worker.email,
+        workerPhone: worker.phone,
+        category: worker.category,
+        documentType: "ID Proof",
+        document: worker.idProof,
+        verifiedAt: worker.idProof.verifiedAt || worker.updatedAt,
+      }));
+
+    res.status(200).json({
+      success: true,
+      data: verifiedDocs,
+      count: verifiedDocs.length,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Upload profile image
 // @route   POST /api/workers/:id/upload-image
 // @access  Private (Worker only)

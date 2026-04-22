@@ -50,6 +50,7 @@ export const api = {
   // Admin
   admin: {
     getPendingDocuments: `${API_URL}/workers/admin/pending`,
+    getVerifiedDocuments: `${API_URL}/workers/admin/verified`,
   },
 
   // Notifications

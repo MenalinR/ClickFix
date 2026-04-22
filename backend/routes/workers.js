@@ -17,6 +17,7 @@ const {
   verifyIDProof,
   verifyExperienceDocument,
   getPendingDocuments,
+  getVerifiedDocuments,
 } = require("../controllers/workerController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument, optionalUploadDocument } = require("../utils/upload");
@@ -29,6 +30,7 @@ router.get("/:id/verification-status", protect, getVerificationStatus);
 
 // Admin routes for document verification
 router.get("/admin/pending", protect, authorize("admin"), getPendingDocuments);
+router.get("/admin/verified", protect, authorize("admin"), getVerifiedDocuments);
 router.put("/:id/verify-id-proof", protect, authorize("admin"), verifyIDProof);
 router.put(
   "/:id/verify-experience/:docId",
