@@ -5,17 +5,18 @@ import { useStore } from "@/constants/Store";
 import { api, apiCall, apiUpload } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type DocumentStatus = "Pending" | "Verified" | "Rejected";
@@ -44,8 +45,18 @@ interface IDProof extends Document {
 }
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 const getYearOptions = () => {
@@ -60,7 +71,10 @@ function monthYearToIso(month: number | "", year: number | ""): string {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
-function isoToMonthYear(iso: string | undefined): { month: number | ""; year: number | "" } {
+function isoToMonthYear(iso: string | undefined): {
+  month: number | "";
+  year: number | "";
+} {
   if (!iso) return { month: "", year: "" };
   const d = new Date(iso);
   if (isNaN(d.getTime())) return { month: "", year: "" };
@@ -74,10 +88,7 @@ function formatMonthYear(month: number | "", year: number | ""): string {
 
 function formatRangeWithPresent(start?: string, end?: string): string {
   const startText = start
-    ? formatMonthYear(
-        isoToMonthYear(start).month,
-        isoToMonthYear(start).year,
-      )
+    ? formatMonthYear(isoToMonthYear(start).month, isoToMonthYear(start).year)
     : "";
   const endText = end
     ? formatMonthYear(isoToMonthYear(end).month, isoToMonthYear(end).year)
@@ -189,23 +200,70 @@ export default function DocumentsScreen() {
     }
   };
 
-  const handlePickDocument = async (
-    setUrl: (url: string) => void,
-    isExperience: boolean = false,
-  ) => {
+  const pickFromGallery = async (setUrl: (url: string) => void) => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow access to your photos to pick an image.",
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setUrl(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const pickFromCamera = async (setUrl: (url: string) => void) => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow camera access to take a photo.",
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+      if (!result.canceled && result.assets?.[0]) {
+        setUrl(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to capture photo");
+    }
+  };
+
+  const pickPdf = async (setUrl: (url: string) => void) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/pdf", "image/*"],
       });
-
       if (!result.canceled && result.assets[0]) {
-        const file = result.assets[0];
-        setUrl(file.uri);
-        console.log("Document selected:", file.name);
+        setUrl(result.assets[0].uri);
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to select document");
     }
+  };
+
+  const handlePickDocument = (
+    setUrl: (url: string) => void,
+    _isExperience: boolean = false,
+  ) => {
+    Alert.alert("Select document", "Choose how to upload your document", [
+      { text: "Take Photo", onPress: () => pickFromCamera(setUrl) },
+      { text: "Choose from Photos", onPress: () => pickFromGallery(setUrl) },
+      { text: "Pick PDF / File", onPress: () => pickPdf(setUrl) },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleUploadIDProof = async () => {
@@ -1365,9 +1423,7 @@ export default function DocumentsScreen() {
                     title={eduUploading ? "Saving..." : "Save Education"}
                     onPress={handleUploadEducationDocument}
                     disabled={
-                      !eduDocumentName ||
-                      !eduDescription ||
-                      eduUploading
+                      !eduDocumentName || !eduDescription || eduUploading
                     }
                   />
                   <Button
@@ -1436,7 +1492,8 @@ export default function DocumentsScreen() {
               <ThemedText style={styles.modalTitle}>
                 {datePickerStep === "month" ? "Select Month" : "Select Year"}
               </ThemedText>
-              {(datePickerTarget === "expEnd" || datePickerTarget === "eduEnd") && (
+              {(datePickerTarget === "expEnd" ||
+                datePickerTarget === "eduEnd") && (
                 <TouchableOpacity
                   style={styles.presentOption}
                   onPress={setEndDateAsPresent}
@@ -1451,7 +1508,10 @@ export default function DocumentsScreen() {
                   </ThemedText>
                 </TouchableOpacity>
               )}
-              <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps="handled">
+              <ScrollView
+                style={styles.pickerScroll}
+                keyboardShouldPersistTaps="handled"
+              >
                 {datePickerStep === "month"
                   ? MONTH_NAMES.map((name, idx) => (
                       <TouchableOpacity
@@ -1459,7 +1519,9 @@ export default function DocumentsScreen() {
                         style={styles.modalOption}
                         onPress={() => handleMonthSelect(idx + 1)}
                       >
-                        <ThemedText style={styles.modalOptionText}>{name}</ThemedText>
+                        <ThemedText style={styles.modalOptionText}>
+                          {name}
+                        </ThemedText>
                       </TouchableOpacity>
                     ))
                   : YEAR_OPTIONS.map((year) => (
@@ -1468,7 +1530,9 @@ export default function DocumentsScreen() {
                         style={styles.modalOption}
                         onPress={() => handleYearSelect(year)}
                       >
-                        <ThemedText style={styles.modalOptionText}>{String(year)}</ThemedText>
+                        <ThemedText style={styles.modalOptionText}>
+                          {String(year)}
+                        </ThemedText>
                       </TouchableOpacity>
                     ))}
               </ScrollView>
