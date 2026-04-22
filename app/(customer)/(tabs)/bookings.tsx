@@ -103,8 +103,16 @@ export default function BookingsScreen() {
     job?.workerId?.name || job?.requestedWorkerId?.name || "—";
   const workerImage = (job: any) =>
     job?.workerId?.image || job?.requestedWorkerId?.image || "https://via.placeholder.com/40";
-  const amount = (job: any) =>
-    job?.pricing?.totalAmount ?? job?.pricing?.serviceCharge ?? 0;
+  const amount = (job: any) => {
+    const status = (job?.status || "").toLowerCase();
+    const p = job?.pricing || {};
+    if (status === "pending") return 0;
+    if (status === "negotiating") {
+      return p.negotiatedPrice || p.proposedPrice || 0;
+    }
+    if (!p.proposedPrice && !p.negotiatedPrice) return 0;
+    return p.negotiatedPrice || p.totalAmount || p.serviceCharge || p.proposedPrice || 0;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -174,6 +182,7 @@ export default function BookingsScreen() {
                 <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
                 <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
                 <Text style={[styles.tableHeaderText, styles.colIssue]}>Issue</Text>
+                <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
                 <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
               </View>
               <ScrollView
@@ -213,6 +222,11 @@ export default function BookingsScreen() {
                       numberOfLines={2}
                     >
                       {(job as any).description || "—"}
+                    </Text>
+                    <Text
+                      style={[styles.tableCell, styles.colAmount, styles.amountCell]}
+                    >
+                      {amount(job) ? `${amount(job)} LKR` : "—"}
                     </Text>
                     <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
                       <Text style={[styles.statusText, { color: colors.text }]}>
@@ -589,6 +603,10 @@ const styles = StyleSheet.create({
   colWorker: { width: 140, justifyContent: "center" },
   colService: { width: 110, justifyContent: "center" },
   colAmount: { width: 100, justifyContent: "center" },
+  amountCell: {
+    fontWeight: "700",
+    color: Colors.primary,
+  },
   colIssue: { width: 160, justifyContent: "center" },
   colStatus: { width: 100, justifyContent: "center", alignItems: "center" },
   tableRow: {
