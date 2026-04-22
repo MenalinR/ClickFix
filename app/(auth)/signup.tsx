@@ -30,7 +30,6 @@ export default function SignupScreen() {
 
   // Worker-specific fields
   const [category, setCategory] = useState("Plumber");
-  const [hourlyRate, setHourlyRate] = useState("");
   const [experience, setExperience] = useState("");
 
   // Store methods
@@ -72,14 +71,6 @@ export default function SignupScreen() {
         Alert.alert("Error", "Please select a category");
         return false;
       }
-      if (!hourlyRate.trim()) {
-        Alert.alert("Error", "Please enter hourly rate");
-        return false;
-      }
-      if (isNaN(Number(hourlyRate))) {
-        Alert.alert("Error", "Hourly rate must be a number");
-        return false;
-      }
       if (!experience.trim()) {
         Alert.alert("Error", "Please enter years of experience");
         return false;
@@ -105,7 +96,6 @@ export default function SignupScreen() {
           phone,
           password,
           category,
-          hourlyRate: Number(hourlyRate),
           experience: Number(experience),
         });
         Alert.alert("Success", "Worker account created successfully!");
@@ -223,18 +213,6 @@ export default function SignupScreen() {
                       ))}
                     </ScrollView>
                   </View>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Hourly Rate ($)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., 1500"
-                    value={hourlyRate}
-                    onChangeText={setHourlyRate}
-                    keyboardType="decimal-pad"
-                    editable={!loading}
-                  />
                 </View>
 
                 <View style={styles.inputGroup}>

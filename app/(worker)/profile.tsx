@@ -554,16 +554,6 @@ export default function WorkerProfileScreen() {
               <Text style={styles.infoValue}>{user.experience}</Text>
             </View>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="cash-outline" size={20} color={Colors.primary} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Hourly Rate</Text>
-              <Text style={styles.infoValue}>Rs. {user.hourlyRate}</Text>
-            </View>
-          </View>
         </View>
 
         {/* Skills Section */}
