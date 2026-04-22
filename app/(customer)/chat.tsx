@@ -12,16 +12,44 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
 import { useChat } from "../../hooks/useChat";
 
 export default function CustomerChatPage() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ jobId?: string; workerId?: string }>();
+  const { token } = useStore();
+  const params = useLocalSearchParams<{
+    jobId?: string;
+    workerId?: string;
+    workerName?: string;
+  }>();
   const jobId = typeof params.jobId === "string" ? params.jobId : "";
   const workerId = typeof params.workerId === "string" ? params.workerId : "";
+  const initialName =
+    typeof params.workerName === "string" ? params.workerName : "";
   const flatListRef = useRef<FlatList>(null);
   const [text, setText] = useState("");
+  const [workerName, setWorkerName] = useState(initialName);
+
+  useEffect(() => {
+    if (workerName || !workerId || !token) return;
+    (async () => {
+      try {
+        const res = await apiCall(
+          api.workers.getById(workerId),
+          "GET",
+          undefined,
+          token,
+        );
+        const name = res?.data?.name || res?.name;
+        if (name) setWorkerName(name);
+      } catch {
+        // silent
+      }
+    })();
+  }, [workerName, workerId, token]);
 
   const { messages, loading, sending, typing, sendMessage, emitTyping, myId } =
     useChat({ jobId, otherUserId: workerId, otherUserModel: "Worker" });
@@ -96,7 +124,7 @@ export default function CustomerChatPage() {
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>Worker</Text>
+          <Text style={styles.headerName}>{workerName || "Worker"}</Text>
           <Text style={styles.headerStatus}>{typing ? "Typing…" : "Chat"}</Text>
         </View>
       </View>

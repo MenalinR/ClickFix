@@ -46,6 +46,7 @@ export default function BookingsScreen() {
         jobId,
         workerId:
           (job?.workerId as any)?._id || (job?.workerId as any) || "",
+        workerName: (job?.workerId as any)?.name || "",
         customerId:
           (job?.customerId as any)?._id || (job?.customerId as any) || "",
       },

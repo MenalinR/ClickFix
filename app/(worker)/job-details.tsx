@@ -266,7 +266,11 @@ export default function JobDetailsPage() {
             onPress={() =>
               router.push({
                 pathname: "/chat",
-                params: { jobId: job.id, customerId: job.customerId },
+                params: {
+                  jobId: job.id,
+                  customerId: job.customerId,
+                  customerName: (job as any).customerName,
+                },
               })
             }
           >

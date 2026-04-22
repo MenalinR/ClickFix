@@ -14,20 +14,45 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
 import { useChat } from "../../hooks/useChat";
 
 export default function WorkerChatPage() {
   const router = useRouter();
+  const { token } = useStore();
   const params = useLocalSearchParams<{
     jobId?: string;
     customerId?: string;
+    customerName?: string;
   }>();
   const jobId = typeof params.jobId === "string" ? params.jobId : "";
   const customerId =
     typeof params.customerId === "string" ? params.customerId : "";
+  const initialName =
+    typeof params.customerName === "string" ? params.customerName : "";
   const flatListRef = useRef<FlatList>(null);
   const [text, setText] = useState("");
+  const [customerName, setCustomerName] = useState(initialName);
+
+  useEffect(() => {
+    if (customerName || !customerId || !token) return;
+    (async () => {
+      try {
+        const res = await apiCall(
+          api.customers.getById(customerId),
+          "GET",
+          undefined,
+          token,
+        );
+        const name = res?.data?.name || res?.name;
+        if (name) setCustomerName(name);
+      } catch {
+        // silent
+      }
+    })();
+  }, [customerName, customerId, token]);
 
   const { messages, loading, sending, typing, sendMessage, emitTyping, myId } =
     useChat({ jobId, otherUserId: customerId, otherUserModel: "Customer" });
@@ -106,7 +131,7 @@ export default function WorkerChatPage() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerName}>Customer</Text>
+            <Text style={styles.headerName}>{customerName || "Customer"}</Text>
             <Text style={styles.headerStatus}>
               {typing ? "Typing…" : "Chat"}
             </Text>

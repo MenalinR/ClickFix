@@ -39,6 +39,7 @@ export default function WorkerChatsScreen() {
             params: {
               jobId: item.chatId,
               customerId: String(customerId),
+              customerName: otherName,
             },
           } as any)
         }

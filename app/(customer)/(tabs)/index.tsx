@@ -91,6 +91,7 @@ export default function CustomerHome() {
         jobId,
         workerId:
           (job?.workerId as any)?._id || (job?.workerId as any) || "",
+        workerName: (job?.workerId as any)?.name || "",
         customerId: customerId ? String(customerId) : "",
       },
     });

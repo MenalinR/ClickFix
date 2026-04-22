@@ -40,6 +40,7 @@ export default function CustomerChatsScreen() {
             params: {
               jobId: item.chatId,
               workerId: String(workerId),
+              workerName: otherName,
             },
           })
         }
