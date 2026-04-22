@@ -52,14 +52,11 @@ export default function WorkerDashboard() {
     useCallback(() => {
       fetchUnreadCount();
       if (token) fetchJobs();
-    }, [token, fetchUnreadCount]),
+      if (!token) return;
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }, [token, fetchUnreadCount, fetchJobs]),
   );
-
-  useEffect(() => {
-    if (!token) return;
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [token, fetchUnreadCount]);
 
   const handleGoLanding = () => {
     router.dismissAll();
