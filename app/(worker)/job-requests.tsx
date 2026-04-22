@@ -40,10 +40,11 @@ export default function JobRequestsPage() {
   const isMine = (j: any) =>
     j.workerId?._id === workerId || j.workerId === workerId;
   const pendingJobs = jobList.filter((j) => statusOf(j) === "pending");
+  const negotiatingJobs = jobList.filter(
+    (j) => statusOf(j) === "negotiating" && isMine(j),
+  );
   const awaitingCustomerJobs = jobList.filter(
-    (j) =>
-      (statusOf(j) === "worker accepted" || statusOf(j) === "negotiating") &&
-      isMine(j),
+    (j) => statusOf(j) === "worker accepted" && isMine(j),
   );
   const acceptedJobs = jobList.filter(
     (j) => statusOf(j) === "accepted" && isMine(j),
@@ -53,8 +54,13 @@ export default function JobRequestsPage() {
     filter === "new"
       ? pendingJobs
       : filter === "accepted"
-        ? [...awaitingCustomerJobs, ...acceptedJobs]
-        : [...pendingJobs, ...awaitingCustomerJobs, ...acceptedJobs];
+        ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs]
+        : [
+            ...negotiatingJobs,
+            ...pendingJobs,
+            ...awaitingCustomerJobs,
+            ...acceptedJobs,
+          ];
 
   const jobId = (j: any) => j._id || j.id;
 
