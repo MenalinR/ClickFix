@@ -1,19 +1,69 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+import { api, apiCall } from '../../constants/api';
 import { useStore } from '../../constants/Store';
 
+type UserRow = {
+    id: string;
+    name: string;
+    role: 'worker' | 'customer';
+    subtitle: string;
+    rating?: number;
+    jobsCompleted?: number;
+};
+
 export default function AdminUsers() {
-    const { workers } = useStore();
+    const { workers, fetchWorkers, token } = useStore();
+    const [customers, setCustomers] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'workers' | 'customers'>('all');
 
-    const filteredWorkers = workers.filter(w =>
-        w.name.toLowerCase().includes(search.toLowerCase()) ||
-        w.category.toLowerCase().includes(search.toLowerCase())
-    );
+    useEffect(() => {
+        fetchWorkers();
+    }, [fetchWorkers]);
+
+    useEffect(() => {
+        if (!token) return;
+        (async () => {
+            try {
+                const res = await apiCall(api.customers.getAll, 'GET', undefined, token);
+                setCustomers(res?.data || []);
+            } catch {
+                // silent
+            }
+        })();
+    }, [token]);
+
+    const rows = useMemo<UserRow[]>(() => {
+        const workerRows: UserRow[] = workers.map((w: any) => ({
+            id: w.id || w._id,
+            name: w.name || '—',
+            role: 'worker',
+            subtitle: w.category || 'Worker',
+            rating: w.rating || 0,
+            jobsCompleted: w.jobsCompleted || 0,
+        }));
+        const customerRows: UserRow[] = customers.map((c: any) => ({
+            id: c.id || c._id,
+            name: c.name || '—',
+            role: 'customer',
+            subtitle: c.email || c.phone || 'Customer',
+        }));
+        if (filterType === 'workers') return workerRows;
+        if (filterType === 'customers') return customerRows;
+        return [...workerRows, ...customerRows];
+    }, [workers, customers, filterType]);
+
+    const filteredRows = rows.filter((u) => {
+        const q = search.toLowerCase();
+        return (
+            u.name.toLowerCase().includes(q) ||
+            u.subtitle.toLowerCase().includes(q)
+        );
+    });
 
     const handleDeleteUser = (id: string, name: string) => {
         Alert.alert(
@@ -85,33 +135,40 @@ export default function AdminUsers() {
 
             {/* Users List */}
             <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
-                {filteredWorkers.map((worker) => (
-                    <View key={worker.id} style={styles.userCard}>
+                {filteredRows.map((u) => (
+                    <View key={`${u.role}-${u.id}`} style={styles.userCard}>
                         <View style={styles.userInfo}>
                             <View style={styles.avatarContainer}>
-                                <Text style={styles.avatarText}>{worker.name.charAt(0)}</Text>
+                                <Text style={styles.avatarText}>{u.name.charAt(0)}</Text>
                             </View>
                             <View style={styles.userDetails}>
-                                <Text style={styles.userName}>{worker.name}</Text>
-                                <Text style={styles.userCategory}>{worker.category}</Text>
-                                <View style={styles.userStats}>
-                                    <Ionicons name="star" size={14} color="#FFD700" />
-                                    <Text style={styles.userRating}>{worker.rating}</Text>
-                                    <Text style={styles.userDivider}>•</Text>
-                                    <Text style={styles.userJobs}>{worker.jobsCompleted} jobs</Text>
-                                </View>
+                                <Text style={styles.userName}>{u.name}</Text>
+                                <Text style={styles.userCategory}>{u.subtitle}</Text>
+                                {u.role === 'worker' ? (
+                                    <View style={styles.userStats}>
+                                        <Ionicons name="star" size={14} color="#FFD700" />
+                                        <Text style={styles.userRating}>{u.rating ?? 0}</Text>
+                                        <Text style={styles.userDivider}>•</Text>
+                                        <Text style={styles.userJobs}>{u.jobsCompleted ?? 0} jobs</Text>
+                                    </View>
+                                ) : (
+                                    <View style={styles.userStats}>
+                                        <Ionicons name="person-outline" size={14} color={Colors.textSecondary} />
+                                        <Text style={styles.userJobs}>Customer</Text>
+                                    </View>
+                                )}
                             </View>
                         </View>
                         <View style={styles.actions}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.actionButton, styles.statusButton]}
-                                onPress={() => handleToggleStatus(worker.id, worker.name, true)}
+                                onPress={() => handleToggleStatus(u.id, u.name, true)}
                             >
                                 <Ionicons name="checkmark-circle-outline" size={20} color="#4CAF50" />
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.actionButton, styles.deleteButton]}
-                                onPress={() => handleDeleteUser(worker.id, worker.name)}
+                                onPress={() => handleDeleteUser(u.id, u.name)}
                             >
                                 <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
                             </TouchableOpacity>

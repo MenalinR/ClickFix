@@ -1,5 +1,6 @@
 const express = require("express");
 const {
+  getAllCustomers,
   getCustomer,
   updateCustomer,
   addAddress,
@@ -13,6 +14,7 @@ const { uploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
+router.get("/", protect, authorize("admin"), getAllCustomers);
 router.get("/:id", protect, authorize("customer"), getCustomer);
 router.put("/:id", protect, authorize("customer"), updateCustomer);
 router.post("/:id/addresses", protect, authorize("customer"), addAddress);

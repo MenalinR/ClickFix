@@ -1,5 +1,19 @@
 const Customer = require("../models/Customer");
 
+// @desc    List all customers (admin)
+// @route   GET /api/customers
+// @access  Private (Admin only)
+exports.getAllCustomers = async (req, res) => {
+  try {
+    const customers = await Customer.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: customers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get customer profile
 // @route   GET /api/customers/:id
 // @access  Private

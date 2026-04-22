@@ -63,6 +63,7 @@ export const api = {
 
   // Customers
   customers: {
+    getAll: `${API_URL}/customers`,
     getById: (id: string) => `${API_URL}/customers/${id}`,
     update: (id: string) => `${API_URL}/customers/${id}`,
     addAddress: (id: string) => `${API_URL}/customers/${id}/addresses`,
