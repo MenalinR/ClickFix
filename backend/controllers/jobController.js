@@ -424,6 +424,69 @@ exports.customerRespond = async (req, res) => {
   }
 };
 
+// @desc    Worker sends a counter price back to the customer during negotiation
+// @route   PUT /api/jobs/:id/worker-counter
+// @access  Private (Worker only)
+exports.workerCounter = async (req, res) => {
+  try {
+    const { price } = req.body || {};
+    const priceNum = Number(price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid price is required",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (!job.workerId || job.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (job.status !== "Negotiating" && job.status !== "Worker Accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Job is not in a negotiable state",
+      });
+    }
+
+    job.status = "Worker Accepted";
+    job.pricing.proposedPrice = priceNum;
+    job.pricing.serviceCharge = priceNum;
+    job.pricing.totalAmount = priceNum;
+    job.pricing.negotiatedPrice = undefined;
+    job.timeline.push({
+      status: "Worker Accepted",
+      timestamp: new Date(),
+      note: `Worker counter price: ${priceNum} LKR`,
+    });
+
+    await job.save();
+
+    try {
+      await createNotification({
+        recipient: job.customerId,
+        recipientModel: "Customer",
+        type: "JOB_ASSIGNED",
+        title: "Worker sent a counter price",
+        message: `Worker proposed ${priceNum} LKR for your ${job.serviceType} request. Review now.`,
+        data: { jobId: job._id, workerId: req.user._id },
+        actionUrl: "/(customer)/(tabs)/",
+      });
+    } catch (e) {
+      // non-fatal
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Finalize agreed price (called from chat negotiation when both sides agree)
 // @route   PUT /api/jobs/:id/finalize-price
 // @access  Private

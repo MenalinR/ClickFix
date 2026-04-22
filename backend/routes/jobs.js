@@ -8,6 +8,7 @@ const {
   updateJobStatus,
   cancelJob,
   customerRespond,
+  workerCounter,
   finalizePrice,
   getWorkerBusySlots,
   uploadJobImage,
@@ -35,6 +36,7 @@ router.get("/worker/:workerId/busy", protect, getWorkerBusySlots);
 router.get("/:id", protect, getJob);
 router.put("/:id/assign", protect, authorize("worker"), assignWorker);
 router.put("/:id/customer-response", protect, authorize("customer"), customerRespond);
+router.put("/:id/worker-counter", protect, authorize("worker"), workerCounter);
 router.put("/:id/finalize-price", protect, finalizePrice);
 router.put("/:id/status", protect, updateJobStatus);
 router.put("/:id/cancel", protect, cancelJob);

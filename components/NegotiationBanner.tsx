@@ -19,7 +19,12 @@ interface Props {
 }
 
 export function NegotiationBanner({ jobId, role }: Props) {
-  const { jobs, customerRespondToJob, finalizeJobPrice } = useStore();
+  const {
+    jobs,
+    customerRespondToJob,
+    finalizeJobPrice,
+    workerCounterPrice,
+  } = useStore();
   const [proposing, setProposing] = useState(false);
   const [proposed, setProposed] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,7 +41,7 @@ export function NegotiationBanner({ jobId, role }: Props) {
   const negotiatedPrice = job.pricing?.negotiatedPrice ?? 0;
   const currentPrice = negotiatedPrice || proposedPrice;
 
-  const handleCustomerPropose = async () => {
+  const handleProposeSubmit = async () => {
     const trimmed = proposed.trim();
     const priceNum = Number(trimmed);
     if (!trimmed || isNaN(priceNum) || priceNum <= 0) {
@@ -45,7 +50,11 @@ export function NegotiationBanner({ jobId, role }: Props) {
     }
     try {
       setLoading(true);
-      await customerRespondToJob(jobId, "negotiate", priceNum);
+      if (role === "customer") {
+        await customerRespondToJob(jobId, "negotiate", priceNum);
+      } else {
+        await workerCounterPrice(jobId, priceNum);
+      }
       setProposing(false);
       setProposed("");
     } catch (e: any) {
@@ -111,20 +120,29 @@ export function NegotiationBanner({ jobId, role }: Props) {
           <Text style={styles.primaryBtnText}>Propose new price</Text>
         </TouchableOpacity>
       )}
-      {role === "worker" && (
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={handleWorkerAcceptCurrent}
-          disabled={loading || !currentPrice}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={styles.primaryBtnText}>
-              Accept {currentPrice} LKR & finalize
-            </Text>
-          )}
-        </TouchableOpacity>
+      {role === "worker" && status === "Negotiating" && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, styles.actionBtn, styles.counterBtn]}
+            onPress={() => setProposing(true)}
+            disabled={loading}
+          >
+            <Text style={styles.counterBtnText}>Counter offer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.primaryBtn, styles.actionBtn]}
+            onPress={handleWorkerAcceptCurrent}
+            disabled={loading || !currentPrice}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                Accept {currentPrice} LKR
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       )}
 
       <Modal
@@ -135,7 +153,9 @@ export function NegotiationBanner({ jobId, role }: Props) {
       >
         <View style={styles.overlay}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Propose new price</Text>
+            <Text style={styles.sheetTitle}>
+              {role === "worker" ? "Send counter price" : "Propose new price"}
+            </Text>
             <View style={styles.inputWrap}>
               <TextInput
                 value={proposed}
@@ -157,7 +177,7 @@ export function NegotiationBanner({ jobId, role }: Props) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.sheetBtn, styles.sheetPrimary]}
-                onPress={handleCustomerPropose}
+                onPress={handleProposeSubmit}
                 disabled={loading}
               >
                 {loading ? (
@@ -211,6 +231,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
+  actionRow: { flexDirection: "row", gap: 8 },
+  actionBtn: { flex: 1 },
+  counterBtn: {
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  counterBtnText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

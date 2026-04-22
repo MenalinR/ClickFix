@@ -82,6 +82,7 @@ export const api = {
     getById: (id: string) => `${API_URL}/jobs/${id}`,
     assignWorker: (id: string) => `${API_URL}/jobs/${id}/assign`,
     customerRespond: (id: string) => `${API_URL}/jobs/${id}/customer-response`,
+    workerCounter: (id: string) => `${API_URL}/jobs/${id}/worker-counter`,
     finalizePrice: (id: string) => `${API_URL}/jobs/${id}/finalize-price`,
     updateStatus: (id: string) => `${API_URL}/jobs/${id}/status`,
     cancel: (id: string) => `${API_URL}/jobs/${id}/cancel`,
