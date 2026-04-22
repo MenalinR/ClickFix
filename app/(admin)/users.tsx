@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ type UserRow = {
     subtitle: string;
     rating?: number;
     jobsCompleted?: number;
+    raw: any;
 };
 
 export default function AdminUsers() {
@@ -20,6 +21,7 @@ export default function AdminUsers() {
     const [customers, setCustomers] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'workers' | 'customers'>('all');
+    const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
 
     useEffect(() => {
         fetchWorkers();
@@ -45,12 +47,14 @@ export default function AdminUsers() {
             subtitle: w.category || 'Worker',
             rating: w.rating || 0,
             jobsCompleted: w.jobsCompleted || 0,
+            raw: w,
         }));
         const customerRows: UserRow[] = customers.map((c: any) => ({
             id: c.id || c._id,
             name: c.name || '—',
             role: 'customer',
             subtitle: c.email || c.phone || 'Customer',
+            raw: c,
         }));
         if (filterType === 'workers') return workerRows;
         if (filterType === 'customers') return customerRows;
@@ -97,9 +101,6 @@ export default function AdminUsers() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.heading}>User Management</Text>
-                <TouchableOpacity style={styles.addButton}>
-                    <Ionicons name="add" size={24} color={Colors.background} />
-                </TouchableOpacity>
             </View>
 
             {/* Search */}
@@ -136,7 +137,12 @@ export default function AdminUsers() {
             {/* Users List */}
             <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
                 {filteredRows.map((u) => (
-                    <View key={`${u.role}-${u.id}`} style={styles.userCard}>
+                    <TouchableOpacity
+                        key={`${u.role}-${u.id}`}
+                        style={styles.userCard}
+                        activeOpacity={0.7}
+                        onPress={() => setSelectedUser(u)}
+                    >
                         <View style={styles.userInfo}>
                             <View style={styles.avatarContainer}>
                                 <Text style={styles.avatarText}>{u.name.charAt(0)}</Text>
@@ -173,10 +179,76 @@ export default function AdminUsers() {
                                 <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
                             </TouchableOpacity>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </ScrollView>
+
+            <Modal
+                visible={!!selectedUser}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setSelectedUser(null)}
+            >
+                <View style={styles.detailOverlay}>
+                    <View style={styles.detailSheet}>
+                        <View style={styles.detailHeader}>
+                            <Text style={styles.detailTitle}>
+                                {selectedUser?.role === 'worker' ? 'Worker Details' : 'Customer Details'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setSelectedUser(null)}>
+                                <Ionicons name="close" size={22} color={Colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                        {selectedUser && <UserDetail user={selectedUser} />}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
+    );
+}
+
+function UserDetail({ user }: { user: UserRow }) {
+    const u = user.raw || {};
+    const address =
+        u?.addresses?.[0]?.address ||
+        u?.location?.address ||
+        u?.address ||
+        '—';
+    const rows: { icon: any; label: string; value: string }[] = [
+        { icon: 'person-outline', label: 'Name', value: u.name || '—' },
+        { icon: 'mail-outline', label: 'Email', value: u.email || '—' },
+        { icon: 'call-outline', label: 'Phone', value: u.phone || '—' },
+        { icon: 'location-outline', label: 'Address', value: address },
+    ];
+    if (user.role === 'worker') {
+        rows.push(
+            { icon: 'briefcase-outline', label: 'Category', value: u.category || '—' },
+            { icon: 'time-outline', label: 'Experience', value: u.experience ? `${u.experience} years` : '—' },
+            { icon: 'star-outline', label: 'Rating', value: String(u.rating ?? 0) },
+            { icon: 'checkmark-done-outline', label: 'Jobs Done', value: String(u.jobsCompleted ?? 0) },
+            { icon: 'shield-checkmark-outline', label: 'Verified', value: u.verified ? 'Yes' : 'No' },
+        );
+    }
+    return (
+        <ScrollView style={{ maxHeight: 460 }}>
+            <View style={styles.detailAvatar}>
+                <Text style={styles.detailAvatarText}>{(u.name || '?').charAt(0)}</Text>
+            </View>
+            <Text style={styles.detailName}>{u.name || '—'}</Text>
+            <Text style={styles.detailRole}>
+                {user.role === 'worker' ? u.category || 'Worker' : 'Customer'}
+            </Text>
+            <View style={{ height: 12 }} />
+            {rows.map((r) => (
+                <View key={r.label} style={styles.detailRow}>
+                    <Ionicons name={r.icon} size={18} color={Colors.primary} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.detailLabel}>{r.label}</Text>
+                        <Text style={styles.detailValue}>{r.value}</Text>
+                    </View>
+                </View>
+            ))}
+        </ScrollView>
     );
 }
 
@@ -320,5 +392,75 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         backgroundColor: '#FF6B6B' + '20',
+    },
+    detailOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    detailSheet: {
+        backgroundColor: Colors.card,
+        borderRadius: 16,
+        padding: 20,
+        width: '100%',
+        maxWidth: 420,
+    },
+    detailHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    detailTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    detailAvatar: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        alignSelf: 'center',
+        marginBottom: 10,
+    },
+    detailAvatarText: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: Colors.background,
+    },
+    detailName: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.text,
+        textAlign: 'center',
+    },
+    detailRole: {
+        fontSize: 13,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        marginTop: 2,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    detailLabel: {
+        fontSize: 11,
+        color: Colors.textSecondary,
+    },
+    detailValue: {
+        fontSize: 14,
+        color: Colors.text,
+        fontWeight: '500',
+        marginTop: 2,
     },
 });
