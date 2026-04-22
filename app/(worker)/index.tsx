@@ -440,13 +440,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actionBadge: {
-    backgroundColor: "#FF6B6B",
-    color: "white",
-    fontSize: 10,
+    color: Colors.text,
+    fontSize: 14,
     fontWeight: "bold",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
     marginTop: 4,
   },
   section: {
