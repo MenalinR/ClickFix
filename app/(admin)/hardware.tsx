@@ -281,7 +281,7 @@ export default function HardwareShop() {
 
       <View style={styles.itemDetails}>
         <Text style={styles.priceText}>
-          ₹{item.price}/{item.unit}
+          {item.price} LKR/{item.unit}
         </Text>
         {item.description && (
           <Text style={styles.descriptionText} numberOfLines={2}>
@@ -365,7 +365,7 @@ export default function HardwareShop() {
         </Text>
         <Text style={styles.requestLabel}>
           Total Cost:{" "}
-          <Text style={styles.costText}>₹{item.totalCost.toFixed(2)}</Text>
+          <Text style={styles.costText}>{item.totalCost.toFixed(2)} LKR</Text>
         </Text>
         <Text style={styles.requestLabel}>
           Items:{" "}
@@ -376,7 +376,7 @@ export default function HardwareShop() {
       <View style={styles.itemsList}>
         {item.items.map((subItem, idx) => (
           <Text key={idx} style={styles.subItem}>
-            • {subItem.name} x{subItem.quantity} (₹{subItem.price})
+            • {subItem.name} x{subItem.quantity} ({subItem.price} LKR)
           </Text>
         ))}
       </View>
@@ -647,7 +647,7 @@ export default function HardwareShop() {
                 ))}
               </View>
 
-              <Text style={styles.label}>Price (₹) *</Text>
+              <Text style={styles.label}>Price (LKR) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="0.00"

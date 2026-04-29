@@ -175,7 +175,7 @@ export default function InventoryScreen() {
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemCategory}>{item.category}</Text>
         <View style={styles.itemDetails}>
-          <Text style={styles.itemPrice}>₹{item.price}</Text>
+          <Text style={styles.itemPrice}>{item.price} LKR</Text>
           <Text style={styles.itemUnit}>({item.unit})</Text>
           <View
             style={[

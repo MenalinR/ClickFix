@@ -115,7 +115,7 @@ export default function OrdersScreen() {
         <View style={styles.detailRow}>
           <Ionicons name="pricetag" size={16} color={Colors.textSecondary} />
           <Text style={styles.detailText}>
-            Total: ₹{item.totalCost.toFixed(2)}
+            Total: {item.totalCost.toFixed(2)} LKR
           </Text>
         </View>
       </View>
