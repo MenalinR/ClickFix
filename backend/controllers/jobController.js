@@ -1,6 +1,7 @@
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
+const Message = require("../models/Message");
 const { createNotification } = require("./notificationController");
 
 // @desc    Create new job
@@ -688,6 +689,116 @@ exports.updateJobStatus = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Customer responds to a worker's hardware cart proposal
+// @route   PUT /api/jobs/:id/hardware-cart/respond
+// @access  Private (Customer only)
+exports.respondHardwareCart = async (req, res) => {
+  try {
+    const { messageId, action } = req.body || {};
+    if (!messageId || !["approve", "reject"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "messageId and action ('approve' | 'reject') are required",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (job.customerId.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message || message.messageType !== "hardware-cart") {
+      return res
+        .status(404)
+        .json({ success: false, message: "Cart message not found" });
+    }
+    if (message.cartStatus !== "pending") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Cart already responded to" });
+    }
+
+    const newStatus = action === "approve" ? "approved" : "rejected";
+    message.cartItems = message.cartItems.map((it) => ({
+      ...(it.toObject ? it.toObject() : it),
+      status: newStatus,
+    }));
+    message.cartStatus = newStatus;
+    await message.save();
+
+    if (action === "approve") {
+      message.cartItems.forEach((it) => {
+        job.hardwareItems.push({
+          name: it.name,
+          price: it.price,
+          quantity: it.quantity,
+          status: "approved",
+        });
+      });
+
+      const approvedTotal = job.hardwareItems
+        .filter((it) => it.status === "approved")
+        .reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
+      job.pricing.hardwareCost = approvedTotal;
+
+      const serviceCharge = job.pricing.serviceCharge || 0;
+      const platformFee = job.pricing.platformFee || 0;
+      job.pricing.totalAmount = serviceCharge + platformFee + approvedTotal;
+
+      job.timeline.push({
+        status: job.status,
+        timestamp: new Date(),
+        note: `Customer approved hardware cart (+${approvedTotal} LKR)`,
+      });
+
+      await job.save();
+
+      if (job.workerId) {
+        try {
+          await createNotification({
+            recipient: job.workerId,
+            recipientModel: "Worker",
+            type: "JOB_ASSIGNED",
+            title: "Hardware approved",
+            message: `Customer approved the hardware cart (${approvedTotal} LKR added).`,
+            data: { jobId: job._id, messageId: message._id },
+            actionUrl: "/job-requests",
+          });
+        } catch (e) {
+          // non-fatal
+        }
+      }
+    } else if (job.workerId) {
+      try {
+        await createNotification({
+          recipient: job.workerId,
+          recipientModel: "Worker",
+          type: "JOB_ASSIGNED",
+          title: "Hardware declined",
+          message: "Customer declined the hardware cart.",
+          data: { jobId: job._id, messageId: message._id },
+          actionUrl: "/job-requests",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { job, message },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

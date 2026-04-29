@@ -4,9 +4,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +21,8 @@ import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useChat } from "../../hooks/useChat";
+
+type DraftItem = { name: string; price: string; quantity: string };
 
 export default function WorkerChatPage() {
   const router = useRouter();
@@ -35,6 +40,10 @@ export default function WorkerChatPage() {
   const flatListRef = useRef<FlatList>(null);
   const [text, setText] = useState("");
   const [customerName, setCustomerName] = useState(initialName);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [draftItems, setDraftItems] = useState<DraftItem[]>([
+    { name: "", price: "", quantity: "1" },
+  ]);
 
   useEffect(() => {
     if (customerName || !customerId || !token) return;
@@ -54,8 +63,16 @@ export default function WorkerChatPage() {
     })();
   }, [customerName, customerId, token]);
 
-  const { messages, loading, sending, typing, sendMessage, emitTyping, myId } =
-    useChat({ jobId, otherUserId: customerId, otherUserModel: "Customer" });
+  const {
+    messages,
+    loading,
+    sending,
+    typing,
+    sendMessage,
+    sendHardwareCart,
+    emitTyping,
+    myId,
+  } = useChat({ jobId, otherUserId: customerId, otherUserModel: "Customer" });
 
   useEffect(() => {
     setTimeout(() => {
@@ -79,10 +96,121 @@ export default function WorkerChatPage() {
     });
   };
 
+  const updateDraftItem = (
+    index: number,
+    field: keyof DraftItem,
+    value: string,
+  ) => {
+    setDraftItems((prev) =>
+      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)),
+    );
+  };
+
+  const addDraftRow = () =>
+    setDraftItems((prev) => [...prev, { name: "", price: "", quantity: "1" }]);
+
+  const removeDraftRow = (index: number) =>
+    setDraftItems((prev) =>
+      prev.length === 1 ? prev : prev.filter((_, i) => i !== index),
+    );
+
+  const draftTotal = draftItems.reduce(
+    (sum, it) =>
+      sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+    0,
+  );
+
+  const resetDraft = () => {
+    setDraftItems([{ name: "", price: "", quantity: "1" }]);
+    setCartModalOpen(false);
+  };
+
+  const handleSendCart = async () => {
+    const cleaned = draftItems
+      .map((it) => ({
+        name: it.name.trim(),
+        price: Number(it.price),
+        quantity: Number(it.quantity) || 1,
+      }))
+      .filter((it) => it.name && it.price > 0);
+
+    if (cleaned.length === 0) {
+      Alert.alert("Add items", "Add at least one item with a name and price.");
+      return;
+    }
+
+    await sendHardwareCart(cleaned);
+    resetDraft();
+  };
+
+  const renderCartBubble = (item: any, isMine: boolean) => {
+    const items = (item.cartItems || []) as any[];
+    const total = items.reduce(
+      (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
+      0,
+    );
+    const status = item.cartStatus || "pending";
+    return (
+      <View
+        style={[
+          styles.cartCard,
+          isMine ? styles.cartCardMine : styles.cartCardOther,
+        ]}
+      >
+        <View style={styles.cartHeader}>
+          <Ionicons name="cube-outline" size={16} color={Colors.primary} />
+          <Text style={styles.cartTitle}>Hardware Suggestion</Text>
+        </View>
+        {items.map((it, idx) => (
+          <View key={idx} style={styles.cartRow}>
+            <Text style={styles.cartItemName} numberOfLines={1}>
+              {it.name}
+            </Text>
+            <Text style={styles.cartItemQty}>×{it.quantity || 1}</Text>
+            <Text style={styles.cartItemPrice}>
+              {(it.price || 0) * (it.quantity || 1)} LKR
+            </Text>
+          </View>
+        ))}
+        <View style={styles.cartTotalRow}>
+          <Text style={styles.cartTotalLabel}>Total</Text>
+          <Text style={styles.cartTotalValue}>{total} LKR</Text>
+        </View>
+        <Text
+          style={[
+            styles.cartStatusBadge,
+            status === "approved" && { color: "#22A06B" },
+            status === "rejected" && { color: "#C73E3A" },
+          ]}
+        >
+          {status === "pending"
+            ? "Awaiting customer approval"
+            : status === "approved"
+              ? "✓ Approved by customer"
+              : "✗ Declined by customer"}
+        </Text>
+      </View>
+    );
+  };
+
   const renderMessage = ({ item }: { item: any }) => {
     const isMine =
       String(item.senderId?._id || item.senderId) === String(myId) ||
       item.senderModel === "Worker";
+
+    if (item.messageType === "hardware-cart") {
+      return (
+        <View
+          style={[
+            styles.messageContainer,
+            isMine && styles.messageContainerRight,
+          ]}
+        >
+          {renderCartBubble(item, isMine)}
+        </View>
+      );
+    }
+
     return (
       <View
         style={[
@@ -158,6 +286,13 @@ export default function WorkerChatPage() {
         )}
 
         <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => setCartModalOpen(true)}
+            disabled={sending}
+          >
+            <Ionicons name="cube-outline" size={20} color={Colors.primary} />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             placeholder="Type your message..."
@@ -182,6 +317,90 @@ export default function WorkerChatPage() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={cartModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={resetDraft}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Suggest Hardware</Text>
+              <TouchableOpacity onPress={resetDraft}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Send the customer a list of parts. They can approve or decline.
+            </Text>
+
+            <ScrollView style={{ maxHeight: 360 }}>
+              {draftItems.map((item, idx) => (
+                <View key={idx} style={styles.draftRow}>
+                  <TextInput
+                    style={[styles.draftInput, { flex: 2 }]}
+                    placeholder="Item name"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={item.name}
+                    onChangeText={(v) => updateDraftItem(idx, "name", v)}
+                  />
+                  <TextInput
+                    style={[styles.draftInput, { flex: 1 }]}
+                    placeholder="Price"
+                    placeholderTextColor={Colors.textSecondary}
+                    keyboardType="numeric"
+                    value={item.price}
+                    onChangeText={(v) => updateDraftItem(idx, "price", v)}
+                  />
+                  <TextInput
+                    style={[styles.draftInput, { width: 56 }]}
+                    placeholder="Qty"
+                    placeholderTextColor={Colors.textSecondary}
+                    keyboardType="numeric"
+                    value={item.quantity}
+                    onChangeText={(v) => updateDraftItem(idx, "quantity", v)}
+                  />
+                  <TouchableOpacity
+                    onPress={() => removeDraftRow(idx)}
+                    style={styles.removeBtn}
+                    disabled={draftItems.length === 1}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={draftItems.length === 1 ? Colors.border : "#C73E3A"}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity onPress={addDraftRow} style={styles.addRowBtn}>
+              <Ionicons name="add" size={18} color={Colors.primary} />
+              <Text style={styles.addRowText}>Add another item</Text>
+            </TouchableOpacity>
+
+            <View style={styles.totalLine}>
+              <Text style={styles.totalLineLabel}>Total</Text>
+              <Text style={styles.totalLineValue}>{draftTotal} LKR</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.sendCartBtn, sending && { opacity: 0.6 }]}
+              onPress={handleSendCart}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.sendCartBtnText}>Send to Customer</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -239,6 +458,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
+  cartButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.lightBackground,
+  },
   input: {
     flex: 1,
     minHeight: 40,
@@ -257,4 +484,127 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  cartCard: {
+    maxWidth: "85%",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: "white",
+  },
+  cartCardMine: {
+    borderColor: Colors.primary,
+    backgroundColor: "#F0F4F8",
+  },
+  cartCardOther: {
+    borderColor: Colors.border,
+  },
+  cartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  cartTitle: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  cartRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+    gap: 8,
+  },
+  cartItemName: { flex: 1, fontSize: 13, color: Colors.text },
+  cartItemQty: { fontSize: 12, color: Colors.textSecondary, width: 30 },
+  cartItemPrice: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.text,
+    minWidth: 70,
+    textAlign: "right",
+  },
+  cartTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 8,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  cartTotalLabel: { fontSize: 13, fontWeight: "700", color: Colors.text },
+  cartTotalValue: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  cartStatusBadge: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalCard: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: Colors.text },
+  modalSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  draftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  draftInput: {
+    backgroundColor: Colors.lightBackground,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: Colors.text,
+  },
+  removeBtn: { padding: 6 },
+  addRowBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    borderStyle: "dashed",
+  },
+  addRowText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
+  totalLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  totalLineLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
+  totalLineValue: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+  sendCartBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  sendCartBtnText: { color: "white", fontWeight: "700", fontSize: 14 },
 });

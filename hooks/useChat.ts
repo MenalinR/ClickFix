@@ -4,6 +4,14 @@ import { api, apiCall } from "../constants/api";
 import { config } from "../constants/config";
 import { useStore } from "../constants/Store";
 
+export interface CartItem {
+  _id?: string;
+  name: string;
+  price: number;
+  quantity: number;
+  status: "suggested" | "approved" | "rejected";
+}
+
 export interface ChatMessage {
   _id: string;
   chatId: string;
@@ -12,8 +20,10 @@ export interface ChatMessage {
   receiverId: any;
   receiverModel: "Worker" | "Customer";
   jobId?: string;
-  messageType: "text" | "image" | "location" | "quick-action";
+  messageType: "text" | "image" | "location" | "quick-action" | "hardware-cart";
   content: string;
+  cartItems?: CartItem[];
+  cartStatus?: "pending" | "approved" | "rejected";
   status: "sending" | "sent" | "delivered" | "read";
   createdAt: string;
   updatedAt: string;
@@ -132,10 +142,84 @@ export function useChat({
     [chatId, token, otherUserId, otherUserModel, jobId],
   );
 
+  const sendHardwareCart = useCallback(
+    async (items: Omit<CartItem, "status" | "_id">[]) => {
+      if (!chatId || !token || !otherUserId || !items?.length) return;
+      const total = items.reduce(
+        (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+        0,
+      );
+      const summary = `Suggested ${items.length} hardware item${
+        items.length > 1 ? "s" : ""
+      } — total ${total} LKR`;
+      setSending(true);
+      try {
+        const res = await apiCall(
+          api.chat.sendMessage,
+          "POST",
+          {
+            chatId,
+            receiverId: otherUserId,
+            receiverModel: otherUserModel,
+            jobId,
+            messageType: "hardware-cart",
+            content: summary,
+            cartItems: items,
+          },
+          token,
+        );
+        if (res?.data) {
+          const saved = res.data as ChatMessage;
+          setMessages((prev) => [...prev, saved]);
+          socketRef.current?.emit("send-message", { ...saved, chatId });
+        }
+      } catch (e) {
+        // silent
+      } finally {
+        setSending(false);
+      }
+    },
+    [chatId, token, otherUserId, otherUserModel, jobId],
+  );
+
+  const respondToCart = useCallback(
+    async (messageId: string, action: "approve" | "reject") => {
+      if (!jobId || !token || !messageId) return;
+      try {
+        const res = await apiCall(
+          api.jobs.respondHardwareCart(jobId),
+          "PUT",
+          { messageId, action },
+          token,
+        );
+        const updated = res?.data?.message as ChatMessage | undefined;
+        if (updated) {
+          setMessages((prev) =>
+            prev.map((m) => (m._id === updated._id ? { ...m, ...updated } : m)),
+          );
+        }
+        return res?.data;
+      } catch (e) {
+        throw e;
+      }
+    },
+    [jobId, token],
+  );
+
   const emitTyping = useCallback(() => {
     if (!chatId) return;
     socketRef.current?.emit("typing", { chatId, senderId: myId });
   }, [chatId, myId]);
 
-  return { messages, loading, sending, typing, sendMessage, emitTyping, myId };
+  return {
+    messages,
+    loading,
+    sending,
+    typing,
+    sendMessage,
+    sendHardwareCart,
+    respondToCart,
+    emitTyping,
+    myId,
+  };
 }

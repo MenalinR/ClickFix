@@ -12,6 +12,7 @@ const {
   finalizePrice,
   getWorkerBusySlots,
   uploadJobImage,
+  respondHardwareCart,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -38,6 +39,12 @@ router.put("/:id/assign", protect, authorize("worker"), assignWorker);
 router.put("/:id/customer-response", protect, authorize("customer"), customerRespond);
 router.put("/:id/worker-counter", protect, authorize("worker"), workerCounter);
 router.put("/:id/finalize-price", protect, finalizePrice);
+router.put(
+  "/:id/hardware-cart/respond",
+  protect,
+  authorize("customer"),
+  respondHardwareCart,
+);
 router.put("/:id/status", protect, updateJobStatus);
 router.put("/:id/cancel", protect, cancelJob);
 

@@ -33,7 +33,7 @@ const messageSchema = new mongoose.Schema(
     },
     messageType: {
       type: String,
-      enum: ["text", "image", "location", "quick-action"],
+      enum: ["text", "image", "location", "quick-action", "hardware-cart"],
       default: "text",
     },
     content: {
@@ -48,6 +48,23 @@ const messageSchema = new mongoose.Schema(
     quickAction: {
       type: String,
       enum: ["location", "eta", "parts", "status"],
+    },
+    cartItems: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true, min: 0 },
+        quantity: { type: Number, default: 1, min: 1 },
+        status: {
+          type: String,
+          enum: ["suggested", "approved", "rejected"],
+          default: "suggested",
+        },
+      },
+    ],
+    cartStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
     },
     status: {
       type: String,

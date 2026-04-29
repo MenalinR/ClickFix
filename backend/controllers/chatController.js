@@ -28,10 +28,17 @@ exports.getMessages = async (req, res) => {
 // @access  Private
 exports.sendMessage = async (req, res) => {
   try {
-    const { chatId, receiverId, receiverModel, jobId, messageType, content } =
-      req.body;
+    const {
+      chatId,
+      receiverId,
+      receiverModel,
+      jobId,
+      messageType,
+      content,
+      cartItems,
+    } = req.body;
 
-    const message = await Message.create({
+    const messagePayload = {
       chatId,
       senderId: req.user._id,
       senderModel: req.userType === "worker" ? "Worker" : "Customer",
@@ -41,7 +48,19 @@ exports.sendMessage = async (req, res) => {
       messageType,
       content,
       status: "sent",
-    });
+    };
+
+    if (messageType === "hardware-cart" && Array.isArray(cartItems)) {
+      messagePayload.cartItems = cartItems.map((it) => ({
+        name: String(it.name || "").trim(),
+        price: Number(it.price) || 0,
+        quantity: Number(it.quantity) || 1,
+        status: "suggested",
+      }));
+      messagePayload.cartStatus = "pending";
+    }
+
+    const message = await Message.create(messagePayload);
 
     // Populate sender and receiver info
     await message.populate("senderId", "name");

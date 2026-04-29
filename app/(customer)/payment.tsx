@@ -1,29 +1,75 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
 
 type PaymentMethod = "card" | "wallet" | "cash";
 
 export default function PaymentPage() {
   const router = useRouter();
-  const { workerName, amount } = useLocalSearchParams();
+  const { token } = useStore();
+  const params = useLocalSearchParams<{
+    workerName?: string;
+    amount?: string;
+    jobId?: string;
+  }>();
+  const jobId = typeof params.jobId === "string" ? params.jobId : "";
+  const workerName =
+    typeof params.workerName === "string" ? params.workerName : "";
+  const fallbackAmount =
+    typeof params.amount === "string" ? Number(params.amount) || 0 : 0;
+
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("card");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const serviceCost = 3000;
-  const hardwareCost = 650;
-  const platformFee = 300;
-  const totalAmount = serviceCost + hardwareCost + platformFee;
+  useEffect(() => {
+    if (!jobId || !token) return;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await apiCall(api.jobs.getById(jobId), "GET", undefined, token);
+        setJob(res?.data || null);
+      } catch (e) {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [jobId, token]);
+
+  const pricing = job?.pricing || {};
+  const approvedHardware = (job?.hardwareItems || []).filter(
+    (it: any) => it.status === "approved",
+  );
+  const serviceCost = Number(
+    pricing.serviceCharge || pricing.negotiatedPrice || pricing.proposedPrice || 0,
+  );
+  const hardwareCost =
+    Number(pricing.hardwareCost) ||
+    approvedHardware.reduce(
+      (sum: number, it: any) =>
+        sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+      0,
+    );
+  const platformFee = Number(pricing.platformFee || 0);
+  const totalAmount =
+    Number(pricing.totalAmount) ||
+    serviceCost + hardwareCost + platformFee ||
+    fallbackAmount;
 
   const paymentMethods = [
     {
@@ -31,21 +77,18 @@ export default function PaymentPage() {
       name: "Credit/Debit Card",
       icon: "card-outline",
       description: "Visa, Mastercard",
-      balance: "Available",
     },
     {
       id: "wallet",
       name: "ClickFix Wallet",
       icon: "wallet-outline",
       description: "2,500 LKR available",
-      balance: "Low balance",
     },
     {
       id: "cash",
       name: "Cash on Site",
       icon: "cash-outline",
       description: "Pay directly to professional",
-      balance: "Available",
     },
   ];
 
@@ -71,29 +114,52 @@ export default function PaymentPage() {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Cost Breakdown Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Cost Breakdown</Text>
-          <View style={styles.costRow}>
-            <Text style={styles.costLabel}>Service (2 hours)</Text>
-            <Text style={styles.costValue}>3,000 LKR</Text>
+        {loading ? (
+          <View style={{ paddingVertical: 32, alignItems: "center" }}>
+            <ActivityIndicator color={Colors.primary} />
           </View>
-          <View style={styles.costRow}>
-            <Text style={styles.costLabel}>Hardware Items</Text>
-            <Text style={styles.costValue}>650 LKR</Text>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Cost Breakdown</Text>
+            <View style={styles.costRow}>
+              <Text style={styles.costLabel}>Service charge</Text>
+              <Text style={styles.costValue}>{serviceCost} LKR</Text>
+            </View>
+            {approvedHardware.length > 0 && (
+              <View style={styles.hardwareGroup}>
+                <Text style={styles.hardwareGroupLabel}>
+                  Hardware items ({approvedHardware.length})
+                </Text>
+                {approvedHardware.map((it: any, idx: number) => (
+                  <View key={idx} style={styles.hardwareLine}>
+                    <Text style={styles.hardwareName} numberOfLines={1}>
+                      • {it.name} ×{it.quantity || 1}
+                    </Text>
+                    <Text style={styles.hardwareValue}>
+                      {(it.price || 0) * (it.quantity || 1)} LKR
+                    </Text>
+                  </View>
+                ))}
+                <View style={styles.costRow}>
+                  <Text style={styles.costLabel}>Hardware subtotal</Text>
+                  <Text style={styles.costValue}>{hardwareCost} LKR</Text>
+                </View>
+              </View>
+            )}
+            {platformFee > 0 && (
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>Platform fee</Text>
+                <Text style={styles.costValue}>{platformFee} LKR</Text>
+              </View>
+            )}
+            <View style={styles.divider} />
+            <View style={styles.costRow}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalValue}>{totalAmount} LKR</Text>
+            </View>
           </View>
-          <View style={styles.costRow}>
-            <Text style={styles.costLabel}>Platform Fee</Text>
-            <Text style={styles.costValue}>300 LKR</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.costRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>{totalAmount} LKR</Text>
-          </View>
-        </View>
+        )}
 
-        {/* Payment Method Selection */}
         <Text style={styles.sectionTitle}>Select Payment Method</Text>
         {paymentMethods.map((method) => (
           <TouchableOpacity
@@ -132,7 +198,6 @@ export default function PaymentPage() {
           </TouchableOpacity>
         ))}
 
-        {/* Card Details (if card selected) */}
         {selectedMethod === "card" && (
           <View style={styles.cardDetailsContainer}>
             <Text style={styles.sectionTitle}>Card Details</Text>
@@ -157,7 +222,6 @@ export default function PaymentPage() {
           </View>
         )}
 
-        {/* Wallet Balance (if wallet selected) */}
         {selectedMethod === "wallet" && (
           <View style={styles.walletContainer}>
             <Text style={styles.sectionTitle}>Wallet Balance</Text>
@@ -171,9 +235,11 @@ export default function PaymentPage() {
                 <Text style={styles.balanceAmount}>2,500 LKR</Text>
                 <Text style={styles.balanceLabel}>Available Balance</Text>
               </View>
-              <Text style={styles.warningText}>
-                ⚠️ Insufficient balance. You need {totalAmount - 2500} LKR more.
-              </Text>
+              {totalAmount > 2500 && (
+                <Text style={styles.warningText}>
+                  ⚠️ Insufficient balance. You need {totalAmount - 2500} LKR more.
+                </Text>
+              )}
               <TouchableOpacity style={styles.addMoneyButton}>
                 <Ionicons
                   name="add-circle-outline"
@@ -186,7 +252,6 @@ export default function PaymentPage() {
           </View>
         )}
 
-        {/* Terms & Conditions */}
         <View style={styles.termsCard}>
           <View style={styles.checkboxContainer}>
             <View style={styles.checkbox}>
@@ -198,7 +263,6 @@ export default function PaymentPage() {
           </View>
         </View>
 
-        {/* Secure Payment Badge */}
         <View style={styles.secureContainer}>
           <Ionicons
             name="shield-checkmark-outline"
@@ -211,21 +275,19 @@ export default function PaymentPage() {
         </View>
       </ScrollView>
 
-      {/* Pay Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
             styles.payButton,
-            selectedMethod === "wallet" && { opacity: 0.6 },
+            selectedMethod === "wallet" && totalAmount > 2500 && { opacity: 0.6 },
           ]}
           onPress={handlePayment}
-          disabled={selectedMethod === "wallet"}
+          disabled={selectedMethod === "wallet" && totalAmount > 2500}
         >
           <Text style={styles.payButtonText}>Pay {totalAmount} LKR</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Success Modal */}
       <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={styles.successModalOverlay}>
           <View style={styles.successModal}>
@@ -304,6 +366,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: Colors.text,
+  },
+  hardwareGroup: {
+    backgroundColor: Colors.lightBackground,
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 4,
+  },
+  hardwareGroupLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  hardwareLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 3,
+  },
+  hardwareName: {
+    fontSize: 12,
+    color: Colors.text,
+    flex: 1,
+  },
+  hardwareValue: {
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: "500",
   },
   divider: {
     height: 1,

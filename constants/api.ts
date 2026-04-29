@@ -91,6 +91,8 @@ export const api = {
     workerBusy: (workerId: string) =>
       `${API_URL}/jobs/worker/${workerId}/busy`,
     uploadImage: `${API_URL}/jobs/upload-image`,
+    respondHardwareCart: (id: string) =>
+      `${API_URL}/jobs/${id}/hardware-cart/respond`,
   },
 
   // Chat
