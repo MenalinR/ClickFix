@@ -1,7 +1,7 @@
 import { JobReviewActions } from "@/components/JobReviewActions";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -53,12 +53,14 @@ export default function BookingsScreen() {
     });
   };
 
-  useEffect(() => {
-    if (token) {
-      setLoading(true);
-      fetchJobs().finally(() => setLoading(false));
-    }
-  }, [token]);
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        setLoading(true);
+        fetchJobs().finally(() => setLoading(false));
+      }
+    }, [token, fetchJobs]),
+  );
 
   const bookings = useMemo(() => (Array.isArray(jobs) ? jobs : []), [jobs]);
 

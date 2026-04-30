@@ -65,10 +65,9 @@ export default function PaymentPage() {
         sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
       0,
     );
-  const platformFee = Number(pricing.platformFee || 0);
   const totalAmount =
     Number(pricing.totalAmount) ||
-    serviceCost + hardwareCost + platformFee ||
+    serviceCost + hardwareCost ||
     fallbackAmount;
 
   const paymentMethods = [
@@ -144,12 +143,6 @@ export default function PaymentPage() {
                   <Text style={styles.costLabel}>Hardware subtotal</Text>
                   <Text style={styles.costValue}>{hardwareCost} LKR</Text>
                 </View>
-              </View>
-            )}
-            {platformFee > 0 && (
-              <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Platform fee</Text>
-                <Text style={styles.costValue}>{platformFee} LKR</Text>
               </View>
             )}
             <View style={styles.divider} />

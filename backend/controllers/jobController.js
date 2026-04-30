@@ -751,8 +751,7 @@ exports.respondHardwareCart = async (req, res) => {
       job.pricing.hardwareCost = approvedTotal;
 
       const serviceCharge = job.pricing.serviceCharge || 0;
-      const platformFee = job.pricing.platformFee || 0;
-      job.pricing.totalAmount = serviceCharge + platformFee + approvedTotal;
+      job.pricing.totalAmount = serviceCharge + approvedTotal;
 
       job.timeline.push({
         status: job.status,

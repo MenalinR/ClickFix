@@ -77,7 +77,7 @@ const jobSchema = new mongoose.Schema(
       hourlyRate: Number,
       estimatedHours: { type: Number, default: 2 },
       serviceCharge: { type: Number, default: 0 },
-      platformFee: { type: Number, default: 300 },
+      platformFee: { type: Number, default: 0 },
       hardwareCost: { type: Number, default: 0 },
       totalAmount: { type: Number, default: 0 },
       proposedPrice: { type: Number, default: 0 },
@@ -145,9 +145,7 @@ jobSchema.pre("save", function (next) {
       const serviceTotal =
         (this.pricing.hourlyRate || 0) * (this.pricing.estimatedHours || 2);
       this.pricing.totalAmount =
-        serviceTotal +
-        (this.pricing.platformFee || 0) +
-        (this.pricing.hardwareCost || 0);
+        serviceTotal + (this.pricing.hardwareCost || 0);
     }
   }
   next();
