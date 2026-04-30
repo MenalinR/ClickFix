@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -137,6 +139,17 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
+          <TouchableOpacity
+            onPress={() =>
+              router.replace({
+                pathname: "/(auth)/login",
+                params: { role: userRole },
+              })
+            }
+            style={styles.backBtn}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>
             Join as a{" "}
@@ -307,6 +320,13 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: "center",
     minHeight: "100%",
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
