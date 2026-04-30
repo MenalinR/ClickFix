@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 interface ButtonProps {
@@ -10,6 +10,8 @@ interface ButtonProps {
     disabled?: boolean;
     style?: ViewStyle;
     textStyle?: TextStyle;
+    hoverStyle?: ViewStyle;
+    hoverTextStyle?: TextStyle;
     icon?: React.ReactNode;
 }
 
@@ -21,6 +23,8 @@ export const Button: React.FC<ButtonProps> = ({
     disabled = false,
     style,
     textStyle,
+    hoverStyle,
+    hoverTextStyle,
     icon,
 }) => {
     const getBackgroundColor = () => {
@@ -51,28 +55,38 @@ export const Button: React.FC<ButtonProps> = ({
     };
 
     return (
-        <TouchableOpacity
-            style={[
+        <Pressable
+            style={(state: any) => [
                 styles.button,
                 { backgroundColor: getBackgroundColor() },
                 getBorder(),
                 style,
+                state.hovered && hoverStyle,
+                state.pressed && { opacity: 0.7 },
             ]}
             onPress={onPress}
             disabled={disabled || loading}
-            activeOpacity={0.7}
         >
-            {loading ? (
-                <ActivityIndicator color={getTextColor()} />
-            ) : (
-                <>
-                    {icon}
-                    <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
-                        {title}
-                    </Text>
-                </>
-            )}
-        </TouchableOpacity>
+            {(state: any) =>
+                loading ? (
+                    <ActivityIndicator color={getTextColor()} />
+                ) : (
+                    <>
+                        {icon}
+                        <Text
+                            style={[
+                                styles.text,
+                                { color: getTextColor() },
+                                textStyle,
+                                state.hovered && hoverTextStyle,
+                            ]}
+                        >
+                            {title}
+                        </Text>
+                    </>
+                )
+            }
+        </Pressable>
     );
 };
 

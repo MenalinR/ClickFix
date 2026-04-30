@@ -65,7 +65,11 @@ export default function LandingPage() {
           <Button
             title="I need a Service"
             onPress={handleCustomerPress}
+            variant="outline"
             style={styles.customerBtn}
+            textStyle={styles.customerBtnText}
+            hoverStyle={styles.customerBtnHover}
+            hoverTextStyle={styles.customerBtnTextHover}
           />
 
           <Button
@@ -74,14 +78,18 @@ export default function LandingPage() {
             variant="outline"
             style={styles.workerBtn}
             textStyle={styles.workerBtnText}
+            hoverStyle={styles.customerBtnHover}
+            hoverTextStyle={styles.customerBtnTextHover}
           />
 
           <Button
             title="I am an Admin"
             onPress={handleAdminPress}
             variant="outline"
-            style={{ borderColor: "#B0C4DE", borderWidth: 1.5 }}
+            style={{ borderColor: Colors.accent, borderWidth: 1.5 }}
             textStyle={{ color: "#DEE2E6" }}
+            hoverStyle={styles.customerBtnHover}
+            hoverTextStyle={styles.customerBtnTextHover}
           />
 
           <Button
@@ -90,6 +98,8 @@ export default function LandingPage() {
             variant="outline"
             style={styles.workerBtn}
             textStyle={styles.workerBtnText}
+            hoverStyle={styles.customerBtnHover}
+            hoverTextStyle={styles.customerBtnTextHover}
           />
         </View>
       </SafeAreaView>
@@ -167,7 +177,7 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "bold",
     color: "#B0C4DE",
     textAlign: "center",
     marginBottom: 8,
@@ -175,7 +185,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   customerBtn: {
+    borderColor: Colors.accent,
+    borderWidth: 1.5,
+  },
+  customerBtnText: {
+    color: "#DEE2E6",
+  },
+  customerBtnHover: {
     backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -185,8 +203,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 8,
   },
+  customerBtnTextHover: {
+    color: "#FFFFFF",
+  },
   workerBtn: {
-    borderColor: "#B0C4DE",
+    borderColor: Colors.accent,
     borderWidth: 1.5,
   },
   workerBtnText: {
