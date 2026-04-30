@@ -1,7 +1,6 @@
-import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -19,7 +18,6 @@ export default function WorkerDashboard() {
   const workerId = user?.id || user?._id || "1"; // Get logged-in worker's id
   const workerName = user?.name || "Professional";
   const workerCategory = (user as any)?.category || "Worker";
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const statusOf = (j: any) => (j.status || "").toLowerCase();
   const isMine = (j: any) =>
@@ -44,52 +42,16 @@ export default function WorkerDashboard() {
     (j) => statusOf(j) === "completed" && isMine(j),
   ).length;
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!token) return;
-    try {
-      const response = await apiCall(
-        api.notifications.getUnreadCount,
-        "GET",
-        undefined,
-        token,
-      );
-      setUnreadCount(response.count || 0);
-    } catch (error) {
-      console.error("Error fetching notification count:", error);
-    }
-  }, [token]);
-
   useFocusEffect(
     useCallback(() => {
-      fetchUnreadCount();
       if (token) fetchJobs();
-      if (!token) return;
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }, [token, fetchUnreadCount, fetchJobs]),
+    }, [token, fetchJobs]),
   );
 
   const handleGoLanding = () => {
     router.dismissAll();
     router.replace("/");
     logout();
-  };
-
-  const handleOpenNotifications = async () => {
-    if (token) {
-      try {
-        await apiCall(
-          api.notifications.markAllAsRead,
-          "PUT",
-          undefined,
-          token,
-        );
-        setUnreadCount(0);
-      } catch (error) {
-        console.error("Error marking notifications read:", error);
-      }
-    }
-    router.push("/job-requests");
   };
 
 
@@ -106,23 +68,6 @@ export default function WorkerDashboard() {
             onPress={handleGoLanding}
           >
             <Ionicons name="home" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={handleOpenNotifications}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={Colors.primary}
-            />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </Text>
-              </View>
-            )}
           </TouchableOpacity>
           </View>
         </View>
@@ -328,10 +273,6 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
   },
-  notificationButton: {
-    padding: 8,
-    position: "relative",
-  },
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,23 +280,6 @@ const styles = StyleSheet.create({
   },
   homeIconBtn: {
     padding: 4,
-  },
-  badge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
   },
   welcomeCard: {
     flexDirection: "row",

@@ -1,10 +1,53 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
 import { useChatList } from "../../hooks/useChatList";
 
 export default function WorkerLayout() {
   const { totalUnread } = useChatList();
+  const token = useStore((s) => s.token);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await apiCall(
+        api.notifications.getUnreadCount,
+        "GET",
+        undefined,
+        token,
+      );
+      setUnreadNotifications(response.count || 0);
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [token, fetchUnreadCount]);
+
+  const handleJobsTabPress = async () => {
+    if (!token || unreadNotifications === 0) return;
+    try {
+      await apiCall(
+        api.notifications.markAllAsRead,
+        "PUT",
+        undefined,
+        token,
+      );
+      setUnreadNotifications(0);
+    } catch (error) {
+      console.error("Error marking notifications read:", error);
+    }
+  };
+
   return (
     <Tabs
       screenOptions={{
@@ -35,6 +78,14 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase-outline" size={size} color={color} />
           ),
+          tabBarBadge:
+            unreadNotifications > 0 ? unreadNotifications : undefined,
+          tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
+        }}
+        listeners={{
+          tabPress: () => {
+            handleJobsTabPress();
+          },
         }}
       />
       <Tabs.Screen
