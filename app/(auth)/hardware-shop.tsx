@@ -120,7 +120,7 @@ export default function HardwareShopLoginScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.replace("/")}
+          onPress={() => (isLogin ? router.replace("/") : setIsLogin(true))}
           style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
