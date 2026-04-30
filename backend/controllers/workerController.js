@@ -1106,3 +1106,43 @@ exports.uploadProfileImage = async (req, res) => {
     });
   }
 };
+
+// @desc    Admin: delete a worker
+// @route   DELETE /api/workers/:id
+// @access  Private (Admin)
+exports.deleteWorker = async (req, res) => {
+  try {
+    const worker = await Worker.findByIdAndDelete(req.params.id);
+    if (!worker) {
+      return res.status(404).json({ success: false, message: "Worker not found" });
+    }
+    res.status(200).json({ success: true, message: "Worker deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Admin: activate/deactivate a worker
+// @route   PUT /api/workers/:id/active
+// @access  Private (Admin)
+exports.setWorkerActive = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== "boolean") {
+      return res
+        .status(400)
+        .json({ success: false, message: "isActive (boolean) is required" });
+    }
+    const worker = await Worker.findByIdAndUpdate(
+      req.params.id,
+      { isActive },
+      { new: true },
+    );
+    if (!worker) {
+      return res.status(404).json({ success: false, message: "Worker not found" });
+    }
+    res.status(200).json({ success: true, data: worker });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

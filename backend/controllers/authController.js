@@ -124,6 +124,13 @@ exports.loginWorker = async (req, res) => {
       });
     }
 
+    if (!worker.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been deactivated. Please contact support.",
+      });
+    }
+
     sendTokenResponse(worker, 200, res, "worker");
   } catch (error) {
     res.status(500).json({
@@ -163,6 +170,13 @@ exports.loginCustomer = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+      });
+    }
+
+    if (!customer.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been deactivated. Please contact support.",
       });
     }
 

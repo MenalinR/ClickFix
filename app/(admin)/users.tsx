@@ -13,6 +13,7 @@ type UserRow = {
     subtitle: string;
     rating?: number;
     jobsCompleted?: number;
+    isActive: boolean;
     raw: any;
 };
 
@@ -47,6 +48,7 @@ export default function AdminUsers() {
             subtitle: w.category || 'Worker',
             rating: w.rating || 0,
             jobsCompleted: w.jobsCompleted || 0,
+            isActive: w.isActive !== false,
             raw: w,
         }));
         const customerRows: UserRow[] = customers.map((c: any) => ({
@@ -54,6 +56,7 @@ export default function AdminUsers() {
             name: c.name || '—',
             role: 'customer',
             subtitle: c.email || c.phone || 'Customer',
+            isActive: c.isActive !== false,
             raw: c,
         }));
         if (filterType === 'workers') return workerRows;
@@ -69,30 +72,75 @@ export default function AdminUsers() {
         );
     });
 
-    const handleDeleteUser = (id: string, name: string) => {
+    const reloadCustomers = async () => {
+        if (!token) return;
+        try {
+            const res = await apiCall(api.customers.getAll, 'GET', undefined, token);
+            setCustomers(res?.data || []);
+        } catch {
+            // silent
+        }
+    };
+
+    const handleDeleteUser = (u: UserRow) => {
         Alert.alert(
             'Delete User',
-            `Are you sure you want to delete ${name}?`,
+            `Permanently delete ${u.name}? This cannot be undone.`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => {
-                    // Implement delete logic here
-                    Alert.alert('Success', 'User deleted successfully');
-                }},
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const url =
+                                u.role === 'worker'
+                                    ? api.admin.deleteWorker(u.id)
+                                    : api.admin.deleteCustomer(u.id);
+                            await apiCall(url, 'DELETE', undefined, token);
+                            if (u.role === 'worker') {
+                                await fetchWorkers();
+                            } else {
+                                await reloadCustomers();
+                            }
+                            Alert.alert('Deleted', `${u.name} has been removed.`);
+                        } catch (err: any) {
+                            Alert.alert('Error', err?.message || 'Failed to delete user');
+                        }
+                    },
+                },
             ]
         );
     };
 
-    const handleToggleStatus = (id: string, name: string, currentStatus: boolean) => {
+    const handleToggleStatus = (u: UserRow) => {
+        const next = !u.isActive;
         Alert.alert(
-            'Change Status',
-            `${currentStatus ? 'Deactivate' : 'Activate'} ${name}?`,
+            next ? 'Activate User' : 'Deactivate User',
+            next
+                ? `Re-enable ${u.name}'s account?`
+                : `Deactivate ${u.name}? They will not be able to log in or work.`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Confirm', onPress: () => {
-                    // Implement status toggle logic here
-                    Alert.alert('Success', 'Status updated successfully');
-                }},
+                {
+                    text: 'Confirm',
+                    onPress: async () => {
+                        try {
+                            const url =
+                                u.role === 'worker'
+                                    ? api.admin.setWorkerActive(u.id)
+                                    : api.admin.setCustomerActive(u.id);
+                            await apiCall(url, 'PUT', { isActive: next }, token);
+                            if (u.role === 'worker') {
+                                await fetchWorkers();
+                            } else {
+                                await reloadCustomers();
+                            }
+                        } catch (err: any) {
+                            Alert.alert('Error', err?.message || 'Failed to update status');
+                        }
+                    },
+                },
             ]
         );
     };
@@ -139,16 +187,26 @@ export default function AdminUsers() {
                 {filteredRows.map((u) => (
                     <TouchableOpacity
                         key={`${u.role}-${u.id}`}
-                        style={styles.userCard}
+                        style={[styles.userCard, !u.isActive && styles.userCardDisabled]}
                         activeOpacity={0.7}
                         onPress={() => setSelectedUser(u)}
                     >
                         <View style={styles.userInfo}>
-                            <View style={styles.avatarContainer}>
+                            <View
+                                style={[
+                                    styles.avatarContainer,
+                                    !u.isActive && styles.avatarContainerDisabled,
+                                ]}
+                            >
                                 <Text style={styles.avatarText}>{u.name.charAt(0)}</Text>
                             </View>
                             <View style={styles.userDetails}>
-                                <Text style={styles.userName}>{u.name}</Text>
+                                <View style={styles.userNameRow}>
+                                    <Text style={styles.userName}>{u.name}</Text>
+                                    {!u.isActive && (
+                                        <Text style={styles.disabledBadge}>Deactivated</Text>
+                                    )}
+                                </View>
                                 <Text style={styles.userCategory}>{u.subtitle}</Text>
                                 {u.role === 'worker' ? (
                                     <View style={styles.userStats}>
@@ -167,14 +225,25 @@ export default function AdminUsers() {
                         </View>
                         <View style={styles.actions}>
                             <TouchableOpacity
-                                style={[styles.actionButton, styles.statusButton]}
-                                onPress={() => handleToggleStatus(u.id, u.name, true)}
+                                style={[
+                                    styles.actionButton,
+                                    u.isActive ? styles.statusButton : styles.statusButtonInactive,
+                                ]}
+                                onPress={() => handleToggleStatus(u)}
                             >
-                                <Ionicons name="checkmark-circle-outline" size={20} color="#4CAF50" />
+                                <Ionicons
+                                    name={
+                                        u.isActive
+                                            ? 'checkmark-circle-outline'
+                                            : 'close-circle-outline'
+                                    }
+                                    size={20}
+                                    color={u.isActive ? '#4CAF50' : '#9E9E9E'}
+                                />
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.actionButton, styles.deleteButton]}
-                                onPress={() => handleDeleteUser(u.id, u.name)}
+                                onPress={() => handleDeleteUser(u)}
                             >
                                 <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
                             </TouchableOpacity>
@@ -329,6 +398,32 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 12,
     },
+    userCardDisabled: {
+        opacity: 0.55,
+    },
+    avatarContainerDisabled: {
+        backgroundColor: '#9E9E9E',
+    },
+    userNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+        marginBottom: 4,
+    },
+    disabledBadge: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#C62828',
+        backgroundColor: '#FFEBEE',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        textTransform: 'uppercase',
+    },
+    statusButtonInactive: {
+        backgroundColor: '#9E9E9E' + '20',
+    },
     userInfo: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -355,7 +450,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: Colors.text,
-        marginBottom: 4,
     },
     userCategory: {
         fontSize: 14,

@@ -292,3 +292,47 @@ exports.uploadProfileImage = async (req, res) => {
     });
   }
 };
+
+// @desc    Admin: delete a customer
+// @route   DELETE /api/customers/:id
+// @access  Private (Admin)
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const customer = await Customer.findByIdAndDelete(req.params.id);
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Customer not found" });
+    }
+    res.status(200).json({ success: true, message: "Customer deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Admin: activate/deactivate a customer
+// @route   PUT /api/customers/:id/active
+// @access  Private (Admin)
+exports.setCustomerActive = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== "boolean") {
+      return res
+        .status(400)
+        .json({ success: false, message: "isActive (boolean) is required" });
+    }
+    const customer = await Customer.findByIdAndUpdate(
+      req.params.id,
+      { isActive },
+      { new: true },
+    );
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Customer not found" });
+    }
+    res.status(200).json({ success: true, data: customer });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

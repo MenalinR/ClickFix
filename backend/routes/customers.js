@@ -8,6 +8,8 @@ const {
   removeFavorite,
   addWalletTransaction,
   uploadProfileImage,
+  deleteCustomer,
+  setCustomerActive,
 } = require("../controllers/customerController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -15,6 +17,8 @@ const { uploadDocument } = require("../utils/upload");
 const router = express.Router();
 
 router.get("/", protect, authorize("admin"), getAllCustomers);
+router.put("/:id/active", protect, authorize("admin"), setCustomerActive);
+router.delete("/:id", protect, authorize("admin"), deleteCustomer);
 router.get("/:id", protect, authorize("customer"), getCustomer);
 router.put("/:id", protect, authorize("customer"), updateCustomer);
 router.post("/:id/addresses", protect, authorize("customer"), addAddress);

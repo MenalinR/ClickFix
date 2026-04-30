@@ -18,6 +18,8 @@ const {
   verifyExperienceDocument,
   getPendingDocuments,
   getVerifiedDocuments,
+  deleteWorker,
+  setWorkerActive,
 } = require("../controllers/workerController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument, optionalUploadDocument } = require("../utils/upload");
@@ -32,6 +34,8 @@ router.get("/:id/verification-status", protect, getVerificationStatus);
 router.get("/admin/pending", protect, authorize("admin"), getPendingDocuments);
 router.get("/admin/verified", protect, authorize("admin"), getVerifiedDocuments);
 router.put("/:id/verify-id-proof", protect, authorize("admin"), verifyIDProof);
+router.put("/:id/active", protect, authorize("admin"), setWorkerActive);
+router.delete("/:id", protect, authorize("admin"), deleteWorker);
 router.put(
   "/:id/verify-experience/:docId",
   protect,

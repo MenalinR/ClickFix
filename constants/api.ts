@@ -51,6 +51,10 @@ export const api = {
   admin: {
     getPendingDocuments: `${API_URL}/workers/admin/pending`,
     getVerifiedDocuments: `${API_URL}/workers/admin/verified`,
+    deleteWorker: (id: string) => `${API_URL}/workers/${id}`,
+    setWorkerActive: (id: string) => `${API_URL}/workers/${id}/active`,
+    deleteCustomer: (id: string) => `${API_URL}/customers/${id}`,
+    setCustomerActive: (id: string) => `${API_URL}/customers/${id}/active`,
   },
 
   // Notifications
