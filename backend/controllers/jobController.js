@@ -49,7 +49,7 @@ exports.createJob = async (req, res) => {
       pricing: {
         hourlyRate: hourlyRateMap[serviceType] || 40,
         estimatedHours: estimatedHours || 2,
-        platformFee: 5,
+        platformFee: 0,
       },
     };
     if (requestedWorkerId) {
