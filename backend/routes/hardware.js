@@ -3,6 +3,7 @@ const {
   getHardwareItems,
   getHardwareItem,
   createHardwareRequest,
+  createOrderFromJob,
   getHardwareRequests,
   getHardwareRequest,
   updateRequestStatus,
@@ -24,6 +25,12 @@ router.get("/items/:id", getHardwareItem);
 
 // Hardware Requests
 router.post("/requests", protect, authorize("worker"), createHardwareRequest);
+router.post(
+  "/orders/from-job",
+  protect,
+  authorize("worker"),
+  createOrderFromJob,
+);
 router.get("/requests", protect, getHardwareRequests);
 router.get("/requests/:id", protect, getHardwareRequest);
 router.put(

@@ -1,4 +1,28 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
+const HardwareShop = require("../models/HardwareShop");
+
+// @desc    List active hardware shops (public to authenticated workers)
+// @route   GET /api/hardwareShop/list
+// @access  Private (Worker)
+exports.listShops = async (req, res) => {
+  try {
+    const { city } = req.query;
+    const query = { isActive: true };
+    if (city) query.city = city;
+
+    const shops = await HardwareShop.find(query)
+      .select("shopName city address phone")
+      .sort("shopName");
+
+    res.status(200).json({
+      success: true,
+      count: shops.length,
+      data: shops,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // @desc    Get all items for hardware shop
 // @route   GET /api/hardwareShop/items

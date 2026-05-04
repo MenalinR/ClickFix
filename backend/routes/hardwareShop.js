@@ -6,12 +6,16 @@ const {
   deleteItem,
   getStats,
   getOrders,
+  listShops,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
-// All routes require hardwareShop authentication
+// Public list of shops (any authenticated user, e.g. worker picking a shop)
+router.get("/list", protect, listShops);
+
+// All other routes require hardwareShop authentication
 router.use(protect, authorize("hardwareShop"));
 
 // Items management

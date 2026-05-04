@@ -189,6 +189,20 @@ export default function WorkerChatPage() {
               ? "✓ Approved by customer"
               : "✗ Declined by customer"}
         </Text>
+        {status === "approved" && isMine && jobId && (
+          <TouchableOpacity
+            style={styles.orderShopBtn}
+            onPress={() =>
+              router.push({
+                pathname: "/(worker)/order-hardware",
+                params: { jobId },
+              })
+            }
+          >
+            <Ionicons name="storefront-outline" size={16} color="white" />
+            <Text style={styles.orderShopBtnText}>Order from Shop</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -607,4 +621,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sendCartBtnText: { color: "white", fontWeight: "700", fontSize: 14 },
+  orderShopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  orderShopBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
 });

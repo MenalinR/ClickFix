@@ -90,7 +90,7 @@ const jobSchema = new mongoose.Schema(
         quantity: { type: Number, default: 1 },
         status: {
           type: String,
-          enum: ["suggested", "approved", "rejected"],
+          enum: ["suggested", "approved", "rejected", "ordered"],
           default: "suggested",
         },
       },

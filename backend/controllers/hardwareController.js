@@ -1,5 +1,6 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const Job = require("../models/Job");
+const HardwareShop = require("../models/HardwareShop");
 
 // @desc    Get all hardware items
 // @route   GET /api/hardware/items
@@ -129,6 +130,80 @@ exports.createHardwareRequest = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Create a hardware order from a job's approved hardware cart
+// @route   POST /api/hardware/orders/from-job
+// @access  Private (Worker only)
+exports.createOrderFromJob = async (req, res) => {
+  try {
+    const { jobId, shopId } = req.body || {};
+    if (!jobId || !shopId) {
+      return res.status(400).json({
+        success: false,
+        message: "jobId and shopId are required",
+      });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (!job.workerId || job.workerId.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized" });
+    }
+
+    const shop = await HardwareShop.findById(shopId);
+    if (!shop) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Hardware shop not found" });
+    }
+
+    const approvedItems = (job.hardwareItems || []).filter(
+      (it) => it.status === "approved",
+    );
+    if (approvedItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No approved hardware items to order",
+      });
+    }
+
+    const orderItems = approvedItems.map((it) => ({
+      name: it.name,
+      quantity: it.quantity || 1,
+      price: it.price || 0,
+    }));
+    const totalCost = orderItems.reduce(
+      (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
+      0,
+    );
+
+    const request = await HardwareRequest.create({
+      jobId: job._id,
+      workerId: req.user._id,
+      customerId: job.customerId,
+      shopId,
+      items: orderItems,
+      totalCost,
+      status: "pending",
+    });
+
+    job.hardwareItems = job.hardwareItems.map((it) => {
+      if (it.status === "approved") {
+        return { ...(it.toObject ? it.toObject() : it), status: "ordered" };
+      }
+      return it;
+    });
+    await job.save();
+
+    res.status(201).json({ success: true, data: request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

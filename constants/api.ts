@@ -123,6 +123,7 @@ export const api = {
     getItems: `${API_URL}/hardware/items`,
     getItemById: (id: string) => `${API_URL}/hardware/items/${id}`,
     createRequest: `${API_URL}/hardware/requests`,
+    createOrderFromJob: `${API_URL}/hardware/orders/from-job`,
     getRequests: `${API_URL}/hardware/requests`,
     getRequestById: (id: string) => `${API_URL}/hardware/requests/${id}`,
     updateRequestStatus: (id: string) =>
@@ -133,6 +134,7 @@ export const api = {
 
   // Hardware Shop
   hardwareShop: {
+    list: `${API_URL}/hardwareShop/list`,
     getItems: `${API_URL}/hardwareShop/items`,
     addItem: `${API_URL}/hardwareShop/items`,
     updateItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,

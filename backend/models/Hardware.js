@@ -55,6 +55,10 @@ const hardwareRequestSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
+    shopId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HardwareShop",
+    },
     items: [
       {
         hardwareId: {
@@ -72,7 +76,15 @@ const hardwareRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "delivered"],
+      enum: [
+        "pending",
+        "approved",
+        "rejected",
+        "packing",
+        "ready",
+        "picked_up",
+        "delivered",
+      ],
       default: "pending",
     },
     customerNote: String,
