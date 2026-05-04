@@ -103,10 +103,6 @@ export default function CustomerChatPage() {
 
   const renderCartBubble = (item: any, isMine: boolean) => {
     const items = (item.cartItems || []) as any[];
-    const total = items.reduce(
-      (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
-      0,
-    );
     const status = item.cartStatus || "pending";
     const isResponding = respondingTo === item._id;
 
@@ -119,18 +115,14 @@ export default function CustomerChatPage() {
         {items.map((it, idx) => (
           <View key={idx} style={styles.cartRow}>
             <Text style={styles.cartItemName} numberOfLines={1}>
-              {it.name}
+              • {it.name}
             </Text>
             <Text style={styles.cartItemQty}>×{it.quantity || 1}</Text>
-            <Text style={styles.cartItemPrice}>
-              {(it.price || 0) * (it.quantity || 1)} LKR
-            </Text>
           </View>
         ))}
-        <View style={styles.cartTotalRow}>
-          <Text style={styles.cartTotalLabel}>Total</Text>
-          <Text style={styles.cartTotalValue}>{total} LKR</Text>
-        </View>
+        <Text style={styles.cartHelper}>
+          Final price will be confirmed when the worker orders from a shop.
+        </Text>
 
         {!isMine && status === "pending" ? (
           <View style={styles.cartActions}>
@@ -168,7 +160,7 @@ export default function CustomerChatPage() {
             {status === "pending"
               ? "Awaiting your approval"
               : status === "approved"
-                ? "✓ Added to your bill"
+                ? "✓ Approved — worker will source from a shop"
                 : "✗ Declined"}
           </Text>
         )}
@@ -425,6 +417,12 @@ const styles = StyleSheet.create({
   cartBtnApproveText: { color: "white", fontWeight: "700", fontSize: 13 },
   cartBtnRejectText: { color: "#C73E3A", fontWeight: "600", fontSize: 13 },
   cartStatusBadge: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  cartHelper: {
     fontSize: 11,
     color: Colors.textSecondary,
     marginTop: 8,

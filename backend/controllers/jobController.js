@@ -736,29 +736,11 @@ exports.respondHardwareCart = async (req, res) => {
     await message.save();
 
     if (action === "approve") {
-      message.cartItems.forEach((it) => {
-        job.hardwareItems.push({
-          name: it.name,
-          price: it.price,
-          quantity: it.quantity,
-          status: "approved",
-        });
-      });
-
-      const approvedTotal = job.hardwareItems
-        .filter((it) => it.status === "approved")
-        .reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
-      job.pricing.hardwareCost = approvedTotal;
-
-      const serviceCharge = job.pricing.serviceCharge || 0;
-      job.pricing.totalAmount = serviceCharge + approvedTotal;
-
       job.timeline.push({
         status: job.status,
         timestamp: new Date(),
-        note: `Customer approved hardware cart (+${approvedTotal} LKR)`,
+        note: "Customer approved hardware suggestion (consent only — worker will source from a shop)",
       });
-
       await job.save();
 
       if (job.workerId) {
@@ -767,8 +749,9 @@ exports.respondHardwareCart = async (req, res) => {
             recipient: job.workerId,
             recipientModel: "Worker",
             type: "JOB_ASSIGNED",
-            title: "Hardware approved",
-            message: `Customer approved the hardware cart (${approvedTotal} LKR added).`,
+            title: "Customer approved hardware",
+            message:
+              "You can now place the order at a hardware shop. Final cost is determined by the shop's prices.",
             data: { jobId: job._id, messageId: message._id },
             actionUrl: "/job-requests",
           });

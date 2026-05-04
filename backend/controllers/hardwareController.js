@@ -7,7 +7,7 @@ const HardwareShop = require("../models/HardwareShop");
 // @access  Public
 exports.getHardwareItems = async (req, res) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, shopId } = req.query;
 
     let query = { inStock: true };
 
@@ -19,7 +19,13 @@ exports.getHardwareItems = async (req, res) => {
       query.name = { $regex: search, $options: "i" };
     }
 
-    const items = await HardwareItem.find(query).sort("name");
+    if (shopId) {
+      query.shopId = shopId;
+    }
+
+    const items = await HardwareItem.find(query)
+      .populate("shopId", "shopName city")
+      .sort("name");
 
     res.status(200).json({
       success: true,
@@ -133,16 +139,20 @@ exports.createHardwareRequest = async (req, res) => {
   }
 };
 
-// @desc    Create a hardware order from a job's approved hardware cart
+// @desc    Create a hardware order from real shop catalog selections
 // @route   POST /api/hardware/orders/from-job
 // @access  Private (Worker only)
+//
+// Body: { jobId, shopId, items: [{ hardwareItemId, quantity }] }
+// The worker has freely picked items from the shop's catalog. Real prices
+// from HardwareItem records become the source of truth for the bill.
 exports.createOrderFromJob = async (req, res) => {
   try {
-    const { jobId, shopId } = req.body || {};
-    if (!jobId || !shopId) {
+    const { jobId, shopId, items } = req.body || {};
+    if (!jobId || !shopId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "jobId and shopId are required",
+        message: "jobId, shopId and a non-empty items array are required",
       });
     }
 
@@ -163,21 +173,30 @@ exports.createOrderFromJob = async (req, res) => {
         .json({ success: false, message: "Hardware shop not found" });
     }
 
-    const approvedItems = (job.hardwareItems || []).filter(
-      (it) => it.status === "approved",
-    );
-    if (approvedItems.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No approved hardware items to order",
+    const orderItems = [];
+    for (const sel of items) {
+      const qty = Math.max(1, Number(sel.quantity) || 1);
+      const hwItem = await HardwareItem.findById(sel.hardwareItemId);
+      if (!hwItem) {
+        return res.status(404).json({
+          success: false,
+          message: `Hardware item ${sel.hardwareItemId} not found`,
+        });
+      }
+      if (hwItem.shopId.toString() !== shopId.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: `Item ${hwItem.name} does not belong to the chosen shop`,
+        });
+      }
+      orderItems.push({
+        hardwareId: hwItem._id,
+        name: hwItem.name,
+        quantity: qty,
+        price: hwItem.price,
       });
     }
 
-    const orderItems = approvedItems.map((it) => ({
-      name: it.name,
-      quantity: it.quantity || 1,
-      price: it.price || 0,
-    }));
     const totalCost = orderItems.reduce(
       (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
       0,
@@ -193,15 +212,40 @@ exports.createOrderFromJob = async (req, res) => {
       status: "pending",
     });
 
-    job.hardwareItems = job.hardwareItems.map((it) => {
-      if (it.status === "approved") {
-        return { ...(it.toObject ? it.toObject() : it), status: "ordered" };
-      }
-      return it;
+    // Replace job.hardwareItems with the actually-ordered items at real prices
+    job.hardwareItems = orderItems.map((it) => ({
+      name: it.name,
+      price: it.price,
+      quantity: it.quantity,
+      status: "ordered",
+    }));
+    job.pricing.hardwareCost = totalCost;
+    const serviceCharge = job.pricing.serviceCharge || 0;
+    job.pricing.totalAmount = serviceCharge + totalCost;
+    job.timeline.push({
+      status: job.status,
+      timestamp: new Date(),
+      note: `Hardware ordered from ${shop.shopName} — ${totalCost} LKR (${orderItems.length} item${
+        orderItems.length > 1 ? "s" : ""
+      })`,
     });
     await job.save();
 
-    res.status(201).json({ success: true, data: request });
+    try {
+      await require("./notificationController").createNotification({
+        recipient: job.customerId,
+        recipientModel: "Customer",
+        type: "JOB_ASSIGNED",
+        title: "Hardware ordered",
+        message: `Worker placed a hardware order at ${shop.shopName} — ${totalCost} LKR added to your bill.`,
+        data: { jobId: job._id, requestId: request._id },
+        actionUrl: "/(customer)/(tabs)/bookings",
+      });
+    } catch (e) {
+      // non-fatal
+    }
+
+    res.status(201).json({ success: true, data: { request, job } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

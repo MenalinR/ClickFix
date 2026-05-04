@@ -22,7 +22,7 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useChat } from "../../hooks/useChat";
 
-type DraftItem = { name: string; price: string; quantity: string };
+type DraftItem = { name: string; quantity: string };
 
 export default function WorkerChatPage() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function WorkerChatPage() {
   const [customerName, setCustomerName] = useState(initialName);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [draftItems, setDraftItems] = useState<DraftItem[]>([
-    { name: "", price: "", quantity: "1" },
+    { name: "", quantity: "1" },
   ]);
 
   useEffect(() => {
@@ -107,21 +107,15 @@ export default function WorkerChatPage() {
   };
 
   const addDraftRow = () =>
-    setDraftItems((prev) => [...prev, { name: "", price: "", quantity: "1" }]);
+    setDraftItems((prev) => [...prev, { name: "", quantity: "1" }]);
 
   const removeDraftRow = (index: number) =>
     setDraftItems((prev) =>
       prev.length === 1 ? prev : prev.filter((_, i) => i !== index),
     );
 
-  const draftTotal = draftItems.reduce(
-    (sum, it) =>
-      sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
-    0,
-  );
-
   const resetDraft = () => {
-    setDraftItems([{ name: "", price: "", quantity: "1" }]);
+    setDraftItems([{ name: "", quantity: "1" }]);
     setCartModalOpen(false);
   };
 
@@ -129,13 +123,12 @@ export default function WorkerChatPage() {
     const cleaned = draftItems
       .map((it) => ({
         name: it.name.trim(),
-        price: Number(it.price),
         quantity: Number(it.quantity) || 1,
       }))
-      .filter((it) => it.name && it.price > 0);
+      .filter((it) => it.name);
 
     if (cleaned.length === 0) {
-      Alert.alert("Add items", "Add at least one item with a name and price.");
+      Alert.alert("Add items", "Add at least one item name.");
       return;
     }
 
@@ -145,10 +138,6 @@ export default function WorkerChatPage() {
 
   const renderCartBubble = (item: any, isMine: boolean) => {
     const items = (item.cartItems || []) as any[];
-    const total = items.reduce(
-      (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
-      0,
-    );
     const status = item.cartStatus || "pending";
     return (
       <View
@@ -164,18 +153,11 @@ export default function WorkerChatPage() {
         {items.map((it, idx) => (
           <View key={idx} style={styles.cartRow}>
             <Text style={styles.cartItemName} numberOfLines={1}>
-              {it.name}
+              • {it.name}
             </Text>
             <Text style={styles.cartItemQty}>×{it.quantity || 1}</Text>
-            <Text style={styles.cartItemPrice}>
-              {(it.price || 0) * (it.quantity || 1)} LKR
-            </Text>
           </View>
         ))}
-        <View style={styles.cartTotalRow}>
-          <Text style={styles.cartTotalLabel}>Total</Text>
-          <Text style={styles.cartTotalValue}>{total} LKR</Text>
-        </View>
         <Text
           style={[
             styles.cartStatusBadge,
@@ -186,7 +168,7 @@ export default function WorkerChatPage() {
           {status === "pending"
             ? "Awaiting customer approval"
             : status === "approved"
-              ? "✓ Approved by customer"
+              ? "✓ Approved — final price set when you order from a shop"
               : "✗ Declined by customer"}
         </Text>
         {status === "approved" && isMine && jobId && (
@@ -195,7 +177,7 @@ export default function WorkerChatPage() {
             onPress={() =>
               router.push({
                 pathname: "/(worker)/order-hardware",
-                params: { jobId },
+                params: { jobId, customerId },
               })
             }
           >
@@ -347,26 +329,19 @@ export default function WorkerChatPage() {
               </TouchableOpacity>
             </View>
             <Text style={styles.modalSubtitle}>
-              Send the customer a list of parts. They can approve or decline.
+              List the parts needed. The customer approves the list — final
+              prices come from the hardware shop you order from.
             </Text>
 
             <ScrollView style={{ maxHeight: 360 }}>
               {draftItems.map((item, idx) => (
                 <View key={idx} style={styles.draftRow}>
                   <TextInput
-                    style={[styles.draftInput, { flex: 2 }]}
-                    placeholder="Item name"
+                    style={[styles.draftInput, { flex: 3 }]}
+                    placeholder="Item name (e.g. PVC pipe)"
                     placeholderTextColor={Colors.textSecondary}
                     value={item.name}
                     onChangeText={(v) => updateDraftItem(idx, "name", v)}
-                  />
-                  <TextInput
-                    style={[styles.draftInput, { flex: 1 }]}
-                    placeholder="Price"
-                    placeholderTextColor={Colors.textSecondary}
-                    keyboardType="numeric"
-                    value={item.price}
-                    onChangeText={(v) => updateDraftItem(idx, "price", v)}
                   />
                   <TextInput
                     style={[styles.draftInput, { width: 56 }]}
@@ -395,11 +370,6 @@ export default function WorkerChatPage() {
               <Ionicons name="add" size={18} color={Colors.primary} />
               <Text style={styles.addRowText}>Add another item</Text>
             </TouchableOpacity>
-
-            <View style={styles.totalLine}>
-              <Text style={styles.totalLineLabel}>Total</Text>
-              <Text style={styles.totalLineValue}>{draftTotal} LKR</Text>
-            </View>
 
             <TouchableOpacity
               style={[styles.sendCartBtn, sending && { opacity: 0.6 }]}

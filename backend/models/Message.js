@@ -52,7 +52,7 @@ const messageSchema = new mongoose.Schema(
     cartItems: [
       {
         name: { type: String, required: true },
-        price: { type: Number, required: true, min: 0 },
+        price: { type: Number, min: 0 },
         quantity: { type: Number, default: 1, min: 1 },
         status: {
           type: String,

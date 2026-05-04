@@ -4,9 +4,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,17 +26,53 @@ interface Shop {
   phone?: string;
 }
 
+interface HardwareItem {
+  _id: string;
+  name: string;
+  category: string;
+  price: number;
+  unit?: string;
+  image?: string;
+  description?: string;
+  inStock?: boolean;
+  shopId?: any;
+}
+
+interface CartLine {
+  hardwareItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+  unit?: string;
+}
+
 export default function OrderHardwarePage() {
   const router = useRouter();
   const { token } = useStore();
-  const params = useLocalSearchParams<{ jobId?: string }>();
+  const params = useLocalSearchParams<{
+    jobId?: string;
+    customerId?: string;
+  }>();
   const jobId = typeof params.jobId === "string" ? params.jobId : "";
+  const customerId =
+    typeof params.customerId === "string" ? params.customerId : "";
 
   const [job, setJob] = useState<any>(null);
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+  const [shopItems, setShopItems] = useState<HardwareItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [loading, setLoading] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Approved suggestions from chat (read-only reference)
+  const approvedSuggestions = useMemo(() => {
+    const msgs = (job?.cartMessages || []) as any[];
+    return msgs;
+  }, [job]);
 
   useEffect(() => {
     if (!jobId || !token) return;
@@ -54,42 +93,133 @@ export default function OrderHardwarePage() {
     })();
   }, [jobId, token]);
 
-  const approvedItems = useMemo(
+  // Load shop items when a shop is picked
+  useEffect(() => {
+    if (!selectedShopId || !token) {
+      setShopItems([]);
+      return;
+    }
+    (async () => {
+      try {
+        setLoadingItems(true);
+        const url = `${api.hardware.getItems}?shopId=${selectedShopId}`;
+        const res = await apiCall(url, "GET", undefined, token);
+        setShopItems((res?.data || []) as HardwareItem[]);
+      } catch (e: any) {
+        Alert.alert("Error", e?.message || "Could not load shop items");
+      } finally {
+        setLoadingItems(false);
+      }
+    })();
+  }, [selectedShopId, token]);
+
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return shopItems;
+    const q = search.toLowerCase();
+    return shopItems.filter(
+      (it) =>
+        it.name.toLowerCase().includes(q) ||
+        it.category?.toLowerCase().includes(q),
+    );
+  }, [shopItems, search]);
+
+  const cartLines = useMemo(() => Object.values(cart), [cart]);
+  const cartTotal = useMemo(
     () =>
-      (job?.hardwareItems || []).filter((it: any) => it.status === "approved"),
-    [job],
+      cartLines.reduce((sum, l) => sum + (l.price || 0) * (l.quantity || 1), 0),
+    [cartLines],
   );
-  const totalCost = useMemo(
-    () =>
-      approvedItems.reduce(
-        (sum: number, it: any) =>
-          sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
-        0,
-      ),
-    [approvedItems],
-  );
+
+  const addToCart = (item: HardwareItem) => {
+    setCart((prev) => {
+      const existing = prev[item._id];
+      if (existing) {
+        return {
+          ...prev,
+          [item._id]: { ...existing, quantity: existing.quantity + 1 },
+        };
+      }
+      return {
+        ...prev,
+        [item._id]: {
+          hardwareItemId: item._id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          image: item.image,
+          unit: item.unit,
+        },
+      };
+    });
+  };
+
+  const updateQty = (hardwareItemId: string, delta: number) => {
+    setCart((prev) => {
+      const existing = prev[hardwareItemId];
+      if (!existing) return prev;
+      const newQty = existing.quantity + delta;
+      if (newQty <= 0) {
+        const { [hardwareItemId]: _, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [hardwareItemId]: { ...existing, quantity: newQty },
+      };
+    });
+  };
 
   const handleSubmit = async () => {
     if (!selectedShopId) {
       Alert.alert("Pick a shop", "Please select a hardware shop first.");
       return;
     }
-    if (approvedItems.length === 0) {
-      Alert.alert(
-        "No items",
-        "There are no approved hardware items to order on this job.",
-      );
+    if (cartLines.length === 0) {
+      Alert.alert("Empty cart", "Add at least one item from the shop.");
       return;
     }
     setSubmitting(true);
     try {
-      await apiCall(
+      const res = await apiCall(
         api.hardware.createOrderFromJob,
         "POST",
-        { jobId, shopId: selectedShopId },
+        {
+          jobId,
+          shopId: selectedShopId,
+          items: cartLines.map((l) => ({
+            hardwareItemId: l.hardwareItemId,
+            quantity: l.quantity,
+          })),
+        },
         token,
       );
-      Alert.alert("Order sent", "The hardware shop has been notified.", [
+      const total = res?.data?.request?.totalCost || cartTotal;
+      const itemCount = cartLines.length;
+
+      // Post a follow-up text message in chat so the customer sees it
+      if (customerId) {
+        try {
+          await apiCall(
+            api.chat.sendMessage,
+            "POST",
+            {
+              chatId: jobId,
+              receiverId: customerId,
+              receiverModel: "Customer",
+              jobId,
+              messageType: "text",
+              content: `Hardware ordered — ${itemCount} item${
+                itemCount > 1 ? "s" : ""
+              }, ${total} LKR added to your bill.`,
+            },
+            token,
+          );
+        } catch {
+          // non-fatal
+        }
+      }
+
+      Alert.alert("Order placed", `Total ${total} LKR added to the bill.`, [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (e: any) {
@@ -122,34 +252,11 @@ export default function OrderHardwarePage() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Approved Items</Text>
-          {approvedItems.length === 0 ? (
-            <Text style={styles.emptyText}>
-              No approved hardware items on this job.
-            </Text>
-          ) : (
-            <>
-              {approvedItems.map((it: any, idx: number) => (
-                <View key={idx} style={styles.itemRow}>
-                  <Text style={styles.itemName} numberOfLines={1}>
-                    {it.name}
-                  </Text>
-                  <Text style={styles.itemQty}>×{it.quantity || 1}</Text>
-                  <Text style={styles.itemPrice}>
-                    {(it.price || 0) * (it.quantity || 1)} LKR
-                  </Text>
-                </View>
-              ))}
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>{totalCost} LKR</Text>
-              </View>
-            </>
-          )}
-        </View>
-
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Shop picker */}
         <Text style={styles.sectionTitle}>Choose Hardware Shop</Text>
         {shops.length === 0 ? (
           <View style={styles.card}>
@@ -161,7 +268,10 @@ export default function OrderHardwarePage() {
             return (
               <TouchableOpacity
                 key={shop._id}
-                onPress={() => setSelectedShopId(shop._id)}
+                onPress={() => {
+                  setSelectedShopId(shop._id);
+                  setCart({});
+                }}
                 style={[
                   styles.shopCard,
                   isSelected && styles.shopCardSelected,
@@ -181,15 +291,9 @@ export default function OrderHardwarePage() {
                       {[shop.address, shop.city].filter(Boolean).join(", ")}
                     </Text>
                   )}
-                  {!!shop.phone && (
-                    <Text style={styles.shopMeta}>{shop.phone}</Text>
-                  )}
                 </View>
                 <View
-                  style={[
-                    styles.radio,
-                    isSelected && styles.radioSelected,
-                  ]}
+                  style={[styles.radio, isSelected && styles.radioSelected]}
                 >
                   {isSelected && <View style={styles.radioInner} />}
                 </View>
@@ -197,28 +301,142 @@ export default function OrderHardwarePage() {
             );
           })
         )}
+
+        {/* Catalog */}
+        {selectedShopId && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+              Browse Products
+            </Text>
+            <View style={styles.searchBar}>
+              <Ionicons
+                name="search-outline"
+                size={18}
+                color={Colors.textSecondary}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search items..."
+                placeholderTextColor={Colors.textSecondary}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+
+            {loadingItems ? (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <ActivityIndicator color={Colors.primary} />
+              </View>
+            ) : filteredItems.length === 0 ? (
+              <View style={styles.card}>
+                <Text style={styles.emptyText}>
+                  No items in this shop's catalog.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                scrollEnabled={false}
+                data={filteredItems}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => {
+                  const inCart = cart[item._id];
+                  return (
+                    <View style={styles.itemCard}>
+                      <View style={styles.itemImageWrap}>
+                        {item.image ? (
+                          <Image
+                            source={{ uri: item.image }}
+                            style={styles.itemImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <Ionicons
+                            name="cube-outline"
+                            size={28}
+                            color={Colors.textSecondary}
+                          />
+                        )}
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.itemMeta}>
+                          {item.category}
+                          {item.unit ? ` • ${item.unit}` : ""}
+                        </Text>
+                        <Text style={styles.itemPrice}>{item.price} LKR</Text>
+                      </View>
+                      {inCart ? (
+                        <View style={styles.qtyControls}>
+                          <TouchableOpacity
+                            onPress={() => updateQty(item._id, -1)}
+                            style={styles.qtyBtn}
+                          >
+                            <Ionicons name="remove" size={18} color="white" />
+                          </TouchableOpacity>
+                          <Text style={styles.qtyText}>{inCart.quantity}</Text>
+                          <TouchableOpacity
+                            onPress={() => updateQty(item._id, 1)}
+                            style={styles.qtyBtn}
+                          >
+                            <Ionicons name="add" size={18} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.addBtn}
+                          onPress={() => addToCart(item)}
+                        >
+                          <Ionicons name="add" size={18} color="white" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                }}
+              />
+            )}
+          </>
+        )}
+
+        {/* Approved suggestions reference */}
+        {approvedSuggestions.length > 0 && (
+          <View style={[styles.card, { marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>Customer's Approved List</Text>
+            {approvedSuggestions.map((item: any, idx: number) => (
+              <Text key={idx} style={styles.approvedItem}>
+                • {item.name} ×{item.quantity || 1}
+              </Text>
+            ))}
+            <Text style={styles.approvedHint}>
+              Use this as reference when shopping the catalog.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!selectedShopId ||
-              approvedItems.length === 0 ||
-              submitting) && { opacity: 0.5 },
-          ]}
-          onPress={handleSubmit}
-          disabled={
-            !selectedShopId || approvedItems.length === 0 || submitting
-          }
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.submitText}>Send Order to Shop</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Cart summary footer */}
+      {cartLines.length > 0 && (
+        <View style={styles.cartSummary}>
+          <View style={styles.cartSummaryTop}>
+            <Text style={styles.cartSummaryTitle}>
+              {cartLines.length} item{cartLines.length > 1 ? "s" : ""} in order
+            </Text>
+            <Text style={styles.cartSummaryTotal}>{cartTotal} LKR</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.submitButton, submitting && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.submitText}>Send Order to Shop</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -243,48 +461,22 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: "center",
   },
-  content: { padding: 16, paddingBottom: 100 },
-  card: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
+  content: { padding: 16, paddingBottom: 140 },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: Colors.text,
     marginBottom: 12,
   },
+  card: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: "center" },
-  itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    gap: 8,
-  },
-  itemName: { flex: 1, fontSize: 13, color: Colors.text },
-  itemQty: { fontSize: 12, color: Colors.textSecondary, width: 30 },
-  itemPrice: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.text,
-    minWidth: 80,
-    textAlign: "right",
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 10,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  totalLabel: { fontSize: 14, fontWeight: "700", color: Colors.text },
-  totalValue: { fontSize: 16, fontWeight: "700", color: Colors.primary },
   shopCard: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -330,7 +522,90 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: 5,
   },
-  footer: {
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "white",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    paddingVertical: 4,
+  },
+  itemCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  itemImageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: Colors.lightBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  itemImage: { width: 56, height: 56 },
+  itemInfo: { flex: 1 },
+  itemName: { fontSize: 14, fontWeight: "600", color: Colors.text },
+  itemMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  itemPrice: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  addBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  qtyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+    minWidth: 22,
+    textAlign: "center",
+  },
+  approvedItem: { fontSize: 13, color: Colors.text, paddingVertical: 2 },
+  approvedHint: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontStyle: "italic",
+    marginTop: 6,
+  },
+  cartSummary: {
     position: "absolute",
     bottom: 0,
     left: 0,
@@ -340,6 +615,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  cartSummaryTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  cartSummaryTitle: { fontSize: 13, color: Colors.textSecondary },
+  cartSummaryTotal: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.primary,
   },
   submitButton: {
     backgroundColor: Colors.primary,

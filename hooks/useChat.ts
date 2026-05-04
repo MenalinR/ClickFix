@@ -7,7 +7,7 @@ import { useStore } from "../constants/Store";
 export interface CartItem {
   _id?: string;
   name: string;
-  price: number;
+  price?: number;
   quantity: number;
   status: "suggested" | "approved" | "rejected";
 }
@@ -145,13 +145,9 @@ export function useChat({
   const sendHardwareCart = useCallback(
     async (items: Omit<CartItem, "status" | "_id">[]) => {
       if (!chatId || !token || !otherUserId || !items?.length) return;
-      const total = items.reduce(
-        (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
-        0,
-      );
       const summary = `Suggested ${items.length} hardware item${
         items.length > 1 ? "s" : ""
-      } — total ${total} LKR`;
+      } — pricing from shop`;
       setSending(true);
       try {
         const res = await apiCall(
