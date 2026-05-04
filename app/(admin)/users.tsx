@@ -13,7 +13,6 @@ type UserRow = {
     subtitle: string;
     rating?: number;
     jobsCompleted?: number;
-    isActive: boolean;
     raw: any;
 };
 
@@ -48,7 +47,6 @@ export default function AdminUsers() {
             subtitle: w.category || 'Worker',
             rating: w.rating || 0,
             jobsCompleted: w.jobsCompleted || 0,
-            isActive: w.isActive !== false,
             raw: w,
         }));
         const customerRows: UserRow[] = customers.map((c: any) => ({
@@ -56,7 +54,6 @@ export default function AdminUsers() {
             name: c.name || '—',
             role: 'customer',
             subtitle: c.email || c.phone || 'Customer',
-            isActive: c.isActive !== false,
             raw: c,
         }));
         if (filterType === 'workers') return workerRows;
@@ -113,38 +110,6 @@ export default function AdminUsers() {
         );
     };
 
-    const handleToggleStatus = (u: UserRow) => {
-        const next = !u.isActive;
-        Alert.alert(
-            next ? 'Activate User' : 'Deactivate User',
-            next
-                ? `Re-enable ${u.name}'s account?`
-                : `Deactivate ${u.name}? They will not be able to log in or work.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Confirm',
-                    onPress: async () => {
-                        try {
-                            const url =
-                                u.role === 'worker'
-                                    ? api.admin.setWorkerActive(u.id)
-                                    : api.admin.setCustomerActive(u.id);
-                            await apiCall(url, 'PUT', { isActive: next }, token);
-                            if (u.role === 'worker') {
-                                await fetchWorkers();
-                            } else {
-                                await reloadCustomers();
-                            }
-                        } catch (err: any) {
-                            Alert.alert('Error', err?.message || 'Failed to update status');
-                        }
-                    },
-                },
-            ]
-        );
-    };
-
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -187,26 +152,16 @@ export default function AdminUsers() {
                 {filteredRows.map((u) => (
                     <TouchableOpacity
                         key={`${u.role}-${u.id}`}
-                        style={[styles.userCard, !u.isActive && styles.userCardDisabled]}
+                        style={styles.userCard}
                         activeOpacity={0.7}
                         onPress={() => setSelectedUser(u)}
                     >
                         <View style={styles.userInfo}>
-                            <View
-                                style={[
-                                    styles.avatarContainer,
-                                    !u.isActive && styles.avatarContainerDisabled,
-                                ]}
-                            >
+                            <View style={styles.avatarContainer}>
                                 <Text style={styles.avatarText}>{u.name.charAt(0)}</Text>
                             </View>
                             <View style={styles.userDetails}>
-                                <View style={styles.userNameRow}>
-                                    <Text style={styles.userName}>{u.name}</Text>
-                                    {!u.isActive && (
-                                        <Text style={styles.disabledBadge}>Deactivated</Text>
-                                    )}
-                                </View>
+                                <Text style={styles.userName}>{u.name}</Text>
                                 <Text style={styles.userCategory}>{u.subtitle}</Text>
                                 {u.role === 'worker' ? (
                                     <View style={styles.userStats}>
@@ -224,23 +179,6 @@ export default function AdminUsers() {
                             </View>
                         </View>
                         <View style={styles.actions}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.actionButton,
-                                    u.isActive ? styles.statusButton : styles.statusButtonInactive,
-                                ]}
-                                onPress={() => handleToggleStatus(u)}
-                            >
-                                <Ionicons
-                                    name={
-                                        u.isActive
-                                            ? 'checkmark-circle-outline'
-                                            : 'close-circle-outline'
-                                    }
-                                    size={20}
-                                    color={u.isActive ? '#4CAF50' : '#9E9E9E'}
-                                />
-                            </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.actionButton, styles.deleteButton]}
                                 onPress={() => handleDeleteUser(u)}
@@ -398,32 +336,6 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 12,
     },
-    userCardDisabled: {
-        opacity: 0.55,
-    },
-    avatarContainerDisabled: {
-        backgroundColor: '#9E9E9E',
-    },
-    userNameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        flexWrap: 'wrap',
-        marginBottom: 4,
-    },
-    disabledBadge: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#C62828',
-        backgroundColor: '#FFEBEE',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        textTransform: 'uppercase',
-    },
-    statusButtonInactive: {
-        backgroundColor: '#9E9E9E' + '20',
-    },
     userInfo: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -484,9 +396,6 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    statusButton: {
-        backgroundColor: '#4CAF50' + '20',
     },
     deleteButton: {
         backgroundColor: '#FF6B6B' + '20',

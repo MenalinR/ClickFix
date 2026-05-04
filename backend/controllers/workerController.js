@@ -15,9 +15,13 @@ exports.getWorkers = async (req, res) => {
       maxDistance = 50000,
       minRating,
       approved,
+      includeInactive,
     } = req.query;
 
-    let query = { availability: "Available", isActive: true };
+    let query =
+      includeInactive === "true"
+        ? {}
+        : { availability: "Available", isActive: true };
 
     if (approved === "true") {
       query = {

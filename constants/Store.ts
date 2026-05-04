@@ -289,6 +289,7 @@ export const useStore = create<StoreState>()(
       if (filters?.longitude)
         params.append("longitude", filters.longitude.toString());
       if (filters?.approved) params.append("approved", "true");
+      if (filters?.includeInactive) params.append("includeInactive", "true");
 
       if (params.toString()) {
         url += `?${params.toString()}`;

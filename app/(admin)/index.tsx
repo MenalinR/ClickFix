@@ -28,7 +28,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!token) return;
-    fetchWorkers();
+    fetchWorkers({ includeInactive: true });
     fetchJobs();
   }, [token, fetchWorkers, fetchJobs]);
 
