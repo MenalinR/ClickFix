@@ -168,17 +168,19 @@ export default function WorkerDashboard() {
               </Text>
             </View>
           ) : (
-            pendingJobs.slice(0, 2).map((job) => (
-              <TouchableOpacity
-                key={job.id}
-                style={styles.jobCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/job-details",
-                    params: { jobId: job.id },
-                  })
-                }
-              >
+            pendingJobs.slice(0, 2).map((job) => {
+              const jobId = (job as any)._id || job.id;
+              return (
+                <TouchableOpacity
+                  key={jobId}
+                  style={styles.jobCard}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/job-details",
+                      params: { jobId },
+                    })
+                  }
+                >
                 <View style={styles.jobCardContent}>
                   <View>
                     <Text style={styles.jobTitle}>{job.serviceType}</Text>
@@ -198,7 +200,8 @@ export default function WorkerDashboard() {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -208,17 +211,19 @@ export default function WorkerDashboard() {
             <Text style={styles.sectionTitle}>
               Active Jobs ({acceptedJobs.length})
             </Text>
-            {acceptedJobs.slice(0, 2).map((job) => (
-              <TouchableOpacity
-                key={job.id}
-                style={[styles.jobCard, styles.activeJobCard]}
-                onPress={() =>
-                  router.push({
-                    pathname: "/job-details",
-                    params: { jobId: job.id },
-                  })
-                }
-              >
+            {acceptedJobs.slice(0, 2).map((job) => {
+              const jobId = (job as any)._id || job.id;
+              return (
+                <TouchableOpacity
+                  key={jobId}
+                  style={[styles.jobCard, styles.activeJobCard]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/job-details",
+                      params: { jobId },
+                    })
+                  }
+                >
                 <View style={styles.jobCardContent}>
                   <View>
                     <Text style={styles.jobTitle}>{job.serviceType}</Text>
@@ -236,7 +241,8 @@ export default function WorkerDashboard() {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         )}
       </ScrollView>
