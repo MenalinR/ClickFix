@@ -198,6 +198,34 @@ exports.getStats = async (req, res) => {
   }
 };
 
+// @desc    Upload an image for a hardware item
+// @route   POST /api/hardwareShop/items/upload-image
+// @access  Private (hardwareShop)
+exports.uploadItemImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an image file",
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const relativePath = req.file.path
+      .split("uploads")[1]
+      .replace(/\\/g, "/")
+      .replace(/^\//, "");
+    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+
+    res.status(200).json({
+      success: true,
+      data: { url: imageUrl },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get hardware orders for shop
 // @route   GET /api/hardwareShop/orders
 // @access  Private (hardwareShop)

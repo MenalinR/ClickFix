@@ -2,15 +2,18 @@ import { api, apiCall } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -26,6 +29,7 @@ interface HardwareItem {
   unit: string;
   inStock: boolean;
   description?: string;
+  image?: string;
 }
 
 export default function InventoryScreen() {
@@ -44,6 +48,8 @@ export default function InventoryScreen() {
   const [unit, setUnit] = useState("piece");
   const [description, setDescription] = useState("");
   const [inStock, setInStock] = useState(true);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const categories = ["Plumbing", "Electrical", "Carpentry", "General"];
   const units = ["piece", "meter", "kg", "liter", "box"];
@@ -82,6 +88,7 @@ export default function InventoryScreen() {
     setUnit("piece");
     setDescription("");
     setInStock(true);
+    setImageUrl("");
     setIsEditing(false);
     setEditingId(null);
   };
@@ -98,9 +105,56 @@ export default function InventoryScreen() {
     setUnit(item.unit);
     setDescription(item.description || "");
     setInStock(item.inStock);
+    setImageUrl(item.image || "");
     setIsEditing(true);
     setEditingId(item._id);
     setModalVisible(true);
+  };
+
+  const pickAndUploadImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Please allow access to your photo library to upload an image.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled || !token) return;
+
+    const uri = result.assets[0].uri;
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      const filename = uri.split("/").pop() || "item.jpg";
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+      // @ts-ignore - FormData accepts files in React Native
+      formData.append("document", { uri, name: filename, type });
+
+      const response = await fetch(api.hardwareShop.uploadItemImage, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.message || "Upload failed");
+      }
+      setImageUrl(json.data?.url || "");
+    } catch (e: any) {
+      Alert.alert("Upload failed", e?.message || "Could not upload image");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSaveItem = async () => {
@@ -117,6 +171,7 @@ export default function InventoryScreen() {
         unit,
         description: description.trim(),
         inStock,
+        image: imageUrl || undefined,
       };
 
       if (isEditing && editingId) {
@@ -171,6 +226,21 @@ export default function InventoryScreen() {
 
   const renderItem = ({ item }: { item: HardwareItem }) => (
     <View style={styles.itemCard}>
+      <View style={styles.itemImageWrap}>
+        {item.image ? (
+          <Image
+            source={{ uri: item.image }}
+            style={styles.itemImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons
+            name="cube-outline"
+            size={24}
+            color={Colors.textSecondary}
+          />
+        )}
+      </View>
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemCategory}>{item.category}</Text>
@@ -269,7 +339,50 @@ export default function InventoryScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.formContent}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.formContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Image</Text>
+              <Pressable
+                style={styles.imagePicker}
+                onPress={pickAndUploadImage}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator color={Colors.primary} />
+                ) : imageUrl ? (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.imagePreview}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons
+                      name="camera-outline"
+                      size={32}
+                      color={Colors.textSecondary}
+                    />
+                    <Text style={styles.imagePlaceholderText}>
+                      Tap to add a photo
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+              {!!imageUrl && !uploadingImage && (
+                <Pressable
+                  style={styles.imageActionBtn}
+                  onPress={pickAndUploadImage}
+                >
+                  <Ionicons name="refresh" size={16} color={Colors.primary} />
+                  <Text style={styles.imageActionText}>Change image</Text>
+                </Pressable>
+              )}
+            </View>
+
             <View style={styles.formGroup}>
               <Text style={styles.label}>Item Name *</Text>
               <TextInput
@@ -371,7 +484,7 @@ export default function InventoryScreen() {
                 </Text>
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -620,4 +733,53 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
+  imagePicker: {
+    height: 160,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: "dashed",
+    backgroundColor: Colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  imagePlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  imagePlaceholderText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
+  },
+  imageActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  imageActionText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontFamily: "Inter_600SemiBold",
+  },
+  itemImageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  itemImage: { width: "100%", height: "100%" },
 });

@@ -7,8 +7,10 @@ const {
   getStats,
   getOrders,
   listShops,
+  uploadItemImage,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
+const { uploadDocument } = require("../utils/upload");
 
 const router = express.Router();
 
@@ -21,6 +23,15 @@ router.use(protect, authorize("hardwareShop"));
 // Items management
 router.get("/items", getItems);
 router.post("/items", addItem);
+router.post(
+  "/items/upload-image",
+  (req, res, next) => {
+    req.uploadFolder = "hardware";
+    next();
+  },
+  uploadDocument,
+  uploadItemImage,
+);
 router.put("/items/:id", updateItem);
 router.delete("/items/:id", deleteItem);
 

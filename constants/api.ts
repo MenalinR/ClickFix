@@ -137,6 +137,7 @@ export const api = {
     list: `${API_URL}/hardwareShop/list`,
     getItems: `${API_URL}/hardwareShop/items`,
     addItem: `${API_URL}/hardwareShop/items`,
+    uploadItemImage: `${API_URL}/hardwareShop/items/upload-image`,
     updateItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
     deleteItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
     getStats: `${API_URL}/hardwareShop/stats`,
