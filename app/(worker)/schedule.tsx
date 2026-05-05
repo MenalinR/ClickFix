@@ -97,6 +97,13 @@ export default function ScheduleScreen() {
   }
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // Group into rows of 7 so we can render each row as a flex row
+  // (avoids percentage-width rounding that would drop Saturday on some devices)
+  const weekRows: (Date | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weekRows.push(cells.slice(i, i + 7));
+  }
+
   const selectedKey = `${selected.getFullYear()}-${selected.getMonth()}-${selected.getDate()}`;
   const jobsOnSelected = jobsByDate.get(selectedKey) || [];
 
@@ -146,46 +153,55 @@ export default function ScheduleScreen() {
           </View>
 
           <View style={styles.grid}>
-            {cells.map((cell, idx) => {
-              if (!cell) {
-                return <View key={idx} style={styles.cell} />;
-              }
-              const key = `${cell.getFullYear()}-${cell.getMonth()}-${cell.getDate()}`;
-              const dayJobs = jobsByDate.get(key) || [];
-              const isToday = sameDay(cell, today);
-              const isSelected = sameDay(cell, selected);
-              return (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.cell,
-                    isSelected && styles.cellSelected,
-                    isToday && !isSelected && styles.cellToday,
-                  ]}
-                  onPress={() => setSelected(cell)}
-                >
-                  <Text
-                    style={[
-                      styles.cellText,
-                      isSelected && styles.cellTextSelected,
-                    ]}
-                  >
-                    {cell.getDate()}
-                  </Text>
-                  <View style={styles.dotsRow}>
-                    {dayJobs.slice(0, 3).map((j, i2) => (
+            {weekRows.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.weekRow}>
+                {row.map((cell, colIdx) => {
+                  if (!cell) {
+                    return (
                       <View
-                        key={i2}
-                        style={[
-                          styles.dot,
-                          { backgroundColor: statusColor(j.status) },
-                        ]}
+                        key={`${rowIdx}-${colIdx}`}
+                        style={styles.cell}
                       />
-                    ))}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                    );
+                  }
+                  const key = `${cell.getFullYear()}-${cell.getMonth()}-${cell.getDate()}`;
+                  const dayJobs = jobsByDate.get(key) || [];
+                  const isToday = sameDay(cell, today);
+                  const isSelected = sameDay(cell, selected);
+                  return (
+                    <TouchableOpacity
+                      key={`${rowIdx}-${colIdx}`}
+                      style={[
+                        styles.cell,
+                        isSelected && styles.cellSelected,
+                        isToday && !isSelected && styles.cellToday,
+                      ]}
+                      onPress={() => setSelected(cell)}
+                    >
+                      <Text
+                        style={[
+                          styles.cellText,
+                          isSelected && styles.cellTextSelected,
+                        ]}
+                      >
+                        {cell.getDate()}
+                      </Text>
+                      <View style={styles.dotsRow}>
+                        {dayJobs.slice(0, 3).map((j, i2) => (
+                          <View
+                            key={i2}
+                            style={[
+                              styles.dot,
+                              { backgroundColor: statusColor(j.status) },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
           </View>
         </View>
 
@@ -294,9 +310,10 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: "600",
   },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
+  grid: {},
+  weekRow: { flexDirection: "row" },
   cell: {
-    width: `${100 / 7}%`,
+    flex: 1,
     aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",

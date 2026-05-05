@@ -666,40 +666,57 @@ export default function WorkerProfile() {
                       ),
                     );
                   while (cells.length % 7 !== 0) cells.push(null);
-                  return cells.map((cell, idx) => {
-                    if (!cell)
-                      return <View key={idx} style={styles.calCell} />;
-                    const dayBusy = busySlots.filter((s) => {
-                      const d = new Date(s.start);
-                      return (
-                        d.getFullYear() === cell.getFullYear() &&
-                        d.getMonth() === cell.getMonth() &&
-                        d.getDate() === cell.getDate()
-                      );
-                    });
-                    const hasBusy = dayBusy.some(
-                      (s) => (s.status || "").toLowerCase() !== "pending",
-                    );
-                    const hasPending = dayBusy.some(
-                      (s) => (s.status || "").toLowerCase() === "pending",
-                    );
-                    return (
-                      <TouchableOpacity
-                        key={idx}
-                        disabled={dayBusy.length === 0}
-                        style={[
-                          styles.calCell,
-                          hasPending && !hasBusy && styles.calCellPending,
-                          hasBusy && styles.calCellBusy,
-                        ]}
-                        onPress={() => setDateDetailFor(cell)}
-                      >
-                        <Text style={styles.calCellText}>
-                          {cell.getDate()}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  });
+
+                  // Group into rows of 7 to avoid percentage-width rounding
+                  // dropping the Saturday column on some devices.
+                  const weekRows: (Date | null)[][] = [];
+                  for (let i = 0; i < cells.length; i += 7) {
+                    weekRows.push(cells.slice(i, i + 7));
+                  }
+
+                  return weekRows.map((row, rowIdx) => (
+                    <View key={rowIdx} style={styles.calWeekRow}>
+                      {row.map((cell, colIdx) => {
+                        if (!cell)
+                          return (
+                            <View
+                              key={`${rowIdx}-${colIdx}`}
+                              style={styles.calCell}
+                            />
+                          );
+                        const dayBusy = busySlots.filter((s) => {
+                          const d = new Date(s.start);
+                          return (
+                            d.getFullYear() === cell.getFullYear() &&
+                            d.getMonth() === cell.getMonth() &&
+                            d.getDate() === cell.getDate()
+                          );
+                        });
+                        const hasBusy = dayBusy.some(
+                          (s) => (s.status || "").toLowerCase() !== "pending",
+                        );
+                        const hasPending = dayBusy.some(
+                          (s) => (s.status || "").toLowerCase() === "pending",
+                        );
+                        return (
+                          <TouchableOpacity
+                            key={`${rowIdx}-${colIdx}`}
+                            disabled={dayBusy.length === 0}
+                            style={[
+                              styles.calCell,
+                              hasPending && !hasBusy && styles.calCellPending,
+                              hasBusy && styles.calCellBusy,
+                            ]}
+                            onPress={() => setDateDetailFor(cell)}
+                          >
+                            <Text style={styles.calCellText}>
+                              {cell.getDate()}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ));
                 })()}
               </View>
             </View>
@@ -1149,20 +1166,23 @@ const styles = StyleSheet.create({
   bookingCalendar: {
     backgroundColor: "#f9f9f9",
     borderRadius: 10,
-    padding: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+    alignSelf: "stretch",
   },
   calMonthRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 4,
+    paddingHorizontal: 4,
   },
   calNavBtn: { padding: 4 },
   calMonthLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: Colors.text,
   },
@@ -1174,17 +1194,24 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: "600",
   },
-  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calGrid: {},
+  calWeekRow: { flexDirection: "row" },
   calCell: {
-    width: `${100 / 7}%`,
-    height: 32,
+    flex: 1,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 4,
+    marginVertical: 1,
   },
   calCellBusy: { backgroundColor: "#FFEBEE" },
   calCellPending: { backgroundColor: "#FFF8E1" },
-  calCellText: { fontSize: 11, color: Colors.text },
+  calCellText: {
+    fontSize: 11,
+    color: Colors.text,
+    textAlign: "center",
+    width: "100%",
+  },
   dateDetailOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
