@@ -1,6 +1,7 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const Job = require("../models/Job");
 const HardwareShop = require("../models/HardwareShop");
+const Message = require("../models/Message");
 
 // @desc    Get all hardware items
 // @route   GET /api/hardware/items
@@ -230,6 +231,17 @@ exports.createOrderFromJob = async (req, res) => {
       })`,
     });
     await job.save();
+
+    // Mark all approved cart messages on this job as "ordered"
+    // so the chat bubbles switch state and the Order button disappears.
+    await Message.updateMany(
+      {
+        jobId: job._id,
+        messageType: "hardware-cart",
+        cartStatus: "approved",
+      },
+      { $set: { cartStatus: "ordered" } },
+    );
 
     try {
       await require("./notificationController").createNotification({

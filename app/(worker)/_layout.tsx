@@ -154,6 +154,12 @@ export default function WorkerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="order-hardware"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

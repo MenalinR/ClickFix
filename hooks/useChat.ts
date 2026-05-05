@@ -1,3 +1,4 @@
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { api, apiCall } from "../constants/api";
@@ -76,6 +77,16 @@ export function useChat({
       // silent
     }
   }, [chatId, token]);
+
+  // Refetch on screen focus so things like cart status flips
+  // ("approved" → "ordered") show up after returning from another screen.
+  useFocusEffect(
+    useCallback(() => {
+      if (chatId && token) {
+        fetchMessages();
+      }
+    }, [chatId, token, fetchMessages]),
+  );
 
   useEffect(() => {
     if (!chatId || !token) return;

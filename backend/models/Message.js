@@ -63,7 +63,7 @@ const messageSchema = new mongoose.Schema(
     ],
     cartStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "ordered"],
       default: "pending",
     },
     status: {

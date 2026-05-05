@@ -154,6 +154,7 @@ export default function CustomerChatPage() {
             style={[
               styles.cartStatusBadge,
               status === "approved" && { color: "#22A06B" },
+              status === "ordered" && { color: "#22A06B" },
               status === "rejected" && { color: "#C73E3A" },
             ]}
           >
@@ -161,7 +162,9 @@ export default function CustomerChatPage() {
               ? "Awaiting your approval"
               : status === "approved"
                 ? "✓ Approved — worker will source from a shop"
-                : "✗ Declined"}
+                : status === "ordered"
+                  ? "✓ Ordered from a shop"
+                  : "✗ Declined"}
           </Text>
         )}
       </View>
