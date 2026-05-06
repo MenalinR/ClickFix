@@ -46,6 +46,14 @@ exports.sendTokenResponse = (user, statusCode, res, userType) => {
         isActive: user.isActive,
         lastLogin: user.lastLogin,
       }),
+      ...(userType === "hardwareShop" && {
+        shopName: user.shopName,
+        address: user.address,
+        city: user.city,
+        verified: user.verified,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+      }),
     },
   });
 };

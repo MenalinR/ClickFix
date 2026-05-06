@@ -100,38 +100,6 @@ export default function ProfileScreen() {
               value={shop?.address || "N/A"}
             />
             <InfoRow icon="map" label="City" value={shop?.city || "N/A"} />
-            <InfoRow
-              icon="document"
-              label="License"
-              value={shop?.licenseNumber || "N/A"}
-            />
-          </View>
-        </View>
-
-        {/* Account Status */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Status</Text>
-          <View style={styles.infoCard}>
-            <StatusRow
-              icon="checkmark-circle"
-              label="Account Status"
-              value={shop?.isActive ? "Active" : "Inactive"}
-              color={shop?.isActive ? "#4CAF50" : "#f44336"}
-            />
-            <StatusRow
-              icon="shield-checkmark"
-              label="Verification Status"
-              value={shop?.verified ? "Verified" : "Pending"}
-              color={shop?.verified ? "#4CAF50" : "#FF9800"}
-            />
-            {shop?.lastLogin && (
-              <StatusRow
-                icon="time"
-                label="Last Login"
-                value={new Date(shop.lastLogin).toLocaleDateString()}
-                color={Colors.textSecondary}
-              />
-            )}
           </View>
         </View>
 
@@ -221,18 +189,6 @@ function InfoRow({ icon, label, value }: any) {
         <Text style={styles.infoLabel}>{label}</Text>
       </View>
       <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-function StatusRow({ icon, label, value, color }: any) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoRowLeft}>
-        <Ionicons name={icon} size={20} color={color} />
-        <Text style={styles.infoLabel}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, { color }]}>{value}</Text>
     </View>
   );
 }
