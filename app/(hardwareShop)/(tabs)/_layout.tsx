@@ -7,18 +7,21 @@ import React, { useCallback, useEffect, useState } from "react";
 
 export default function HardwareShopTabsLayout() {
   const token = useStore((s) => s.token);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [newPending, setNewPending] = useState(0);
 
-  const fetchUnread = useCallback(async () => {
+  const fetchNewPending = useCallback(async () => {
     if (!token) return;
     try {
       const res = await apiCall(
-        api.notifications.getUnreadCount,
+        api.hardwareShop.getStats,
         "GET",
         undefined,
         token,
       );
-      setUnreadCount(res?.count || 0);
+      // Fall back to pendingOrders if backend hasn't been redeployed yet.
+      const count =
+        res?.data?.newPendingOrders ?? res?.data?.pendingOrders ?? 0;
+      setNewPending(count);
     } catch {
       // silent
     }
@@ -26,21 +29,29 @@ export default function HardwareShopTabsLayout() {
 
   useEffect(() => {
     if (!token) return;
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 20000);
+    fetchNewPending();
+    const interval = setInterval(fetchNewPending, 20000);
     return () => clearInterval(interval);
-  }, [token, fetchUnread]);
+  }, [token, fetchNewPending]);
 
+  // When user taps Orders, mark them as viewed → badge clears.
+  // New pending orders that arrive AFTER this tap will reappear.
   const handleOrdersTabPress = async () => {
-    if (!token || unreadCount === 0) return;
+    if (!token) return;
+    setNewPending(0);
     try {
+      await apiCall(
+        api.hardwareShop.markOrdersViewed,
+        "PUT",
+        undefined,
+        token,
+      );
       await apiCall(
         api.notifications.markAllAsRead,
         "PUT",
         undefined,
         token,
       );
-      setUnreadCount(0);
     } catch {
       // silent
     }
@@ -85,7 +96,7 @@ export default function HardwareShopTabsLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons size={24} name="list" color={color} />
           ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadge: newPending > 0 ? newPending : undefined,
           tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
         }}
         listeners={{

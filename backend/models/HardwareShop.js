@@ -52,6 +52,9 @@ const hardwareShopSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    lastOrdersViewedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

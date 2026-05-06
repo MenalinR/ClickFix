@@ -184,11 +184,21 @@ exports.getStats = async (req, res) => {
       status: "delivered",
     });
 
+    // Count "new" pending orders — pending orders the shop hasn't viewed yet.
+    // If lastOrdersViewedAt isn't set, every pending order counts as new.
+    const lastViewed = req.user.lastOrdersViewedAt;
+    const newPendingQuery = { shopId, status: "pending" };
+    if (lastViewed) {
+      newPendingQuery.createdAt = { $gt: lastViewed };
+    }
+    const newPendingOrders = await HardwareRequest.countDocuments(newPendingQuery);
+
     res.status(200).json({
       success: true,
       data: {
         totalItems,
         pendingOrders,
+        newPendingOrders,
         approvedOrders,
         deliveredOrders,
       },
@@ -198,6 +208,20 @@ exports.getStats = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Mark all orders as viewed (clears the badge)
+// @route   PUT /api/hardwareShop/orders/mark-viewed
+// @access  Private (hardwareShop)
+exports.markOrdersViewed = async (req, res) => {
+  try {
+    await HardwareShop.findByIdAndUpdate(req.user._id, {
+      lastOrdersViewedAt: new Date(),
+    });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
