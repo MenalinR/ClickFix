@@ -129,15 +129,12 @@ export default function WorkerDashboard() {
             <Text style={styles.actionLabel}>Messages</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => router.push("/earnings")}
-          >
+          <View style={styles.quickActionCard}>
             <View style={[styles.actionIcon, { backgroundColor: "#E8F5E9" }]}>
               <Ionicons name="wallet-outline" size={28} color="#4CAF50" />
             </View>
             <Text style={styles.actionLabel}>Earnings</Text>
-          </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={styles.quickActionCard}
