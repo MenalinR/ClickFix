@@ -311,9 +311,7 @@ export default function WorkerProfile() {
       />
       <ScrollView>
         <Image source={{ uri: worker.image }} style={styles.coverImage} />
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
+        
 
         <View style={styles.content}>
           <Text style={styles.name}>{worker.name}</Text>
@@ -351,15 +349,6 @@ export default function WorkerProfile() {
                 {Number(worker.experience ?? workerExperience ?? 0)} Yr
               </Text>
               <Text style={styles.statLabel}>Exp.</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons
-                name="pricetag-outline"
-                size={20}
-                color={Colors.success}
-              />
-              <Text style={styles.statValue}>{worker.hourlyRate}</Text>
-              <Text style={styles.statLabel}>LKR/hr</Text>
             </View>
           </View>
 
@@ -881,13 +870,13 @@ const styles = StyleSheet.create({
   category: { fontSize: 16, color: Colors.textSecondary, marginBottom: 24 },
   stats: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     marginBottom: 24,
     backgroundColor: Colors.white,
     padding: 16,
     borderRadius: 12,
   },
-  statItem: { alignItems: "center" },
+  statItem: { alignItems: "center", flex: 1 },
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold", marginTop: 4 },
   statLabel: { fontSize: 12, color: Colors.textSecondary },
   sectionHeader: {

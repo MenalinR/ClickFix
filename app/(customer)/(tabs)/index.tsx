@@ -259,9 +259,6 @@ export default function CustomerHome() {
                 <View style={styles.ratingRow}>
                   <Ionicons name="star" size={16} color={Colors.accent} />
                   <Text style={styles.ratingText}>{worker.rating}</Text>
-                  <Text style={styles.rateText}>
-                    • {worker.hourlyRate} LKR/hr
-                  </Text>
                 </View>
               </View>
               <Ionicons
