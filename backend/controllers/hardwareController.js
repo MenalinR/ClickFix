@@ -243,8 +243,10 @@ exports.createOrderFromJob = async (req, res) => {
       { $set: { cartStatus: "ordered" } },
     );
 
+    const { createNotification } = require("./notificationController");
+
     try {
-      await require("./notificationController").createNotification({
+      await createNotification({
         recipient: job.customerId,
         recipientModel: "Customer",
         type: "JOB_ASSIGNED",
@@ -252,6 +254,23 @@ exports.createOrderFromJob = async (req, res) => {
         message: `Worker placed a hardware order at ${shop.shopName} — ${totalCost} LKR added to your bill.`,
         data: { jobId: job._id, requestId: request._id },
         actionUrl: "/(customer)/(tabs)/bookings",
+      });
+    } catch (e) {
+      // non-fatal
+    }
+
+    // Notify the hardware shop about the incoming order
+    try {
+      await createNotification({
+        recipient: shopId,
+        recipientModel: "HardwareShop",
+        type: "HARDWARE_ORDER",
+        title: "New order received",
+        message: `${orderItems.length} item${
+          orderItems.length > 1 ? "s" : ""
+        } — ${totalCost} LKR. Check the Orders tab.`,
+        data: { jobId: job._id, requestId: request._id },
+        actionUrl: "/(hardwareShop)/(tabs)/orders",
       });
     } catch (e) {
       // non-fatal

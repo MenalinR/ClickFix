@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     recipientModel: {
       type: String,
       required: true,
-      enum: ["Worker", "Customer", "Admin"],
+      enum: ["Worker", "Customer", "Admin", "HardwareShop"],
     },
     type: {
       type: String,
@@ -25,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
         "PAYMENT_RECEIVED",
         "REVIEW_RECEIVED",
         "HARDWARE_REQUEST",
+        "HARDWARE_ORDER",
         "GENERAL",
       ],
     },
