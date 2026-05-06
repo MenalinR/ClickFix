@@ -1,10 +1,14 @@
+import { api } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -17,15 +21,62 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useStore();
+  const { user, token, setUser, logout } = useStore();
   const shop = user as any;
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Edit form state
   const [editShopName, setEditShopName] = useState(shop?.shopName || "");
   const [editPhone, setEditPhone] = useState(shop?.phone || "");
   const [editAddress, setEditAddress] = useState(shop?.address || "");
   const [editCity, setEditCity] = useState(shop?.city || "");
+
+  const pickAndUploadProfileImage = async () => {
+    if (!token) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Please allow photo library access to upload an image.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      const filename = uri.split("/").pop() || "shop.jpg";
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+      // @ts-ignore - FormData accepts files in React Native
+      formData.append("document", { uri, name: filename, type });
+
+      const response = await fetch(api.hardwareShop.uploadShopImage, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.message || "Upload failed");
+      }
+      setUser({ ...(user as any), image: json.data?.url });
+    } catch (e: any) {
+      Alert.alert("Upload failed", e?.message || "Could not upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -64,9 +115,26 @@ export default function ProfileScreen() {
 
         {/* Shop Avatar Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Ionicons name="storefront" size={48} color={Colors.primary} />
-          </View>
+          <Pressable
+            onPress={pickAndUploadProfileImage}
+            disabled={uploadingImage}
+            style={styles.avatar}
+          >
+            {uploadingImage ? (
+              <ActivityIndicator color={Colors.primary} />
+            ) : shop?.image ? (
+              <Image
+                source={{ uri: shop.image }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="storefront" size={48} color={Colors.primary} />
+            )}
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={14} color="white" />
+            </View>
+          </Pressable>
           <Text style={styles.shopName}>{shop?.shopName || "Shop"}</Text>
           <Text style={styles.email}>{shop?.email || ""}</Text>
           {shop?.verified && (
@@ -230,6 +298,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "white",
   },
   shopName: {
     fontSize: 24,

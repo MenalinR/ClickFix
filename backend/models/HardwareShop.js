@@ -37,6 +37,10 @@ const hardwareShopSchema = new mongoose.Schema(
       type: String,
       required: [true, "License number is required"],
     },
+    image: {
+      type: String,
+      default: "",
+    },
     verified: {
       type: Boolean,
       default: false,

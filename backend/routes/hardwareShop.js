@@ -8,6 +8,7 @@ const {
   getOrders,
   listShops,
   uploadItemImage,
+  uploadShopImage,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -19,6 +20,17 @@ router.get("/list", protect, listShops);
 
 // All other routes require hardwareShop authentication
 router.use(protect, authorize("hardwareShop"));
+
+// Profile image
+router.post(
+  "/upload-image",
+  (req, res, next) => {
+    req.uploadFolder = "shop-profiles";
+    next();
+  },
+  uploadDocument,
+  uploadShopImage,
+);
 
 // Items management
 router.get("/items", getItems);

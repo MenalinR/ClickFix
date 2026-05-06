@@ -50,6 +50,7 @@ exports.sendTokenResponse = (user, statusCode, res, userType) => {
         shopName: user.shopName,
         address: user.address,
         city: user.city,
+        image: user.image,
         verified: user.verified,
         isActive: user.isActive,
         lastLogin: user.lastLogin,
