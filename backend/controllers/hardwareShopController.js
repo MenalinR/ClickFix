@@ -165,19 +165,22 @@ exports.deleteItem = async (req, res) => {
 // @access  Private (hardwareShop)
 exports.getStats = async (req, res) => {
   try {
-    const totalItems = await HardwareItem.countDocuments({
-      shopId: req.user._id,
-    });
+    const shopId = req.user._id;
+
+    const totalItems = await HardwareItem.countDocuments({ shopId });
 
     const pendingOrders = await HardwareRequest.countDocuments({
+      shopId,
       status: "pending",
     });
 
     const approvedOrders = await HardwareRequest.countDocuments({
+      shopId,
       status: "approved",
     });
 
     const deliveredOrders = await HardwareRequest.countDocuments({
+      shopId,
       status: "delivered",
     });
 
@@ -266,16 +269,21 @@ exports.uploadItemImage = async (req, res) => {
 exports.getOrders = async (req, res) => {
   try {
     const { status } = req.query;
+    const shopId = req.user._id;
 
-    // Get all items owned by this shop
-    const items = await HardwareItem.find({ shopId: req.user._id }).select(
-      "_id",
-    );
+    // Match orders directly by shopId (new flow), and also match legacy
+    // orders that don't have shopId set but contain items from this shop.
+    const items = await HardwareItem.find({ shopId }).select("_id");
     const itemIds = items.map((item) => item._id);
 
-    // Find requests that include items from this shop
-    let query = {
-      items: { $elemMatch: { hardwareId: { $in: itemIds } } },
+    const query = {
+      $or: [
+        { shopId },
+        {
+          shopId: { $exists: false },
+          items: { $elemMatch: { hardwareId: { $in: itemIds } } },
+        },
+      ],
     };
 
     if (status) {
