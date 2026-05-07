@@ -863,17 +863,83 @@ export default function DocumentsScreen() {
               </TouchableOpacity>
             </Modal>
 
-            <Button
-              title={idDocumentUrl ? "Document Selected ✓" : "Select Document"}
-              onPress={() => handlePickDocument(setIdDocumentUrl)}
-              variant="secondary"
-            />
+            <View style={styles.idPickerWrap}>
+              <TouchableOpacity
+                style={styles.idPickerBox}
+                onPress={() => {
+                  Alert.alert("Select file", "Choose a source", [
+                    {
+                      text: "Choose from Photos",
+                      onPress: () => pickFromGallery(setIdDocumentUrl),
+                    },
+                    {
+                      text: "Pick PDF / File",
+                      onPress: () => pickPdf(setIdDocumentUrl),
+                    },
+                    { text: "Cancel", style: "cancel" },
+                  ]);
+                }}
+              >
+                <View style={styles.idPickerIconWrap}>
+                  <Ionicons name="document-outline" size={36} color="#0F4C75" />
+                  <View style={styles.idPickerPlus}>
+                    <Ionicons name="add" size={14} color="white" />
+                  </View>
+                </View>
+                <ThemedText style={styles.idPickerLabel}>
+                  Select a file
+                </ThemedText>
+              </TouchableOpacity>
 
-            <Button
-              title={idUploading ? "Uploading..." : "Upload ID Proof"}
+              <TouchableOpacity
+                style={styles.idPickerBox}
+                onPress={() => pickFromCamera(setIdDocumentUrl)}
+              >
+                <View style={styles.idPickerIconWrap}>
+                  <Ionicons name="phone-portrait-outline" size={36} color="#0F4C75" />
+                </View>
+                <ThemedText style={styles.idPickerLabel}>
+                  Use your device's camera
+                </ThemedText>
+              </TouchableOpacity>
+
+              <ThemedText style={styles.idPickerHelper}>
+                Support JPG, PNG, PDF, WAV, MP3, MOV and TXT
+              </ThemedText>
+              <ThemedText style={styles.idPickerHelper}>
+                Maximum size 20MB per file. Up to 10 files at a time.
+              </ThemedText>
+
+              {!!idDocumentUrl && (
+                <View style={styles.idPickerSelected}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={18}
+                    color="#22A06B"
+                  />
+                  <ThemedText style={styles.idPickerSelectedText}>
+                    File selected
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.idUploadBtn,
+                idDocumentUrl && !idUploading && styles.idUploadBtnReady,
+              ]}
               onPress={handleUploadIDProof}
               disabled={!idDocumentUrl || idUploading}
-            />
+            >
+              {idUploading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <ThemedText style={styles.idUploadBtnText}>
+                  Upload document
+                </ThemedText>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1970,5 +2036,80 @@ const styles = StyleSheet.create({
   formActions: {
     gap: 10,
     paddingBottom: 20,
+  },
+  idPickerWrap: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  idPickerBox: {
+    borderWidth: 1.5,
+    borderColor: "#0F4C75",
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  idPickerIconWrap: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  idPickerPlus: {
+    position: "absolute",
+    right: -6,
+    bottom: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#0F4C75",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  idPickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    textDecorationLine: "underline",
+  },
+  idPickerHelper: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  idPickerSelected: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  idPickerSelectedText: {
+    fontSize: 13,
+    color: "#22A06B",
+    fontWeight: "600",
+  },
+  idUploadBtn: {
+    backgroundColor: "#A7C5DD",
+    paddingVertical: 16,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  idUploadBtnReady: {
+    backgroundColor: "#0F4C75",
+  },
+  idUploadBtnText: {
+    color: "white",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
