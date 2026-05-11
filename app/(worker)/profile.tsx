@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -17,7 +18,107 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/Button";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
-import { api, apiCall } from "../../constants/api";
+import { api, apiCall, apiUpload } from "../../constants/api";
+
+type DatePickerField = "expStart" | "expEnd" | "eduStart" | "eduEnd";
+
+interface WorkerDocument {
+  _id?: string;
+  title?: string;
+  name?: string;
+  documentName?: string;
+  institution?: string;
+  description?: string;
+  url: string;
+  documentType: string;
+  verificationStatus?: "Pending" | "Verified" | "Rejected";
+  verificationNotes?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const getYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = currentYear + 1; y >= 1980; y--) years.push(y);
+  return years;
+};
+
+function monthYearToIso(month: number | "", year: number | ""): string {
+  if (month === "" || year === "" || !month || !year) return "";
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+function isoToMonthYear(iso: string | undefined): {
+  month: number | "";
+  year: number | "";
+} {
+  if (!iso) return { month: "", year: "" };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { month: "", year: "" };
+  return { month: d.getMonth() + 1, year: d.getFullYear() };
+}
+
+function formatMonthYear(month: number | "", year: number | ""): string {
+  if (month === "" || year === "") return "Select";
+  return `${MONTH_NAMES[Number(month) - 1]} ${year}`;
+}
+
+function formatRangeWithPresent(start?: string, end?: string): string {
+  const startText = start
+    ? formatMonthYear(isoToMonthYear(start).month, isoToMonthYear(start).year)
+    : "";
+  const endText = end
+    ? formatMonthYear(isoToMonthYear(end).month, isoToMonthYear(end).year)
+    : "Present";
+
+  if (!startText || startText === "Select") return endText;
+  return `${startText} – ${endText}`;
+}
+
+function isLocalFileUri(uri: string): boolean {
+  return !!uri && !uri.startsWith("http://") && !uri.startsWith("https://");
+}
+
+function isImageUri(uri: string): boolean {
+  if (!uri) return false;
+  const lower = uri.toLowerCase().split("?")[0];
+  return (
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".gif") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".heic")
+  );
+}
+
+function getFilenameFromUri(uri: string): string {
+  if (!uri) return "";
+  const segment = uri.split("?")[0].split("/").pop() || "Document";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
 
 export default function WorkerProfileScreen() {
   const router = useRouter();
@@ -51,6 +152,51 @@ export default function WorkerProfileScreen() {
   const [newSkill, setNewSkill] = useState("");
   const [savingSkills, setSavingSkills] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Experience documents
+  const [experienceDocs, setExperienceDocs] = useState<WorkerDocument[]>([]);
+  const [showExpForm, setShowExpForm] = useState(false);
+  const [expFormMode, setExpFormMode] = useState<"add" | "edit">("add");
+  const [expTitle, setExpTitle] = useState("");
+  const [expDescription, setExpDescription] = useState("");
+  const [expCertificateName, setExpCertificateName] = useState("");
+  const [expCertificateUrl, setExpCertificateUrl] = useState("");
+  const [expStartMonth, setExpStartMonth] = useState<number | "">("");
+  const [expStartYear, setExpStartYear] = useState<number | "">("");
+  const [expEndMonth, setExpEndMonth] = useState<number | "">("");
+  const [expEndYear, setExpEndYear] = useState<number | "">("");
+  const [expUploading, setExpUploading] = useState(false);
+  const [editingExpId, setEditingExpId] = useState<string | null>(null);
+
+  // Education documents
+  const [educationDocs, setEducationDocs] = useState<WorkerDocument[]>([]);
+  const [showEduForm, setShowEduForm] = useState(false);
+  const [eduFormMode, setEduFormMode] = useState<"add" | "edit">("add");
+  const [eduDocumentName, setEduDocumentName] = useState("");
+  const [eduInstitution, setEduInstitution] = useState("");
+  const [eduDescription, setEduDescription] = useState("");
+  const [eduDocumentUrl, setEduDocumentUrl] = useState("");
+  const [eduDocumentType, setEduDocumentType] = useState("Certificate");
+  const [eduStartMonth, setEduStartMonth] = useState<number | "">("");
+  const [eduStartYear, setEduStartYear] = useState<number | "">("");
+  const [eduEndMonth, setEduEndMonth] = useState<number | "">("");
+  const [eduEndYear, setEduEndYear] = useState<number | "">("");
+  const [eduUploading, setEduUploading] = useState(false);
+  const [eduTypeModalVisible, setEduTypeModalVisible] = useState(false);
+  const [editingEduId, setEditingEduId] = useState<string | null>(null);
+
+  // Month/Year picker
+  const [datePickerTarget, setDatePickerTarget] =
+    useState<DatePickerField | null>(null);
+  const [datePickerStep, setDatePickerStep] = useState<"month" | "year">(
+    "month",
+  );
+  const YEAR_OPTIONS = getYearOptions();
+
+  // Document picker sheet
+  const [docPickerSetUrl, setDocPickerSetUrl] = useState<
+    ((url: string) => void) | null
+  >(null);
 
   const mapWorkerToUser = (workerData: any) => ({
     id: workerData._id || workerData.id || user.id,
@@ -98,6 +244,8 @@ export default function WorkerProfileScreen() {
         const updatedUser = mapWorkerToUser(workerData);
         console.log("🔄 Setting user state to:", updatedUser);
         setUser(updatedUser);
+        setExperienceDocs(workerData.experienceDocuments || []);
+        setEducationDocs(workerData.educationDocuments || []);
       }
     } catch (error: any) {
       console.error("❌ Failed to load worker profile:", error);
@@ -396,6 +544,370 @@ export default function WorkerProfileScreen() {
     ]);
   };
 
+  const pickFromGallery = async (setUrl: (url: string) => void) => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow access to your photos to pick an image.",
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setUrl(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const pickPdf = async (setUrl: (url: string) => void) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*"],
+      });
+      if (!result.canceled && result.assets[0]) {
+        setUrl(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to select document");
+    }
+  };
+
+  const handlePickDocument = (setUrl: (url: string) => void) => {
+    setDocPickerSetUrl(() => setUrl);
+  };
+
+  const closeDocPicker = () => setDocPickerSetUrl(null);
+
+  const runDocPickerOption = (
+    handler: (setUrl: (url: string) => void) => Promise<void> | void,
+  ) => {
+    const setUrl = docPickerSetUrl;
+    closeDocPicker();
+    if (setUrl) handler(setUrl);
+  };
+
+  const resetExpForm = () => {
+    setExpTitle("");
+    setExpDescription("");
+    setExpCertificateName("");
+    setExpCertificateUrl("");
+    setExpStartMonth("");
+    setExpStartYear("");
+    setExpEndMonth("");
+    setExpEndYear("");
+    setShowExpForm(false);
+    setEditingExpId(null);
+    setExpFormMode("add");
+  };
+
+  const resetEduForm = () => {
+    setEduDocumentName("");
+    setEduInstitution("");
+    setEduDescription("");
+    setEduDocumentUrl("");
+    setEduDocumentType("Certificate");
+    setEduStartMonth("");
+    setEduStartYear("");
+    setEduEndMonth("");
+    setEduEndYear("");
+    setShowEduForm(false);
+    setEditingEduId(null);
+    setEduFormMode("add");
+  };
+
+  const openDatePicker = (field: DatePickerField) => {
+    setDatePickerTarget(field);
+    setDatePickerStep("month");
+  };
+
+  const closeDatePicker = () => {
+    setDatePickerTarget(null);
+    setDatePickerStep("month");
+  };
+
+  const handleMonthSelect = (month: number) => {
+    if (datePickerTarget === "expStart") setExpStartMonth(month);
+    else if (datePickerTarget === "expEnd") setExpEndMonth(month);
+    else if (datePickerTarget === "eduStart") setEduStartMonth(month);
+    else if (datePickerTarget === "eduEnd") setEduEndMonth(month);
+    setDatePickerStep("year");
+  };
+
+  const handleYearSelect = (year: number) => {
+    if (datePickerTarget === "expStart") setExpStartYear(year);
+    else if (datePickerTarget === "expEnd") setExpEndYear(year);
+    else if (datePickerTarget === "eduStart") setEduStartYear(year);
+    else if (datePickerTarget === "eduEnd") setEduEndYear(year);
+    closeDatePicker();
+  };
+
+  const setEndDateAsPresent = () => {
+    if (datePickerTarget === "expEnd") {
+      setExpEndMonth("");
+      setExpEndYear("");
+    } else if (datePickerTarget === "eduEnd") {
+      setEduEndMonth("");
+      setEduEndYear("");
+    }
+    closeDatePicker();
+  };
+
+  const getDateFieldDisplay = (
+    month: number | "",
+    year: number | "",
+    placeholder: string,
+    showPresentWhenEmpty: boolean = false,
+  ) => {
+    if (month === "" || year === "") {
+      return showPresentWhenEmpty ? "Present" : placeholder;
+    }
+    return formatMonthYear(month, year);
+  };
+
+  const handleSaveExperience = async () => {
+    if (!user.id || !token) {
+      Alert.alert("Error", "Please login again");
+      return;
+    }
+    if (!expTitle.trim()) {
+      Alert.alert("Error", "Please enter an experience title");
+      return;
+    }
+    if (!expDescription.trim()) {
+      Alert.alert("Error", "Please enter your experience description");
+      return;
+    }
+
+    try {
+      setExpUploading(true);
+      const formData = new FormData();
+
+      if (expCertificateUrl.trim() && isLocalFileUri(expCertificateUrl)) {
+        const filename = expCertificateUrl.split("/").pop() || "certificate.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const extension = match ? match[1] : "jpg";
+
+        let mimeType = "image/jpeg";
+        if (extension === "pdf") mimeType = "application/pdf";
+        else if (extension === "png") mimeType = "image/png";
+        else if (extension === "jpg" || extension === "jpeg")
+          mimeType = "image/jpeg";
+
+        formData.append("document", {
+          uri: expCertificateUrl,
+          name: filename,
+          type: mimeType,
+        } as any);
+      }
+
+      if (expCertificateName.trim()) {
+        formData.append("documentName", expCertificateName);
+      }
+      formData.append("title", expTitle);
+      formData.append("documentType", "Certificate");
+      formData.append("description", expDescription);
+      const expIssue = monthYearToIso(expStartMonth, expStartYear);
+      const expExpiry = monthYearToIso(expEndMonth, expEndYear);
+      if (expIssue) formData.append("issueDate", expIssue);
+      if (expExpiry) formData.append("expiryDate", expExpiry);
+
+      await apiUpload(
+        expFormMode === "edit" && editingExpId
+          ? api.workers.updateExperience(user.id, editingExpId)
+          : api.workers.uploadExperience(user.id),
+        formData,
+        token,
+        expFormMode === "edit" ? "PUT" : "POST",
+      );
+
+      Alert.alert(
+        "Success",
+        expFormMode === "edit"
+          ? "Experience updated successfully!"
+          : "Experience saved successfully!",
+      );
+      resetExpForm();
+      loadWorkerProfile();
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setExpUploading(false);
+    }
+  };
+
+  const handleSaveEducation = async () => {
+    if (!user.id || !token) {
+      Alert.alert("Error", "Please login again");
+      return;
+    }
+    if (!eduDocumentName.trim()) {
+      Alert.alert("Error", "Please enter a degree or certificate name");
+      return;
+    }
+    if (eduFormMode !== "edit" && !eduDocumentUrl.trim()) {
+      Alert.alert("Error", "Please upload a document file");
+      return;
+    }
+
+    try {
+      setEduUploading(true);
+      const formData = new FormData();
+
+      if (eduDocumentUrl.trim() && isLocalFileUri(eduDocumentUrl)) {
+        const filename = eduDocumentUrl.split("/").pop() || "education.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const extension = match ? match[1] : "jpg";
+
+        let mimeType = "image/jpeg";
+        if (extension === "pdf") mimeType = "application/pdf";
+        else if (extension === "png") mimeType = "image/png";
+        else if (extension === "jpg" || extension === "jpeg")
+          mimeType = "image/jpeg";
+
+        formData.append("document", {
+          uri: eduDocumentUrl,
+          name: filename,
+          type: mimeType,
+        } as any);
+      }
+
+      formData.append("documentName", eduDocumentName);
+      formData.append("institution", eduInstitution);
+      formData.append("documentType", eduDocumentType);
+      formData.append("description", eduDescription);
+      const eduStart = monthYearToIso(eduStartMonth, eduStartYear);
+      const eduEnd = monthYearToIso(eduEndMonth, eduEndYear);
+      if (eduStart) formData.append("startDate", eduStart);
+      if (eduEnd) formData.append("endDate", eduEnd);
+
+      await apiUpload(
+        eduFormMode === "edit" && editingEduId
+          ? api.workers.updateEducation(user.id, editingEduId)
+          : api.workers.uploadEducation(user.id),
+        formData,
+        token,
+        eduFormMode === "edit" ? "PUT" : "POST",
+      );
+
+      Alert.alert(
+        "Success",
+        eduFormMode === "edit"
+          ? "Education updated successfully!"
+          : "Education document uploaded successfully!",
+      );
+      resetEduForm();
+      loadWorkerProfile();
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setEduUploading(false);
+    }
+  };
+
+  const handleDeleteExperience = (doc: WorkerDocument) => {
+    if (!user.id || !token || !doc._id) return;
+    Alert.alert(
+      "Delete Experience",
+      "Are you sure you want to delete this experience?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(
+                api.workers.deleteExperience(user.id, doc._id!),
+                "DELETE",
+                undefined,
+                token,
+              );
+              Alert.alert("Success", "Experience deleted successfully.");
+              loadWorkerProfile();
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.message || "Failed to delete experience",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteEducation = (doc: WorkerDocument) => {
+    if (!user.id || !token || !doc._id) return;
+    Alert.alert(
+      "Delete Education",
+      "Are you sure you want to delete this education record?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(
+                api.workers.deleteEducation(user.id, doc._id!),
+                "DELETE",
+                undefined,
+                token,
+              );
+              Alert.alert("Success", "Education deleted successfully.");
+              loadWorkerProfile();
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.message || "Failed to delete education",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openExperienceEditor = (doc: WorkerDocument) => {
+    setEditingExpId(doc._id || null);
+    setExpTitle(doc.title || doc.name || doc.description || "");
+    setExpDescription(doc.description || "");
+    setExpCertificateName(doc.name || "");
+    setExpCertificateUrl(doc.url || "");
+    const start = isoToMonthYear(doc.issueDate);
+    const end = isoToMonthYear(doc.expiryDate);
+    setExpStartMonth(start.month);
+    setExpStartYear(start.year);
+    setExpEndMonth(end.month);
+    setExpEndYear(end.year);
+    setExpFormMode("edit");
+    setShowExpForm(true);
+  };
+
+  const openEducationEditor = (doc: WorkerDocument) => {
+    setEditingEduId(doc._id || null);
+    setEduDocumentName(doc.name || "");
+    setEduInstitution(doc.institution || "");
+    setEduDescription(doc.description || "");
+    setEduDocumentUrl(doc.url || "");
+    setEduDocumentType(doc.documentType || "Certificate");
+    const start = isoToMonthYear(doc.startDate);
+    const end = isoToMonthYear(doc.endDate);
+    setEduStartMonth(start.month);
+    setEduStartYear(start.year);
+    setEduEndMonth(end.month);
+    setEduEndYear(end.year);
+    setEduFormMode("edit");
+    setShowEduForm(true);
+  };
+
   const saveSkills = async (skills: string[]) => {
     if (!user.id || !token) {
       Alert.alert("Error", "Please login again");
@@ -598,6 +1110,157 @@ export default function WorkerProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Experience Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Experience</Text>
+          <TouchableOpacity
+            style={styles.sectionAddButton}
+            onPress={() => {
+              setExpFormMode("add");
+              setShowExpForm(true);
+            }}
+          >
+            <Ionicons name="add-circle" size={28} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.experienceContainer}>
+          {experienceDocs.length > 0 ? (
+            experienceDocs.map((doc, index) => (
+              <View key={doc._id || index} style={styles.experienceCard}>
+                <View style={styles.experienceHeader}>
+                  <View style={styles.experienceInfo}>
+                    <Text style={styles.experienceTitle}>
+                      {doc.title || doc.name || doc.description || "Experience"}
+                    </Text>
+                    <Text style={styles.experienceDescription}>
+                      {doc.description || "No description provided"}
+                    </Text>
+                    {(doc.issueDate || doc.expiryDate) && (
+                      <Text style={styles.dateRangeText}>
+                        {formatRangeWithPresent(doc.issueDate, doc.expiryDate)}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.experienceActions}>
+                    <TouchableOpacity
+                      onPress={() => openExperienceEditor(doc)}
+                      style={styles.iconActionButton}
+                    >
+                      <Ionicons name="pencil" size={18} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteExperience(doc)}
+                      style={styles.iconActionButton}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {doc.url && (
+                  <View style={styles.certificateThumbnailContainer}>
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={styles.certificateThumbnail}
+                    />
+                  </View>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.experienceEmpty}>
+              <Ionicons name="briefcase" size={48} color="#9CA3AF" />
+              <Text style={styles.experienceEmptyText}>
+                No experience added yet
+              </Text>
+              <Text style={styles.experienceEmptySubtext}>
+                Add your work experience. Certificates are optional.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Education Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Education</Text>
+          <TouchableOpacity
+            style={styles.sectionAddButton}
+            onPress={() => {
+              setEduFormMode("add");
+              setShowEduForm(true);
+            }}
+          >
+            <Ionicons name="add-circle" size={28} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.experienceContainer}>
+          {educationDocs.length > 0 ? (
+            educationDocs.map((doc, index) => (
+              <View key={doc._id || index} style={styles.experienceCard}>
+                <View style={styles.experienceHeader}>
+                  <View style={styles.experienceInfo}>
+                    <Text style={styles.experienceTitle}>
+                      {doc.name || "Unnamed Education"}
+                    </Text>
+                    {!!doc.institution && (
+                      <Text style={styles.institutionText}>
+                        {doc.institution}
+                      </Text>
+                    )}
+                    <Text style={styles.experienceDescription}>
+                      {doc.description || "No description provided"}
+                    </Text>
+                    {(doc.startDate || doc.endDate) && (
+                      <Text style={styles.dateRangeText}>
+                        {formatRangeWithPresent(doc.startDate, doc.endDate)}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.experienceActions}>
+                    <TouchableOpacity
+                      onPress={() => openEducationEditor(doc)}
+                      style={styles.iconActionButton}
+                    >
+                      <Ionicons name="pencil" size={18} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteEducation(doc)}
+                      style={styles.iconActionButton}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {doc.url && (
+                  <View style={styles.certificateThumbnailContainer}>
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={styles.certificateThumbnail}
+                    />
+                  </View>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.experienceEmpty}>
+              <Ionicons name="school" size={48} color="#9CA3AF" />
+              <Text style={styles.experienceEmptyText}>
+                No education added yet
+              </Text>
+              <Text style={styles.experienceEmptySubtext}>
+                Add your degrees, diplomas, and certificates
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Rating & Reviews Section */}
         <Text style={styles.sectionTitle}>Rating & Reviews</Text>
         <View style={styles.ratingCard}>
@@ -660,6 +1323,539 @@ export default function WorkerProfileScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* Experience Form Modal */}
+      <Modal
+        visible={showExpForm}
+        transparent
+        animationType="slide"
+        onRequestClose={resetExpForm}
+      >
+        <View style={styles.formModalContainer}>
+          <View style={styles.formModalContent}>
+            <View style={styles.formModalHeader}>
+              <Text style={styles.formModalTitle}>
+                {expFormMode === "add" ? "Add Experience" : "Edit Experience"}
+              </Text>
+              <TouchableOpacity onPress={resetExpForm}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.formModalScroll}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Experience Title *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g., HVAC Technician"
+                  placeholderTextColor="#9CA3AF"
+                  value={expTitle}
+                  onChangeText={setExpTitle}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Experience Description *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Describe your experience (e.g., 5+ years HVAC technician)"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={3}
+                  value={expDescription}
+                  onChangeText={setExpDescription}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.dateInputWrapper}
+                activeOpacity={0.8}
+                onPress={() => openDatePicker("expStart")}
+              >
+                <Text style={styles.dateInputLabel}>Start date*</Text>
+                <View style={styles.dateInputField}>
+                  <Text
+                    style={[
+                      styles.dateInputValue,
+                      expStartMonth === "" || expStartYear === ""
+                        ? styles.dateInputPlaceholder
+                        : undefined,
+                    ]}
+                  >
+                    {getDateFieldDisplay(
+                      expStartMonth,
+                      expStartYear,
+                      "Start date*",
+                    )}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color="#1F2937"
+                  />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dateInputWrapper}
+                activeOpacity={0.8}
+                onPress={() => openDatePicker("expEnd")}
+              >
+                <Text style={styles.dateInputLabel}>End date*</Text>
+                <View style={styles.dateInputField}>
+                  <Text
+                    style={[
+                      styles.dateInputValue,
+                      expEndMonth === "" || expEndYear === ""
+                        ? styles.dateInputPlaceholder
+                        : undefined,
+                    ]}
+                  >
+                    {getDateFieldDisplay(
+                      expEndMonth,
+                      expEndYear,
+                      "End date*",
+                      true,
+                    )}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color="#1F2937"
+                  />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>
+                  Certificate Name (Optional)
+                </Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g., HVAC Technician Certification"
+                  placeholderTextColor="#9CA3AF"
+                  value={expCertificateName}
+                  onChangeText={setExpCertificateName}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>
+                  Upload Certificate (Optional)
+                </Text>
+                {expCertificateUrl ? (
+                  <View style={styles.documentPreviewCard}>
+                    {isImageUri(expCertificateUrl) ? (
+                      <Image
+                        source={{ uri: expCertificateUrl }}
+                        style={styles.documentPreviewImage}
+                      />
+                    ) : (
+                      <View style={styles.documentPreviewFile}>
+                        <Ionicons
+                          name="document-text"
+                          size={36}
+                          color={Colors.primary}
+                        />
+                        <Text
+                          style={styles.documentPreviewFileName}
+                          numberOfLines={1}
+                        >
+                          {getFilenameFromUri(expCertificateUrl)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.documentPreviewActions}>
+                      <TouchableOpacity
+                        style={styles.documentPreviewBtn}
+                        onPress={() => handlePickDocument(setExpCertificateUrl)}
+                      >
+                        <Ionicons
+                          name="swap-horizontal"
+                          size={16}
+                          color={Colors.primary}
+                        />
+                        <Text style={styles.documentPreviewBtnText}>
+                          Replace
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.documentPreviewBtn}
+                        onPress={() => setExpCertificateUrl("")}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color="#EF4444"
+                        />
+                        <Text
+                          style={[
+                            styles.documentPreviewBtnText,
+                            { color: "#EF4444" },
+                          ]}
+                        >
+                          Remove
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Button
+                    title="Select Certificate (Optional)"
+                    onPress={() => handlePickDocument(setExpCertificateUrl)}
+                    variant="secondary"
+                  />
+                )}
+              </View>
+              <View style={styles.formActions}>
+                <Button
+                  title={expUploading ? "Saving..." : "Save Experience"}
+                  onPress={handleSaveExperience}
+                  disabled={!expTitle || !expDescription || expUploading}
+                />
+                <Button
+                  title="Cancel"
+                  onPress={resetExpForm}
+                  variant="secondary"
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Education Form Modal */}
+      <Modal
+        visible={showEduForm}
+        transparent
+        animationType="slide"
+        onRequestClose={resetEduForm}
+      >
+        <View style={styles.formModalContainer}>
+          <View style={styles.formModalContent}>
+            <View style={styles.formModalHeader}>
+              <Text style={styles.formModalTitle}>
+                {eduFormMode === "add" ? "Add Education" : "Edit Education"}
+              </Text>
+              <TouchableOpacity onPress={resetEduForm}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.formModalScroll}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Degree/Certificate Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g., Bachelor of Engineering"
+                  placeholderTextColor="#9CA3AF"
+                  value={eduDocumentName}
+                  onChangeText={setEduDocumentName}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Institution Name</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g., University of Colombo"
+                  placeholderTextColor="#9CA3AF"
+                  value={eduInstitution}
+                  onChangeText={setEduInstitution}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.dateInputWrapper}
+                activeOpacity={0.8}
+                onPress={() => openDatePicker("eduStart")}
+              >
+                <Text style={styles.dateInputLabel}>Start date*</Text>
+                <View style={styles.dateInputField}>
+                  <Text
+                    style={[
+                      styles.dateInputValue,
+                      eduStartMonth === "" || eduStartYear === ""
+                        ? styles.dateInputPlaceholder
+                        : undefined,
+                    ]}
+                  >
+                    {getDateFieldDisplay(
+                      eduStartMonth,
+                      eduStartYear,
+                      "Start date*",
+                    )}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color="#1F2937"
+                  />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dateInputWrapper}
+                activeOpacity={0.8}
+                onPress={() => openDatePicker("eduEnd")}
+              >
+                <Text style={styles.dateInputLabel}>End date*</Text>
+                <View style={styles.dateInputField}>
+                  <Text
+                    style={[
+                      styles.dateInputValue,
+                      eduEndMonth === "" || eduEndYear === ""
+                        ? styles.dateInputPlaceholder
+                        : undefined,
+                    ]}
+                  >
+                    {getDateFieldDisplay(
+                      eduEndMonth,
+                      eduEndYear,
+                      "End date*",
+                      true,
+                    )}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color="#1F2937"
+                  />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Document Type *</Text>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setEduTypeModalVisible(true)}
+                >
+                  <Text style={styles.dropdownText}>{eduDocumentType}</Text>
+                  <Ionicons name="chevron-down" size={20} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Description</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Describe your education background"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={3}
+                  value={eduDescription}
+                  onChangeText={setEduDescription}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Upload Document *</Text>
+                {eduDocumentUrl ? (
+                  <View style={styles.documentPreviewCard}>
+                    {isImageUri(eduDocumentUrl) ? (
+                      <Image
+                        source={{ uri: eduDocumentUrl }}
+                        style={styles.documentPreviewImage}
+                      />
+                    ) : (
+                      <View style={styles.documentPreviewFile}>
+                        <Ionicons
+                          name="document-text"
+                          size={36}
+                          color={Colors.primary}
+                        />
+                        <Text
+                          style={styles.documentPreviewFileName}
+                          numberOfLines={1}
+                        >
+                          {getFilenameFromUri(eduDocumentUrl)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.documentPreviewActions}>
+                      <TouchableOpacity
+                        style={styles.documentPreviewBtn}
+                        onPress={() => handlePickDocument(setEduDocumentUrl)}
+                      >
+                        <Ionicons
+                          name="swap-horizontal"
+                          size={16}
+                          color={Colors.primary}
+                        />
+                        <Text style={styles.documentPreviewBtnText}>
+                          Replace
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.documentPreviewBtn}
+                        onPress={() => setEduDocumentUrl("")}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color="#EF4444"
+                        />
+                        <Text
+                          style={[
+                            styles.documentPreviewBtnText,
+                            { color: "#EF4444" },
+                          ]}
+                        >
+                          Remove
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Button
+                    title="Select Document"
+                    onPress={() => handlePickDocument(setEduDocumentUrl)}
+                    variant="secondary"
+                  />
+                )}
+              </View>
+              <View style={styles.formActions}>
+                <Button
+                  title={eduUploading ? "Saving..." : "Save Education"}
+                  onPress={handleSaveEducation}
+                  disabled={
+                    !eduDocumentName || eduUploading
+                  }
+                />
+                <Button
+                  title="Cancel"
+                  onPress={resetEduForm}
+                  variant="secondary"
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Education Type Modal */}
+      <Modal
+        transparent
+        visible={eduTypeModalVisible}
+        onRequestClose={() => setEduTypeModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setEduTypeModalVisible(false)}
+        >
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Select Document Type</Text>
+            {["Degree", "Diploma", "Certificate", "Other"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={styles.pickerOption}
+                onPress={() => {
+                  setEduDocumentType(type);
+                  setEduTypeModalVisible(false);
+                }}
+              >
+                <Ionicons
+                  name={
+                    eduDocumentType === type
+                      ? "radio-button-on"
+                      : "radio-button-off"
+                  }
+                  size={20}
+                  color={Colors.primary}
+                />
+                <Text style={styles.pickerOptionText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Document Source Picker Sheet */}
+      <Modal
+        transparent
+        visible={!!docPickerSetUrl}
+        animationType="fade"
+        onRequestClose={closeDocPicker}
+      >
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={closeDocPicker}
+        >
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Select document</Text>
+            <TouchableOpacity
+              style={styles.docPickerOption}
+              onPress={() => runDocPickerOption(pickFromGallery)}
+            >
+              <Ionicons name="image-outline" size={22} color={Colors.primary} />
+              <Text style={styles.docPickerOptionText}>Choose from Photos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.docPickerOption}
+              onPress={() => runDocPickerOption(pickPdf)}
+            >
+              <Ionicons
+                name="document-outline"
+                size={22}
+                color={Colors.primary}
+              />
+              <Text style={styles.docPickerOptionText}>Pick PDF / File</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.docPickerOption, styles.docPickerCancel]}
+              onPress={closeDocPicker}
+            >
+              <Text style={styles.docPickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Month/Year Picker Modal */}
+      <Modal
+        transparent
+        visible={!!datePickerTarget}
+        onRequestClose={closeDatePicker}
+      >
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={closeDatePicker}
+        >
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>
+              {datePickerStep === "month" ? "Select Month" : "Select Year"}
+            </Text>
+            {(datePickerTarget === "expEnd" ||
+              datePickerTarget === "eduEnd") && (
+              <TouchableOpacity
+                style={styles.presentOption}
+                onPress={setEndDateAsPresent}
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={20}
+                  color={Colors.primary}
+                />
+                <Text style={styles.presentOptionText}>Set as Present</Text>
+              </TouchableOpacity>
+            )}
+            <ScrollView
+              style={styles.pickerScroll}
+              keyboardShouldPersistTaps="handled"
+            >
+              {datePickerStep === "month"
+                ? MONTH_NAMES.map((name, idx) => (
+                    <TouchableOpacity
+                      key={name}
+                      style={styles.pickerOption}
+                      onPress={() => handleMonthSelect(idx + 1)}
+                    >
+                      <Text style={styles.pickerOptionText}>{name}</Text>
+                    </TouchableOpacity>
+                  ))
+                : YEAR_OPTIONS.map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={styles.pickerOption}
+                      onPress={() => handleYearSelect(year)}
+                    >
+                      <Text style={styles.pickerOptionText}>{String(year)}</Text>
+                    </TouchableOpacity>
+                  ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Add Skill Modal */}
       <Modal
@@ -1097,5 +2293,328 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
     fontSize: 14,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  sectionAddButton: {
+    padding: 4,
+  },
+  experienceContainer: {
+    marginBottom: 8,
+  },
+  experienceCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  experienceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  experienceInfo: {
+    flex: 1,
+  },
+  experienceTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: Colors.text,
+  },
+  institutionText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  experienceDescription: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  dateRangeText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  experienceActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  iconActionButton: {
+    padding: 6,
+  },
+  certificateThumbnailContainer: {
+    marginTop: 12,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#E5E7EB",
+    height: 120,
+    width: 120,
+  },
+  certificateThumbnail: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  experienceEmpty: {
+    alignItems: "center",
+    paddingVertical: 32,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    opacity: 0.7,
+  },
+  experienceEmptyText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  experienceEmptySubtext: {
+    marginTop: 4,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    opacity: 0.8,
+  },
+  formModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  formModalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
+  },
+  formModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  formModalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  formModalScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 8,
+    color: Colors.text,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: "System",
+    color: Colors.text,
+  },
+  dateInputWrapper: {
+    marginBottom: 24,
+  },
+  dateInputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  dateInputField: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#4B5563",
+    paddingBottom: 8,
+  },
+  dateInputValue: {
+    flex: 1,
+    fontSize: 18,
+    color: "#111827",
+  },
+  dateInputPlaceholder: {
+    color: "#9CA3AF",
+  },
+  dropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#F9FAFB",
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.text,
+  },
+  fileSelectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    gap: 8,
+  },
+  fileSelectedText: {
+    fontSize: 13,
+    color: "#059669",
+    fontWeight: "500",
+  },
+  formActions: {
+    gap: 10,
+    paddingBottom: 20,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  pickerSheet: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    maxHeight: "70%",
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 16,
+    textAlign: "center",
+    color: Colors.text,
+  },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E5E7EB",
+    gap: 12,
+  },
+  pickerOptionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: Colors.text,
+    flex: 1,
+  },
+  pickerScroll: {
+    maxHeight: 280,
+  },
+  presentOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    marginBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E5E7EB",
+  },
+  presentOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.primary,
+  },
+  documentPreviewCard: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    backgroundColor: Colors.white,
+    overflow: "hidden",
+  },
+  documentPreviewImage: {
+    width: "100%",
+    height: 180,
+    resizeMode: "cover",
+    backgroundColor: "#F3F4F6",
+  },
+  documentPreviewFile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 18,
+    backgroundColor: "#F9FAFB",
+  },
+  documentPreviewFileName: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: "500",
+  },
+  documentPreviewActions: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  documentPreviewBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  documentPreviewBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.primary,
+  },
+  docPickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.border,
+  },
+  docPickerOptionText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: Colors.text,
+  },
+  docPickerCancel: {
+    justifyContent: "center",
+    borderBottomWidth: 0,
+    marginTop: 6,
+  },
+  docPickerCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.error,
   },
 });
