@@ -79,25 +79,6 @@ export default function DocumentsScreen() {
     }
   };
 
-  const pickFromCamera = async (setUrl: (url: string) => void) => {
-    try {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert(
-          "Permission needed",
-          "Allow camera access to take a photo.",
-        );
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
-      if (!result.canceled && result.assets?.[0]) {
-        setUrl(result.assets[0].uri);
-      }
-    } catch {
-      Alert.alert("Error", "Failed to capture photo");
-    }
-  };
-
   const pickPdf = async (setUrl: (url: string) => void) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -377,18 +358,6 @@ export default function DocumentsScreen() {
                 </View>
                 <ThemedText style={styles.idPickerLabel}>
                   Select a file
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.idPickerBox}
-                onPress={() => pickFromCamera(setIdDocumentUrl)}
-              >
-                <View style={styles.idPickerIconWrap}>
-                  <Ionicons name="phone-portrait-outline" size={36} color="#0F4C75" />
-                </View>
-                <ThemedText style={styles.idPickerLabel}>
-                  Use your device's camera
                 </ThemedText>
               </TouchableOpacity>
 
