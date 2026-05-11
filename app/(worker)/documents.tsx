@@ -9,14 +9,39 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
 type DocumentStatus = "Pending" | "Verified" | "Rejected";
+
+function isImageUri(uri: string): boolean {
+  if (!uri) return false;
+  const lower = uri.toLowerCase().split("?")[0];
+  return (
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".gif") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".heic")
+  );
+}
+
+function getFilenameFromUri(uri: string): string {
+  if (!uri) return "";
+  const segment = uri.split("?")[0].split("/").pop() || "Document";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
 
 export default function DocumentsScreen() {
   const { user, token } = useStore();
@@ -369,15 +394,67 @@ export default function DocumentsScreen() {
               </ThemedText>
 
               {!!idDocumentUrl && (
-                <View style={styles.idPickerSelected}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={18}
-                    color="#22A06B"
-                  />
-                  <ThemedText style={styles.idPickerSelectedText}>
-                    File selected
-                  </ThemedText>
+                <View style={styles.idPreviewCard}>
+                  {isImageUri(idDocumentUrl) ? (
+                    <Image
+                      source={{ uri: idDocumentUrl }}
+                      style={styles.idPreviewImage}
+                    />
+                  ) : (
+                    <View style={styles.idPreviewFile}>
+                      <Ionicons
+                        name="document-text"
+                        size={36}
+                        color="#0F4C75"
+                      />
+                      <Text style={styles.idPreviewFileName} numberOfLines={1}>
+                        {getFilenameFromUri(idDocumentUrl)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.idPreviewActions}>
+                    <TouchableOpacity
+                      style={styles.idPreviewBtn}
+                      onPress={() => {
+                        Alert.alert("Select file", "Choose a source", [
+                          {
+                            text: "Choose from Photos",
+                            onPress: () => pickFromGallery(setIdDocumentUrl),
+                          },
+                          {
+                            text: "Pick PDF / File",
+                            onPress: () => pickPdf(setIdDocumentUrl),
+                          },
+                          { text: "Cancel", style: "cancel" },
+                        ]);
+                      }}
+                    >
+                      <Ionicons
+                        name="swap-horizontal"
+                        size={16}
+                        color="#0F4C75"
+                      />
+                      <Text style={styles.idPreviewBtnText}>Replace</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.idPreviewBtn}
+                      onPress={() => setIdDocumentUrl("")}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color="#EF4444"
+                      />
+                      <Text
+                        style={[
+                          styles.idPreviewBtnText,
+                          { color: "#EF4444" },
+                        ]}
+                      >
+                        Remove
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
@@ -679,5 +756,51 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 15,
     fontWeight: "700",
+  },
+  idPreviewCard: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    backgroundColor: "white",
+    overflow: "hidden",
+    marginTop: 12,
+  },
+  idPreviewImage: {
+    width: "100%",
+    height: 200,
+    resizeMode: "cover",
+    backgroundColor: "#F3F4F6",
+  },
+  idPreviewFile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 18,
+    backgroundColor: "#F9FAFB",
+  },
+  idPreviewFileName: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1F2937",
+    fontWeight: "500",
+  },
+  idPreviewActions: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  idPreviewBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  idPreviewBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F4C75",
   },
 });
