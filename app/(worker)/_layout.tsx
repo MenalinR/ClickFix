@@ -6,21 +6,48 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useChatList } from "../../hooks/useChatList";
 
+const DOCUMENT_NOTIFICATION_TYPES = [
+  "DOCUMENT_UPLOADED",
+  "DOCUMENT_VERIFIED",
+  "DOCUMENT_REJECTED",
+];
+
+const JOB_NOTIFICATION_TYPES = [
+  "JOB_ASSIGNED",
+  "JOB_REQUESTED",
+  "JOB_COMPLETED",
+  "PAYMENT_RECEIVED",
+  "REVIEW_RECEIVED",
+  "HARDWARE_REQUEST",
+  "HARDWARE_ORDER",
+  "GENERAL",
+];
+
 export default function WorkerLayout() {
   const { totalUnread } = useChatList();
   const token = useStore((s) => s.token);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadJobs, setUnreadJobs] = useState(0);
+  const [unreadDocuments, setUnreadDocuments] = useState(0);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await apiCall(
-        api.notifications.getUnreadCount,
-        "GET",
-        undefined,
-        token,
-      );
-      setUnreadNotifications(response.count || 0);
+      const [jobsRes, docsRes] = await Promise.all([
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
+          "GET",
+          undefined,
+          token,
+        ),
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=${DOCUMENT_NOTIFICATION_TYPES.join(",")}`,
+          "GET",
+          undefined,
+          token,
+        ),
+      ]);
+      setUnreadJobs(jobsRes.count || 0);
+      setUnreadDocuments(docsRes.count || 0);
     } catch (error) {
       console.error("Error fetching notification count:", error);
     }
@@ -34,15 +61,30 @@ export default function WorkerLayout() {
   }, [token, fetchUnreadCount]);
 
   const handleJobsTabPress = async () => {
-    if (!token || unreadNotifications === 0) return;
+    if (!token || unreadJobs === 0) return;
     try {
       await apiCall(
-        api.notifications.markAllAsRead,
+        `${api.notifications.markAllAsRead}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
         "PUT",
         undefined,
         token,
       );
-      setUnreadNotifications(0);
+      setUnreadJobs(0);
+    } catch (error) {
+      console.error("Error marking notifications read:", error);
+    }
+  };
+
+  const handleDocumentsTabPress = async () => {
+    if (!token || unreadDocuments === 0) return;
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=${DOCUMENT_NOTIFICATION_TYPES.join(",")}`,
+        "PUT",
+        undefined,
+        token,
+      );
+      setUnreadDocuments(0);
     } catch (error) {
       console.error("Error marking notifications read:", error);
     }
@@ -78,8 +120,7 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase-outline" size={size} color={color} />
           ),
-          tabBarBadge:
-            unreadNotifications > 0 ? unreadNotifications : undefined,
+          tabBarBadge: unreadJobs > 0 ? unreadJobs : undefined,
           tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
         }}
         listeners={{
@@ -130,6 +171,13 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text-outline" size={size} color={color} />
           ),
+          tabBarBadge: unreadDocuments > 0 ? unreadDocuments : undefined,
+          tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
+        }}
+        listeners={{
+          tabPress: () => {
+            handleDocumentsTabPress();
+          },
         }}
       />
       <Tabs.Screen

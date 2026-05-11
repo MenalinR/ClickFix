@@ -77,10 +77,16 @@ exports.getNotifications = async (req, res) => {
 // @access  Private
 exports.getUnreadCount = async (req, res) => {
   try {
-    const count = await Notification.countDocuments({
-      recipient: req.user._id,
-      read: false,
-    });
+    const query = { recipient: req.user._id, read: false };
+    if (req.query.types) {
+      const types = String(req.query.types)
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (types.length > 0) query.type = { $in: types };
+    }
+
+    const count = await Notification.countDocuments(query);
 
     res.status(200).json({
       success: true,
@@ -137,10 +143,19 @@ exports.markAsRead = async (req, res) => {
 // @access  Private
 exports.markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany(
-      { recipient: req.user._id, read: false },
-      { read: true, readAt: new Date() },
-    );
+    const query = { recipient: req.user._id, read: false };
+    if (req.query.types) {
+      const types = String(req.query.types)
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (types.length > 0) query.type = { $in: types };
+    }
+
+    await Notification.updateMany(query, {
+      read: true,
+      readAt: new Date(),
+    });
 
     res.status(200).json({
       success: true,
