@@ -117,7 +117,8 @@ export function NegotiationBanner({ jobId, role }: Props) {
           onPress={() => setProposing(true)}
           disabled={loading}
         >
-          <Text style={styles.primaryBtnText}>Propose new price</Text>
+          <Ionicons name="pricetag" size={14} color="white" />
+          <Text style={styles.primaryBtnText}>Ask Price</Text>
         </TouchableOpacity>
       )}
       {role === "worker" && status === "Negotiating" && (
@@ -154,7 +155,7 @@ export function NegotiationBanner({ jobId, role }: Props) {
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>
-              {role === "worker" ? "Send counter price" : "Propose new price"}
+              {role === "worker" ? "Send counter price" : "Ask for a price"}
             </Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -229,6 +230,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
   },
   primaryBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
   actionRow: { flexDirection: "row", gap: 8 },

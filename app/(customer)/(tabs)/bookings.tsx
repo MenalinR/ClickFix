@@ -34,8 +34,7 @@ export default function BookingsScreen() {
     await customerRespondToJob(jobId, "deny");
     setReviewJob(null);
   };
-  const handleNegotiate = async (jobId: string, counterPrice?: number) => {
-    await customerRespondToJob(jobId, "negotiate", counterPrice);
+  const handleNegotiate = async (jobId: string) => {
     const job: any = (jobs as any[]).find(
       (j) => (j._id || j.id) === jobId,
     );

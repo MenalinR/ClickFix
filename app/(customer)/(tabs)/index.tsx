@@ -79,8 +79,7 @@ export default function CustomerHome() {
   const handleDeny = async (jobId: string) => {
     await customerRespondToJob(jobId, "deny");
   };
-  const handleNegotiate = async (jobId: string, counterPrice?: number) => {
-    await customerRespondToJob(jobId, "negotiate", counterPrice);
+  const handleNegotiate = async (jobId: string) => {
     const job: any = (jobs as any[]).find(
       (j) => (j._id || j.id) === jobId,
     );
