@@ -217,6 +217,7 @@ export default function AdminUsers() {
 
 function UserDetail({ user }: { user: UserRow }) {
     const u = user.raw || {};
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const address =
         u?.addresses?.[0]?.address ||
         u?.location?.address ||
@@ -264,6 +265,10 @@ function UserDetail({ user }: { user: UserRow }) {
     const openCertificate = async (url?: string) => {
         if (!url) {
             Alert.alert('Unavailable', 'Certificate URL is not available.');
+            return;
+        }
+        if (isImageUrl(url)) {
+            setPreviewImage(url);
             return;
         }
         try {
@@ -340,6 +345,23 @@ function UserDetail({ user }: { user: UserRow }) {
                     })}
                 </View>
             )}
+
+            <Modal visible={!!previewImage} animationType="fade" transparent>
+                <TouchableOpacity
+                    style={styles.imagePreviewOverlay}
+                    activeOpacity={1}
+                    onPress={() => setPreviewImage(null)}
+                >
+                    {previewImage ? (
+                        <Image
+                            source={{ uri: previewImage }}
+                            style={styles.imagePreview}
+                            resizeMode="contain"
+                        />
+                    ) : null}
+                    <Text style={styles.imagePreviewHint}>Tap anywhere to close</Text>
+                </TouchableOpacity>
+            </Modal>
         </ScrollView>
     );
 }
@@ -686,5 +708,21 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginTop: 8,
         alignSelf: 'flex-start',
+    },
+    imagePreviewOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+    },
+    imagePreview: {
+        width: '100%',
+        height: '80%',
+    },
+    imagePreviewHint: {
+        color: '#fff',
+        marginTop: 20,
+        fontSize: 13,
     },
 });
