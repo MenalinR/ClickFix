@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Colors } from '../../constants/Colors';
@@ -277,12 +277,6 @@ function UserDetail({ user }: { user: UserRow }) {
         }
     };
 
-    const statusColor = (s?: string) => {
-        if (s === 'Verified') return '#2E7D32';
-        if (s === 'Rejected') return '#C62828';
-        return '#F57F17';
-    };
-
     return (
         <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
             <View style={styles.detailAvatar}>
@@ -305,55 +299,21 @@ function UserDetail({ user }: { user: UserRow }) {
 
             {user.role === 'worker' && experienceDocs.length > 0 && (
                 <View style={styles.docSection}>
-                    <View style={styles.docSectionHeader}>
-                        <Ionicons name="briefcase" size={16} color={Colors.primary} />
-                        <Text style={styles.docSectionTitle}>Experience</Text>
-                    </View>
+                    <Text style={styles.docSectionTitle}>Experience</Text>
                     {experienceDocs.map((doc, i) => {
                         const period = [formatDate(doc.issueDate), formatDate(doc.expiryDate)]
                             .filter(Boolean)
                             .join(' – ');
                         return (
-                            <View key={i} style={styles.docCard}>
-                                <View style={styles.docCardHeader}>
-                                    <Text style={styles.docTitle} numberOfLines={2}>
-                                        {doc.title || doc.name || 'Experience'}
-                                    </Text>
-                                    {!!doc.verificationStatus && (
-                                        <View
-                                            style={[
-                                                styles.docStatusBadge,
-                                                { backgroundColor: statusColor(doc.verificationStatus) + '20' },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.docStatusText,
-                                                    { color: statusColor(doc.verificationStatus) },
-                                                ]}
-                                            >
-                                                {doc.verificationStatus}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                                {!!doc.documentType && (
-                                    <Text style={styles.docMeta}>{doc.documentType}</Text>
-                                )}
-                                {!!period && <Text style={styles.docMeta}>{period}</Text>}
-                                {!!doc.description && (
-                                    <Text style={styles.docDesc}>{doc.description}</Text>
-                                )}
-                                {!!doc.url && (
-                                    <TouchableOpacity
-                                        style={styles.docLinkBtn}
-                                        onPress={() => openCertificate(doc.url)}
-                                    >
-                                        <Ionicons name="document-attach-outline" size={14} color={Colors.primary} />
-                                        <Text style={styles.docLinkText}>View certificate</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
+                            <DocCard
+                                key={i}
+                                title={doc.title || doc.name || 'Experience'}
+                                accent={doc.description || doc.name}
+                                period={period}
+                                docType={doc.documentType}
+                                url={doc.url}
+                                onOpen={openCertificate}
+                            />
                         );
                     })}
                 </View>
@@ -361,63 +321,99 @@ function UserDetail({ user }: { user: UserRow }) {
 
             {user.role === 'worker' && educationDocs.length > 0 && (
                 <View style={styles.docSection}>
-                    <View style={styles.docSectionHeader}>
-                        <Ionicons name="school" size={16} color={Colors.primary} />
-                        <Text style={styles.docSectionTitle}>Education</Text>
-                    </View>
+                    <Text style={styles.docSectionTitle}>Education</Text>
                     {educationDocs.map((doc, i) => {
                         const period = [formatDate(doc.startDate), formatDate(doc.endDate)]
                             .filter(Boolean)
                             .join(' – ');
                         return (
-                            <View key={i} style={styles.docCard}>
-                                <View style={styles.docCardHeader}>
-                                    <Text style={styles.docTitle} numberOfLines={2}>
-                                        {doc.name || 'Education'}
-                                    </Text>
-                                    {!!doc.verificationStatus && (
-                                        <View
-                                            style={[
-                                                styles.docStatusBadge,
-                                                { backgroundColor: statusColor(doc.verificationStatus) + '20' },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.docStatusText,
-                                                    { color: statusColor(doc.verificationStatus) },
-                                                ]}
-                                            >
-                                                {doc.verificationStatus}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                                {!!doc.institution && (
-                                    <Text style={styles.docMeta}>{doc.institution}</Text>
-                                )}
-                                {!!doc.documentType && (
-                                    <Text style={styles.docMeta}>{doc.documentType}</Text>
-                                )}
-                                {!!period && <Text style={styles.docMeta}>{period}</Text>}
-                                {!!doc.description && (
-                                    <Text style={styles.docDesc}>{doc.description}</Text>
-                                )}
-                                {!!doc.url && (
-                                    <TouchableOpacity
-                                        style={styles.docLinkBtn}
-                                        onPress={() => openCertificate(doc.url)}
-                                    >
-                                        <Ionicons name="document-attach-outline" size={14} color={Colors.primary} />
-                                        <Text style={styles.docLinkText}>View certificate</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
+                            <DocCard
+                                key={i}
+                                title={doc.name || 'Education'}
+                                accent={doc.institution || doc.description}
+                                period={period}
+                                docType={doc.documentType}
+                                url={doc.url}
+                                onOpen={openCertificate}
+                            />
                         );
                     })}
                 </View>
             )}
         </ScrollView>
+    );
+}
+
+function isImageUrl(uri: string): boolean {
+    if (!uri) return false;
+    const lower = uri.toLowerCase().split('?')[0];
+    return (
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.heic')
+    );
+}
+
+function getFilename(uri: string): string {
+    if (!uri) return 'Document';
+    const seg = uri.split('?')[0].split('/').pop() || 'Document';
+    try {
+        return decodeURIComponent(seg);
+    } catch {
+        return seg;
+    }
+}
+
+function DocCard({
+    title,
+    accent,
+    period,
+    docType,
+    url,
+    onOpen,
+}: {
+    title: string;
+    accent?: string;
+    period?: string;
+    docType?: string;
+    url?: string;
+    onOpen: (url?: string) => void;
+}) {
+    return (
+        <View style={styles.docCard}>
+            <Text style={styles.docTitle} numberOfLines={2}>{title}</Text>
+            {!!accent && (
+                <Text style={styles.docAccent} numberOfLines={2}>{accent}</Text>
+            )}
+            {!!period && <Text style={styles.docMeta}>{period}</Text>}
+            {!!docType && <Text style={styles.docMeta}>{docType}</Text>}
+            {!!url && (
+                <TouchableOpacity
+                    style={styles.docPreviewWrap}
+                    activeOpacity={0.85}
+                    onPress={() => onOpen(url)}
+                >
+                    {isImageUrl(url) ? (
+                        <Image
+                            source={{ uri: url }}
+                            style={styles.docPreviewImage}
+                            resizeMode="contain"
+                        />
+                    ) : (
+                        <View style={styles.docPreviewFile}>
+                            <Ionicons name="document-text" size={48} color={Colors.primary} />
+                            <Text style={styles.docPreviewFileName} numberOfLines={1}>
+                                {getFilename(url)}
+                            </Text>
+                        </View>
+                    )}
+                    <Text style={styles.docTapHint}>Tap to view</Text>
+                </TouchableOpacity>
+            )}
+        </View>
     );
 }
 
@@ -631,75 +627,64 @@ const styles = StyleSheet.create({
     docSection: {
         marginTop: 16,
     },
-    docSectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 8,
-    },
     docSectionTitle: {
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: '700',
         color: Colors.text,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        marginBottom: 10,
     },
     docCard: {
         backgroundColor: Colors.card,
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 8,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: Colors.border,
     },
-    docCardHeader: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 8,
-        marginBottom: 4,
-    },
     docTitle: {
-        flex: 1,
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '700',
         color: Colors.text,
     },
-    docStatusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-    },
-    docStatusText: {
-        fontSize: 10,
-        fontWeight: '700',
+    docAccent: {
+        fontSize: 14,
+        color: Colors.primary,
+        fontWeight: '600',
+        marginTop: 2,
     },
     docMeta: {
         fontSize: 12,
         color: Colors.textSecondary,
         marginTop: 2,
     },
-    docDesc: {
-        fontSize: 13,
-        color: Colors.text,
-        marginTop: 6,
-        lineHeight: 18,
-    },
-    docLinkBtn: {
-        flexDirection: 'row',
+    docPreviewWrap: {
+        marginTop: 12,
         alignItems: 'center',
-        gap: 6,
-        marginTop: 10,
-        alignSelf: 'flex-start',
-        backgroundColor: Colors.lightBackground,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: Colors.primary,
     },
-    docLinkText: {
+    docPreviewImage: {
+        width: '100%',
+        height: 220,
+        borderRadius: 8,
+        backgroundColor: Colors.background,
+    },
+    docPreviewFile: {
+        width: '100%',
+        height: 140,
+        borderRadius: 8,
+        backgroundColor: Colors.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    docPreviewFileName: {
         fontSize: 12,
-        color: Colors.primary,
-        fontWeight: '600',
+        color: Colors.text,
+        maxWidth: '80%',
+    },
+    docTapHint: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        marginTop: 8,
+        alignSelf: 'flex-start',
     },
 });
