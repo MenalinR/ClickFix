@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,7 +36,6 @@ function sameDay(a: Date, b: Date) {
 }
 
 export default function ScheduleScreen() {
-  const router = useRouter();
   const { jobs, fetchJobs, token, user } = useStore();
   const workerId = (user as any)?._id || (user as any)?.id;
   const today = new Date();
@@ -43,6 +43,7 @@ export default function ScheduleScreen() {
     new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selected, setSelected] = useState<Date>(today);
+  const [detailJob, setDetailJob] = useState<any | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -237,12 +238,7 @@ export default function ScheduleScreen() {
                 <TouchableOpacity
                   key={id}
                   style={styles.jobRow}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/job-details",
-                      params: { jobId: id },
-                    })
-                  }
+                  onPress={() => setDetailJob(j)}
                 >
                   <View
                     style={[
@@ -269,6 +265,112 @@ export default function ScheduleScreen() {
             })
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!detailJob}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetailJob(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>
+                  {detailJob?.serviceType || "Job"}
+                </Text>
+                <View style={styles.modalStatusRow}>
+                  <View
+                    style={[
+                      styles.jobDot,
+                      { backgroundColor: statusColor(detailJob?.status) },
+                    ]}
+                  />
+                  <Text style={styles.modalStatusText}>
+                    {detailJob?.status || "—"}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setDetailJob(null)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalRow}>
+              <Ionicons
+                name="person-outline"
+                size={16}
+                color={Colors.textSecondary}
+              />
+              <Text style={styles.modalRowText}>
+                {detailJob?.customerId?.name || "Customer"}
+              </Text>
+            </View>
+
+            <View style={styles.modalRow}>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={Colors.textSecondary}
+              />
+              <Text style={styles.modalRowText}>
+                {detailJob
+                  ? new Date(
+                      detailJob.scheduledDate || detailJob.createdAt,
+                    ).toLocaleString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "—"}
+              </Text>
+            </View>
+
+            {!!detailJob?.location?.address && (
+              <View style={styles.modalRow}>
+                <Ionicons
+                  name="location-outline"
+                  size={16}
+                  color={Colors.textSecondary}
+                />
+                <Text style={styles.modalRowText} numberOfLines={2}>
+                  {detailJob.location.address}
+                </Text>
+              </View>
+            )}
+
+            {!!detailJob?.description && (
+              <View style={styles.modalDescBlock}>
+                <Text style={styles.modalDescLabel}>Description</Text>
+                <Text style={styles.modalDescText}>{detailJob.description}</Text>
+              </View>
+            )}
+
+            {!!(
+              detailJob?.pricing?.finalPrice ||
+              detailJob?.pricing?.negotiatedPrice ||
+              detailJob?.pricing?.proposedPrice ||
+              detailJob?.pricing?.totalAmount
+            ) && (
+              <View style={styles.modalPriceBlock}>
+                <Text style={styles.modalPriceLabel}>Price</Text>
+                <Text style={styles.modalPriceValue}>
+                  {detailJob?.pricing?.finalPrice ||
+                    detailJob?.pricing?.negotiatedPrice ||
+                    detailJob?.pricing?.proposedPrice ||
+                    detailJob?.pricing?.totalAmount}{" "}
+                  LKR
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -373,5 +475,93 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: "white",
+    borderRadius: 14,
+    padding: 18,
+    width: "100%",
+    maxWidth: 380,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  modalStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  modalStatusText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
+  modalRowText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.text,
+  },
+  modalDescBlock: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  modalDescLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modalDescText: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 18,
+  },
+  modalPriceBlock: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalPriceLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  modalPriceValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.primary,
   },
 });
