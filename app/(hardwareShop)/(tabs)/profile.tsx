@@ -85,8 +85,9 @@ export default function ProfileScreen() {
         text: "Logout",
         style: "destructive",
         onPress: () => {
+          router.dismissAll();
+          router.replace("/");
           logout();
-          router.replace("/(auth)/hardware-shop" as any);
         },
       },
     ]);
