@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { api, apiCall } from '../../constants/api';
@@ -240,8 +241,50 @@ function UserDetail({ user }: { user: UserRow }) {
             { icon: 'shield-checkmark-outline', label: 'Verified', value: isVerified ? 'Yes' : 'No' },
         );
     }
+
+    const experienceDocs: any[] =
+        user.role === 'worker' && Array.isArray(u.experienceDocuments)
+            ? u.experienceDocuments
+            : [];
+    const educationDocs: any[] =
+        user.role === 'worker' && Array.isArray(u.educationDocuments)
+            ? u.educationDocuments
+            : [];
+
+    const formatDate = (d: any) => {
+        if (!d) return '';
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-GB', {
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
+    const openCertificate = async (url?: string) => {
+        if (!url) {
+            Alert.alert('Unavailable', 'Certificate URL is not available.');
+            return;
+        }
+        try {
+            await WebBrowser.openBrowserAsync(url);
+        } catch {
+            try {
+                await Linking.openURL(url);
+            } catch {
+                Alert.alert('Error', 'Failed to open certificate.');
+            }
+        }
+    };
+
+    const statusColor = (s?: string) => {
+        if (s === 'Verified') return '#2E7D32';
+        if (s === 'Rejected') return '#C62828';
+        return '#F57F17';
+    };
+
     return (
-        <ScrollView style={{ maxHeight: 460 }}>
+        <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
             <View style={styles.detailAvatar}>
                 <Text style={styles.detailAvatarText}>{(u.name || '?').charAt(0)}</Text>
             </View>
@@ -259,6 +302,121 @@ function UserDetail({ user }: { user: UserRow }) {
                     </View>
                 </View>
             ))}
+
+            {user.role === 'worker' && experienceDocs.length > 0 && (
+                <View style={styles.docSection}>
+                    <View style={styles.docSectionHeader}>
+                        <Ionicons name="briefcase" size={16} color={Colors.primary} />
+                        <Text style={styles.docSectionTitle}>Experience</Text>
+                    </View>
+                    {experienceDocs.map((doc, i) => {
+                        const period = [formatDate(doc.issueDate), formatDate(doc.expiryDate)]
+                            .filter(Boolean)
+                            .join(' – ');
+                        return (
+                            <View key={i} style={styles.docCard}>
+                                <View style={styles.docCardHeader}>
+                                    <Text style={styles.docTitle} numberOfLines={2}>
+                                        {doc.title || doc.name || 'Experience'}
+                                    </Text>
+                                    {!!doc.verificationStatus && (
+                                        <View
+                                            style={[
+                                                styles.docStatusBadge,
+                                                { backgroundColor: statusColor(doc.verificationStatus) + '20' },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.docStatusText,
+                                                    { color: statusColor(doc.verificationStatus) },
+                                                ]}
+                                            >
+                                                {doc.verificationStatus}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                                {!!doc.documentType && (
+                                    <Text style={styles.docMeta}>{doc.documentType}</Text>
+                                )}
+                                {!!period && <Text style={styles.docMeta}>{period}</Text>}
+                                {!!doc.description && (
+                                    <Text style={styles.docDesc}>{doc.description}</Text>
+                                )}
+                                {!!doc.url && (
+                                    <TouchableOpacity
+                                        style={styles.docLinkBtn}
+                                        onPress={() => openCertificate(doc.url)}
+                                    >
+                                        <Ionicons name="document-attach-outline" size={14} color={Colors.primary} />
+                                        <Text style={styles.docLinkText}>View certificate</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        );
+                    })}
+                </View>
+            )}
+
+            {user.role === 'worker' && educationDocs.length > 0 && (
+                <View style={styles.docSection}>
+                    <View style={styles.docSectionHeader}>
+                        <Ionicons name="school" size={16} color={Colors.primary} />
+                        <Text style={styles.docSectionTitle}>Education</Text>
+                    </View>
+                    {educationDocs.map((doc, i) => {
+                        const period = [formatDate(doc.startDate), formatDate(doc.endDate)]
+                            .filter(Boolean)
+                            .join(' – ');
+                        return (
+                            <View key={i} style={styles.docCard}>
+                                <View style={styles.docCardHeader}>
+                                    <Text style={styles.docTitle} numberOfLines={2}>
+                                        {doc.name || 'Education'}
+                                    </Text>
+                                    {!!doc.verificationStatus && (
+                                        <View
+                                            style={[
+                                                styles.docStatusBadge,
+                                                { backgroundColor: statusColor(doc.verificationStatus) + '20' },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.docStatusText,
+                                                    { color: statusColor(doc.verificationStatus) },
+                                                ]}
+                                            >
+                                                {doc.verificationStatus}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                                {!!doc.institution && (
+                                    <Text style={styles.docMeta}>{doc.institution}</Text>
+                                )}
+                                {!!doc.documentType && (
+                                    <Text style={styles.docMeta}>{doc.documentType}</Text>
+                                )}
+                                {!!period && <Text style={styles.docMeta}>{period}</Text>}
+                                {!!doc.description && (
+                                    <Text style={styles.docDesc}>{doc.description}</Text>
+                                )}
+                                {!!doc.url && (
+                                    <TouchableOpacity
+                                        style={styles.docLinkBtn}
+                                        onPress={() => openCertificate(doc.url)}
+                                    >
+                                        <Ionicons name="document-attach-outline" size={14} color={Colors.primary} />
+                                        <Text style={styles.docLinkText}>View certificate</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        );
+                    })}
+                </View>
+            )}
         </ScrollView>
     );
 }
@@ -469,5 +627,79 @@ const styles = StyleSheet.create({
         color: Colors.text,
         fontWeight: '500',
         marginTop: 2,
+    },
+    docSection: {
+        marginTop: 16,
+    },
+    docSectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 8,
+    },
+    docSectionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: Colors.text,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    docCard: {
+        backgroundColor: Colors.card,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    docCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        marginBottom: 4,
+    },
+    docTitle: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    docStatusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+    },
+    docStatusText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    docMeta: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        marginTop: 2,
+    },
+    docDesc: {
+        fontSize: 13,
+        color: Colors.text,
+        marginTop: 6,
+        lineHeight: 18,
+    },
+    docLinkBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        alignSelf: 'flex-start',
+        backgroundColor: Colors.lightBackground,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+    },
+    docLinkText: {
+        fontSize: 12,
+        color: Colors.primary,
+        fontWeight: '600',
     },
 });
