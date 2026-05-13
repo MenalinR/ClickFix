@@ -748,12 +748,12 @@ exports.respondHardwareCart = async (req, res) => {
           await createNotification({
             recipient: job.workerId,
             recipientModel: "Worker",
-            type: "JOB_ASSIGNED",
+            type: "HARDWARE_ORDER",
             title: "Customer approved hardware",
             message:
               "You can now place the order at a hardware shop. Final cost is determined by the shop's prices.",
             data: { jobId: job._id, messageId: message._id },
-            actionUrl: "/job-requests",
+            actionUrl: "/chats",
           });
         } catch (e) {
           // non-fatal
@@ -764,11 +764,11 @@ exports.respondHardwareCart = async (req, res) => {
         await createNotification({
           recipient: job.workerId,
           recipientModel: "Worker",
-          type: "JOB_ASSIGNED",
+          type: "HARDWARE_ORDER",
           title: "Hardware declined",
           message: "Customer declined the hardware cart.",
           data: { jobId: job._id, messageId: message._id },
-          actionUrl: "/job-requests",
+          actionUrl: "/chats",
         });
       } catch (e) {
         // non-fatal

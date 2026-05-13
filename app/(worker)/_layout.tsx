@@ -18,21 +18,22 @@ const JOB_NOTIFICATION_TYPES = [
   "JOB_COMPLETED",
   "PAYMENT_RECEIVED",
   "REVIEW_RECEIVED",
-  "HARDWARE_REQUEST",
-  "HARDWARE_ORDER",
   "GENERAL",
 ];
+
+const CHAT_NOTIFICATION_TYPES = ["HARDWARE_REQUEST", "HARDWARE_ORDER"];
 
 export default function WorkerLayout() {
   const { totalUnread } = useChatList();
   const token = useStore((s) => s.token);
   const [unreadJobs, setUnreadJobs] = useState(0);
   const [unreadDocuments, setUnreadDocuments] = useState(0);
+  const [unreadChatNotifs, setUnreadChatNotifs] = useState(0);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const [jobsRes, docsRes] = await Promise.all([
+      const [jobsRes, docsRes, chatRes] = await Promise.all([
         apiCall(
           `${api.notifications.getUnreadCount}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
           "GET",
@@ -45,9 +46,16 @@ export default function WorkerLayout() {
           undefined,
           token,
         ),
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=${CHAT_NOTIFICATION_TYPES.join(",")}`,
+          "GET",
+          undefined,
+          token,
+        ),
       ]);
       setUnreadJobs(jobsRes.count || 0);
       setUnreadDocuments(docsRes.count || 0);
+      setUnreadChatNotifs(chatRes.count || 0);
     } catch (error) {
       console.error("Error fetching notification count:", error);
     }
@@ -70,6 +78,21 @@ export default function WorkerLayout() {
         token,
       );
       setUnreadJobs(0);
+    } catch (error) {
+      console.error("Error marking notifications read:", error);
+    }
+  };
+
+  const handleChatsTabPress = async () => {
+    if (!token || unreadChatNotifs === 0) return;
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=${CHAT_NOTIFICATION_TYPES.join(",")}`,
+        "PUT",
+        undefined,
+        token,
+      );
+      setUnreadChatNotifs(0);
     } catch (error) {
       console.error("Error marking notifications read:", error);
     }
@@ -160,8 +183,16 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
-          tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
+          tabBarBadge:
+            totalUnread + unreadChatNotifs > 0
+              ? totalUnread + unreadChatNotifs
+              : undefined,
           tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
+        }}
+        listeners={{
+          tabPress: () => {
+            handleChatsTabPress();
+          },
         }}
       />
       <Tabs.Screen
