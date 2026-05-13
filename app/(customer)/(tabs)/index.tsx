@@ -23,7 +23,8 @@ export default function CustomerHome() {
     logout();
     setTimeout(() => {
       router.dismissAll();
-      router.replace("/");
+      router.replace("/(auth)/login" as any);
+      setTimeout(() => router.replace("/"), 0);
     }, 0);
   };
   const customerName = (user as any)?.name || "there";
@@ -106,6 +107,10 @@ export default function CustomerHome() {
       activeCategory === "All" || w.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (!user) {
+    return <SafeAreaView style={styles.container} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
