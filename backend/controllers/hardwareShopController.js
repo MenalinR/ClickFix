@@ -287,6 +287,122 @@ exports.uploadItemImage = async (req, res) => {
   }
 };
 
+// Helper: load an order that belongs to the current shop and is in one of `allowedStatuses`.
+async function loadShopOrder(req, allowedStatuses) {
+  const order = await HardwareRequest.findById(req.params.id);
+  if (!order) {
+    return { error: { code: 404, message: "Order not found" } };
+  }
+  const ownedByShop =
+    order.shopId && order.shopId.toString() === req.user._id.toString();
+  if (!ownedByShop) {
+    return { error: { code: 403, message: "Not authorized" } };
+  }
+  if (!allowedStatuses.includes(order.status)) {
+    return {
+      error: {
+        code: 400,
+        message: `Order is in status "${order.status}", expected one of: ${allowedStatuses.join(", ")}`,
+      },
+    };
+  }
+  return { order };
+}
+
+async function notifyWorker(order, title, message) {
+  if (!order.workerId) return;
+  try {
+    const { createNotification } = require("./notificationController");
+    await createNotification({
+      recipient: order.workerId,
+      recipientModel: "Worker",
+      type: "HARDWARE_ORDER",
+      title,
+      message,
+      data: { jobId: order.jobId, requestId: order._id },
+      actionUrl: "/chats",
+    });
+  } catch (e) {
+    // non-fatal
+  }
+}
+
+// @desc    Shop accepts a pending order
+// @route   PUT /api/hardwareShop/orders/:id/accept
+// @access  Private (hardwareShop)
+exports.acceptOrder = async (req, res) => {
+  try {
+    const { order, error } = await loadShopOrder(req, ["pending"]);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    order.status = "approved";
+    await order.save();
+
+    const shop = await HardwareShop.findById(req.user._id).select("shopName");
+    await notifyWorker(
+      order,
+      "Order accepted",
+      `${shop?.shopName || "The shop"} accepted your hardware order.`,
+    );
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Shop rejects a pending order
+// @route   PUT /api/hardwareShop/orders/:id/reject
+// @access  Private (hardwareShop)
+exports.rejectOrder = async (req, res) => {
+  try {
+    const reason = (req.body?.reason || "").toString().trim();
+    const { order, error } = await loadShopOrder(req, ["pending"]);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    order.status = "rejected";
+    if (reason) order.customerNote = reason;
+    await order.save();
+
+    const shop = await HardwareShop.findById(req.user._id).select("shopName");
+    await notifyWorker(
+      order,
+      "Order rejected",
+      reason
+        ? `${shop?.shopName || "The shop"} rejected your order: ${reason}`
+        : `${shop?.shopName || "The shop"} rejected your hardware order.`,
+    );
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Shop marks order as packing
+// @route   PUT /api/hardwareShop/orders/:id/mark-packing
+// @access  Private (hardwareShop)
+exports.markPacking = async (req, res) => {
+  try {
+    const { order, error } = await loadShopOrder(req, ["approved"]);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    order.status = "packing";
+    await order.save();
+
+    const shop = await HardwareShop.findById(req.user._id).select("shopName");
+    await notifyWorker(
+      order,
+      "Order is being packed",
+      `${shop?.shopName || "The shop"} is packing your order.`,
+    );
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get hardware orders for shop
 // @route   GET /api/hardwareShop/orders
 // @access  Private (hardwareShop)

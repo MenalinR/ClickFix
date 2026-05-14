@@ -6,18 +6,31 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type OrderStatus =
+  | "pending"
+  | "approved"
+  | "packing"
+  | "ready"
+  | "picked_up"
+  | "rejected"
+  | "delivered";
+
 interface Order {
   _id: string;
-  status: "pending" | "approved" | "rejected" | "delivered";
+  status: OrderStatus;
   totalCost: number;
   items: Array<{ name: string; quantity: number; price: number }>;
   workerId: { name: string; phone: string };
@@ -31,8 +44,11 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const [rejectFor, setRejectFor] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
-  const statuses = ["pending", "approved", "delivered"];
+  const statuses = ["pending", "approved", "packing", "delivered"];
 
   const fetchOrders = async () => {
     try {
@@ -71,11 +87,141 @@ export default function OrdersScreen() {
         return "#FF9800";
       case "approved":
         return "#4CAF50";
+      case "packing":
+        return "#8E24AA";
+      case "ready":
+        return "#0288D1";
+      case "picked_up":
       case "delivered":
         return "#2196F3";
+      case "rejected":
+        return "#C62828";
       default:
         return "#999";
     }
+  };
+
+  const prettyStatus = (status: string) =>
+    status === "picked_up"
+      ? "Picked Up"
+      : status.charAt(0).toUpperCase() + status.slice(1);
+
+  const runAction = async (
+    orderId: string,
+    url: string,
+    body?: any,
+    successMessage?: string,
+  ) => {
+    if (!token) return;
+    try {
+      setBusyOrderId(orderId);
+      const res = await apiCall(url, "PUT", body, token);
+      if (!res.success) {
+        Alert.alert("Error", res.message || "Failed to update order");
+        return;
+      }
+      if (successMessage) Alert.alert("Done", successMessage);
+      await fetchOrders();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to update order");
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const handleAccept = (orderId: string) =>
+    runAction(
+      orderId,
+      api.hardwareShop.acceptOrder(orderId),
+      undefined,
+      "Order accepted. The worker has been notified.",
+    );
+
+  const handleMarkPacking = (orderId: string) =>
+    runAction(
+      orderId,
+      api.hardwareShop.markPacking(orderId),
+      undefined,
+      "Marked as packing. The worker has been notified.",
+    );
+
+  const submitReject = async () => {
+    if (!rejectFor) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      Alert.alert("Reason required", "Please tell the worker why.");
+      return;
+    }
+    await runAction(
+      rejectFor,
+      api.hardwareShop.rejectOrder(rejectFor),
+      { reason },
+      "Order rejected. The worker has been notified.",
+    );
+    setRejectFor(null);
+    setRejectReason("");
+  };
+
+  const renderActions = (item: Order) => {
+    const isBusy = busyOrderId === item._id;
+    if (item.status === "pending") {
+      return (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.rejectBtn]}
+            disabled={isBusy}
+            onPress={() => {
+              setRejectReason("");
+              setRejectFor(item._id);
+            }}
+          >
+            {isBusy ? (
+              <ActivityIndicator size="small" color="#C62828" />
+            ) : (
+              <>
+                <Ionicons name="close-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.rejectBtnText}>Reject</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.acceptBtn]}
+            disabled={isBusy}
+            onPress={() => handleAccept(item._id)}
+          >
+            {isBusy ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={16} color="white" />
+                <Text style={styles.acceptBtnText}>Accept</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (item.status === "approved") {
+      return (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.packingBtn]}
+            disabled={isBusy}
+            onPress={() => handleMarkPacking(item._id)}
+          >
+            {isBusy ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="cube-outline" size={16} color="white" />
+                <Text style={styles.acceptBtnText}>Mark Packing</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return null;
   };
 
   const renderOrder = ({ item }: { item: Order }) => (
@@ -93,9 +239,7 @@ export default function OrdersScreen() {
             { backgroundColor: getStatusColor(item.status) },
           ]}
         >
-          <Text style={styles.statusText}>
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
+          <Text style={styles.statusText}>{prettyStatus(item.status)}</Text>
         </View>
       </View>
 
@@ -128,6 +272,8 @@ export default function OrdersScreen() {
           </Text>
         ))}
       </View>
+
+      {renderActions(item)}
     </View>
   );
 
@@ -175,6 +321,50 @@ export default function OrdersScreen() {
           </Pressable>
         ))}
       </View>
+
+      <Modal
+        visible={!!rejectFor}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRejectFor(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Reject order</Text>
+            <Text style={styles.modalSubtitle}>
+              Tell the worker why you can&apos;t fulfill this order.
+            </Text>
+            <TextInput
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              placeholder="e.g. Out of stock"
+              placeholderTextColor={Colors.textSecondary}
+              style={styles.modalInput}
+              multiline
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalCancel]}
+                onPress={() => setRejectFor(null)}
+                disabled={busyOrderId === rejectFor}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalReject]}
+                onPress={submitReject}
+                disabled={busyOrderId === rejectFor}
+              >
+                {busyOrderId === rejectFor ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.modalRejectText}>Reject order</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {loading ? (
         <View style={styles.centerContent}>
@@ -345,4 +535,79 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  rejectBtn: {
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#EF9A9A",
+  },
+  rejectBtnText: { color: "#C62828", fontWeight: "600", fontSize: 13 },
+  acceptBtn: { backgroundColor: "#2E7D32" },
+  acceptBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
+  packingBtn: { backgroundColor: "#8E24AA" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+    maxWidth: 360,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 14,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 80,
+    color: Colors.text,
+    fontSize: 14,
+    textAlignVertical: "top",
+    marginBottom: 16,
+  },
+  modalActions: { flexDirection: "row", gap: 10 },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancel: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalCancelText: { color: Colors.text, fontWeight: "600" },
+  modalReject: { backgroundColor: "#C62828" },
+  modalRejectText: { color: "white", fontWeight: "600" },
 });

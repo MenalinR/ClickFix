@@ -10,6 +10,9 @@ const {
   uploadItemImage,
   uploadShopImage,
   markOrdersViewed,
+  acceptOrder,
+  rejectOrder,
+  markPacking,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -52,5 +55,8 @@ router.delete("/items/:id", deleteItem);
 router.get("/stats", getStats);
 router.get("/orders", getOrders);
 router.put("/orders/mark-viewed", markOrdersViewed);
+router.put("/orders/:id/accept", acceptOrder);
+router.put("/orders/:id/reject", rejectOrder);
+router.put("/orders/:id/mark-packing", markPacking);
 
 module.exports = router;

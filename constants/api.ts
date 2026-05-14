@@ -144,6 +144,12 @@ export const api = {
     getStats: `${API_URL}/hardwareShop/stats`,
     getOrders: `${API_URL}/hardwareShop/orders`,
     markOrdersViewed: `${API_URL}/hardwareShop/orders/mark-viewed`,
+    acceptOrder: (id: string) =>
+      `${API_URL}/hardwareShop/orders/${id}/accept`,
+    rejectOrder: (id: string) =>
+      `${API_URL}/hardwareShop/orders/${id}/reject`,
+    markPacking: (id: string) =>
+      `${API_URL}/hardwareShop/orders/${id}/mark-packing`,
   },
 
   // Health
