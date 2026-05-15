@@ -21,19 +21,19 @@ const JOB_NOTIFICATION_TYPES = [
   "GENERAL",
 ];
 
-const CHAT_NOTIFICATION_TYPES = ["HARDWARE_REQUEST", "HARDWARE_ORDER"];
+const HARDWARE_NOTIFICATION_TYPES = ["HARDWARE_REQUEST", "HARDWARE_ORDER"];
 
 export default function WorkerLayout() {
   const { totalUnread } = useChatList();
   const token = useStore((s) => s.token);
   const [unreadJobs, setUnreadJobs] = useState(0);
   const [unreadDocuments, setUnreadDocuments] = useState(0);
-  const [unreadChatNotifs, setUnreadChatNotifs] = useState(0);
+  const [unreadHardware, setUnreadHardware] = useState(0);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const [jobsRes, docsRes, chatRes] = await Promise.all([
+      const [jobsRes, docsRes, hwRes] = await Promise.all([
         apiCall(
           `${api.notifications.getUnreadCount}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
           "GET",
@@ -47,7 +47,7 @@ export default function WorkerLayout() {
           token,
         ),
         apiCall(
-          `${api.notifications.getUnreadCount}?types=${CHAT_NOTIFICATION_TYPES.join(",")}`,
+          `${api.notifications.getUnreadCount}?types=${HARDWARE_NOTIFICATION_TYPES.join(",")}`,
           "GET",
           undefined,
           token,
@@ -55,7 +55,7 @@ export default function WorkerLayout() {
       ]);
       setUnreadJobs(jobsRes.count || 0);
       setUnreadDocuments(docsRes.count || 0);
-      setUnreadChatNotifs(chatRes.count || 0);
+      setUnreadHardware(hwRes.count || 0);
     } catch (error) {
       console.error("Error fetching notification count:", error);
     }
@@ -83,16 +83,16 @@ export default function WorkerLayout() {
     }
   };
 
-  const handleChatsTabPress = async () => {
-    if (!token || unreadChatNotifs === 0) return;
+  const handleHardwareTabPress = async () => {
+    if (!token || unreadHardware === 0) return;
     try {
       await apiCall(
-        `${api.notifications.markAllAsRead}?types=${CHAT_NOTIFICATION_TYPES.join(",")}`,
+        `${api.notifications.markAllAsRead}?types=${HARDWARE_NOTIFICATION_TYPES.join(",")}`,
         "PUT",
         undefined,
         token,
       );
-      setUnreadChatNotifs(0);
+      setUnreadHardware(0);
     } catch (error) {
       console.error("Error marking notifications read:", error);
     }
@@ -183,15 +183,23 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
-          tabBarBadge:
-            totalUnread + unreadChatNotifs > 0
-              ? totalUnread + unreadChatNotifs
-              : undefined,
+          tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
+        }}
+      />
+      <Tabs.Screen
+        name="hardware-updates"
+        options={{
+          title: "Hardware",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cube-outline" size={size} color={color} />
+          ),
+          tabBarBadge: unreadHardware > 0 ? unreadHardware : undefined,
           tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
         }}
         listeners={{
           tabPress: () => {
-            handleChatsTabPress();
+            handleHardwareTabPress();
           },
         }}
       />

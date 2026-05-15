@@ -753,7 +753,7 @@ exports.respondHardwareCart = async (req, res) => {
             message:
               "You can now place the order at a hardware shop. Final cost is determined by the shop's prices.",
             data: { jobId: job._id, messageId: message._id },
-            actionUrl: "/chats",
+            actionUrl: "/hardware-updates",
           });
         } catch (e) {
           // non-fatal
@@ -768,7 +768,7 @@ exports.respondHardwareCart = async (req, res) => {
           title: "Hardware declined",
           message: "Customer declined the hardware cart.",
           data: { jobId: job._id, messageId: message._id },
-          actionUrl: "/chats",
+          actionUrl: "/hardware-updates",
         });
       } catch (e) {
         // non-fatal

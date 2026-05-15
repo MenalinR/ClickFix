@@ -320,7 +320,7 @@ async function notifyWorker(order, title, message) {
       title,
       message,
       data: { jobId: order.jobId, requestId: order._id },
-      actionUrl: "/chats",
+      actionUrl: "/hardware-updates",
     });
   } catch (e) {
     // non-fatal

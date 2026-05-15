@@ -299,6 +299,7 @@ exports.getHardwareRequests = async (req, res) => {
       .populate("jobId", "serviceType status")
       .populate("workerId", "name phone")
       .populate("customerId", "name phone")
+      .populate("shopId", "shopName phone address city")
       .sort("-createdAt");
 
     res.status(200).json({
