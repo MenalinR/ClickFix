@@ -351,23 +351,29 @@ export default function ScheduleScreen() {
               </View>
             )}
 
-            {!!(
-              detailJob?.pricing?.finalPrice ||
-              detailJob?.pricing?.negotiatedPrice ||
-              detailJob?.pricing?.proposedPrice ||
-              detailJob?.pricing?.totalAmount
-            ) && (
-              <View style={styles.modalPriceBlock}>
-                <Text style={styles.modalPriceLabel}>Price</Text>
-                <Text style={styles.modalPriceValue}>
-                  {detailJob?.pricing?.finalPrice ||
-                    detailJob?.pricing?.negotiatedPrice ||
-                    detailJob?.pricing?.proposedPrice ||
-                    detailJob?.pricing?.totalAmount}{" "}
-                  LKR
-                </Text>
-              </View>
-            )}
+            {(() => {
+              const status = (detailJob?.status || "").toLowerCase();
+              const isFinalized =
+                status !== "pending" &&
+                status !== "worker accepted" &&
+                status !== "negotiating";
+              const price = isFinalized
+                ? detailJob?.pricing?.totalAmount ||
+                  detailJob?.pricing?.serviceCharge
+                : detailJob?.pricing?.negotiatedPrice ||
+                  detailJob?.pricing?.proposedPrice ||
+                  detailJob?.pricing?.totalAmount ||
+                  detailJob?.pricing?.serviceCharge;
+              if (!price) return null;
+              return (
+                <View style={styles.modalPriceBlock}>
+                  <Text style={styles.modalPriceLabel}>
+                    {isFinalized ? "Agreed Price" : "Price"}
+                  </Text>
+                  <Text style={styles.modalPriceValue}>{price} LKR</Text>
+                </View>
+              );
+            })()}
           </View>
         </View>
       </Modal>
