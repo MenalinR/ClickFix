@@ -35,6 +35,49 @@ function sameDay(a: Date, b: Date) {
   );
 }
 
+type CountdownKind = "overdue" | "today" | "soon" | "future" | "done";
+
+function getCountdown(
+  scheduledDate: string | Date | undefined,
+  status: string,
+): { label: string; kind: CountdownKind } | null {
+  if (!scheduledDate) return null;
+  const date = new Date(scheduledDate);
+  if (isNaN(date.getTime())) return null;
+
+  const s = (status || "").toLowerCase();
+  if (
+    s === "completed" ||
+    s === "cancelled" ||
+    s === "rejected" ||
+    s === "denied"
+  ) {
+    return null;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  const days = Math.round(
+    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (days < 0) return { label: "Overdue", kind: "overdue" };
+  if (days === 0) return { label: "Today", kind: "today" };
+  if (days === 1) return { label: "Tomorrow", kind: "soon" };
+  return { label: `In ${days} days`, kind: "future" };
+}
+
+const countdownColor = (kind: CountdownKind): string => {
+  if (kind === "overdue") return "#C62828";
+  if (kind === "today") return "#E65100";
+  if (kind === "soon") return "#1565C0";
+  if (kind === "future") return "#2E7D32";
+  return "#2E7D32";
+};
+
 export default function ScheduleScreen() {
   const { jobs, fetchJobs, token, user } = useStore();
   const workerId = (user as any)?._id || (user as any)?.id;
@@ -234,6 +277,10 @@ export default function ScheduleScreen() {
             .map((j: any) => {
               const id = j._id || j.id;
               const customerName = j.customerId?.name || "Customer";
+              const countdown = getCountdown(
+                j.scheduledDate || j.createdAt,
+                j.status,
+              );
               return (
                 <TouchableOpacity
                   key={id}
@@ -255,6 +302,23 @@ export default function ScheduleScreen() {
                       {customerName} · {j.status}
                     </Text>
                   </View>
+                  {countdown && (
+                    <View
+                      style={[
+                        styles.countdownBadge,
+                        { backgroundColor: countdownColor(countdown.kind) + "20" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.countdownText,
+                          { color: countdownColor(countdown.kind) },
+                        ]}
+                      >
+                        {countdown.label}
+                      </Text>
+                    </View>
+                  )}
                   <Ionicons
                     name="chevron-forward"
                     size={18}
@@ -330,6 +394,27 @@ export default function ScheduleScreen() {
                   : "—"}
               </Text>
             </View>
+
+            {(() => {
+              const cd = getCountdown(
+                detailJob?.scheduledDate || detailJob?.createdAt,
+                detailJob?.status,
+              );
+              if (!cd) return null;
+              const color = countdownColor(cd.kind);
+              return (
+                <View style={styles.modalRow}>
+                  <Ionicons
+                    name={cd.kind === "overdue" ? "alert-circle-outline" : "hourglass-outline"}
+                    size={16}
+                    color={color}
+                  />
+                  <Text style={[styles.modalRowText, { color, fontWeight: "700" }]}>
+                    {cd.label}
+                  </Text>
+                </View>
+              );
+            })()}
 
             {!!detailJob?.location?.address && (
               <View style={styles.modalRow}>
@@ -481,6 +566,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  countdownBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 6,
+  },
+  countdownText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,
