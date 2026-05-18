@@ -253,9 +253,6 @@ export default function BookingsScreen() {
             <Text style={styles.emptyStateSubtext}>
               Your {selectedFilter.toLowerCase()} bookings will appear here
             </Text>
-            <TouchableOpacity style={styles.browseButton}>
-              <Text style={styles.browseButtonText}>Browse Services</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
