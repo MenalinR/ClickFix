@@ -16,6 +16,9 @@ export const api = {
     hardwareShopRegister: `${API_URL}/auth/hardwareShop/register`,
     hardwareShopLogin: `${API_URL}/auth/hardwareShop/login`,
     getMe: `${API_URL}/auth/me`,
+    adminUpdateProfile: `${API_URL}/auth/admin/profile`,
+    adminChangePassword: `${API_URL}/auth/admin/password`,
+    adminNotificationPreferences: `${API_URL}/auth/admin/notification-preferences`,
   },
 
   // Workers

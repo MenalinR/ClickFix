@@ -341,6 +341,126 @@ exports.loginHardwareShop = async (req, res) => {
   }
 };
 
+// @desc    Update admin profile (name, email, phone)
+// @route   PUT /api/auth/admin/profile
+// @access  Private (Admin)
+exports.updateAdminProfile = async (req, res) => {
+  try {
+    if (req.userType !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+    const { name, email, phone } = req.body;
+    const update = {};
+    if (typeof name === "string" && name.trim()) update.name = name.trim();
+    if (typeof email === "string" && email.trim()) {
+      update.email = email.trim().toLowerCase();
+    }
+    if (typeof phone === "string") update.phone = phone.trim();
+
+    if (update.email) {
+      const existing = await Admin.findOne({
+        email: update.email,
+        _id: { $ne: req.user._id },
+      });
+      if (existing) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email already in use" });
+      }
+    }
+
+    const admin = await Admin.findByIdAndUpdate(req.user._id, update, {
+      new: true,
+      runValidators: true,
+    });
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
+    }
+    res.status(200).json({ success: true, data: admin });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Change admin password
+// @route   PUT /api/auth/admin/password
+// @access  Private (Admin)
+exports.changeAdminPassword = async (req, res) => {
+  try {
+    if (req.userType !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current and new password are required",
+      });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters",
+      });
+    }
+    const admin = await Admin.findById(req.user._id).select("+password");
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
+    }
+    const isMatch = await admin.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
+    }
+    admin.password = newPassword;
+    await admin.save();
+    res
+      .status(200)
+      .json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update admin notification preferences
+// @route   PUT /api/auth/admin/notification-preferences
+// @access  Private (Admin)
+exports.updateAdminNotificationPreferences = async (req, res) => {
+  try {
+    if (req.userType !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+    const { newDocuments, newBookings, newShops } = req.body;
+    const prefs = {};
+    if (typeof newDocuments === "boolean") prefs.newDocuments = newDocuments;
+    if (typeof newBookings === "boolean") prefs.newBookings = newBookings;
+    if (typeof newShops === "boolean") prefs.newShops = newShops;
+
+    const admin = await Admin.findById(req.user._id);
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
+    }
+    admin.notificationPreferences = {
+      ...admin.notificationPreferences?.toObject?.(),
+      ...prefs,
+    };
+    await admin.save();
+    res.status(200).json({
+      success: true,
+      data: admin.notificationPreferences,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private

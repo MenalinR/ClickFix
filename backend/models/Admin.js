@@ -21,6 +21,11 @@ const adminSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     role: {
       type: String,
       default: "admin",
@@ -32,6 +37,11 @@ const adminSchema = new mongoose.Schema(
     },
     lastLogin: {
       type: Date,
+    },
+    notificationPreferences: {
+      newDocuments: { type: Boolean, default: true },
+      newBookings: { type: Boolean, default: true },
+      newShops: { type: Boolean, default: true },
     },
   },
   {
