@@ -200,7 +200,6 @@ export default function AdminSettings() {
             <Ionicons name="hammer" size={32} color={Colors.background} />
           </View>
           <Text style={styles.appName}>ClickFix Admin</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
         </View>
 
         {/* Account */}
