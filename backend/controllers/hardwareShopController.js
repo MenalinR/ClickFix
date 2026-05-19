@@ -24,6 +24,41 @@ exports.listShops = async (req, res) => {
   }
 };
 
+// @desc    Admin: list all hardware shops
+// @route   GET /api/hardwareShop/admin/shops
+// @access  Private (Admin)
+exports.adminListShops = async (req, res) => {
+  try {
+    const shops = await HardwareShop.find()
+      .select("-password")
+      .sort("shopName");
+    res.status(200).json({
+      success: true,
+      count: shops.length,
+      data: shops,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Admin: delete a hardware shop
+// @route   DELETE /api/hardwareShop/admin/shops/:id
+// @access  Private (Admin)
+exports.adminDeleteShop = async (req, res) => {
+  try {
+    const shop = await HardwareShop.findByIdAndDelete(req.params.id);
+    if (!shop) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Hardware shop not found" });
+    }
+    res.status(200).json({ success: true, message: "Hardware shop deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get all items for hardware shop
 // @route   GET /api/hardwareShop/items
 // @access  Private (hardwareShop)

@@ -13,6 +13,8 @@ const {
   acceptOrder,
   rejectOrder,
   markPacking,
+  adminListShops,
+  adminDeleteShop,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -21,6 +23,10 @@ const router = express.Router();
 
 // Public list of shops (any authenticated user, e.g. worker picking a shop)
 router.get("/list", protect, listShops);
+
+// Admin routes
+router.get("/admin/shops", protect, authorize("admin"), adminListShops);
+router.delete("/admin/shops/:id", protect, authorize("admin"), adminDeleteShop);
 
 // All other routes require hardwareShop authentication
 router.use(protect, authorize("hardwareShop"));

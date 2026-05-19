@@ -55,6 +55,9 @@ export const api = {
     setWorkerActive: (id: string) => `${API_URL}/workers/${id}/active`,
     deleteCustomer: (id: string) => `${API_URL}/customers/${id}`,
     setCustomerActive: (id: string) => `${API_URL}/customers/${id}/active`,
+    listHardwareShops: `${API_URL}/hardwareShop/admin/shops`,
+    deleteHardwareShop: (id: string) =>
+      `${API_URL}/hardwareShop/admin/shops/${id}`,
   },
 
   // Notifications
