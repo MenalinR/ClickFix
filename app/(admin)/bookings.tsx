@@ -80,12 +80,24 @@ export default function AdminBookings() {
     });
   };
 
-  const priceOf = (b: any) =>
-    b?.pricing?.finalPrice ||
-    b?.pricing?.negotiatedPrice ||
-    b?.pricing?.proposedPrice ||
-    b?.pricing?.totalAmount ||
-    0;
+  const priceOf = (b: any) => {
+    const status = (b?.status || "").toLowerCase();
+    if (status === "pending") return 0;
+    const isFinalized =
+      status !== "worker accepted" && status !== "negotiating";
+    if (isFinalized) {
+      return (
+        b?.pricing?.totalAmount ||
+        b?.pricing?.serviceCharge ||
+        0
+      );
+    }
+    return (
+      b?.pricing?.negotiatedPrice ||
+      b?.pricing?.proposedPrice ||
+      0
+    );
+  };
 
   const shortId = (id: string) =>
     id ? id.slice(-6).toUpperCase() : "—";
@@ -276,7 +288,7 @@ export default function AdminBookings() {
                       color={Colors.textSecondary}
                     />
                     <Text style={styles.detailText}>
-                      Amount: {amount ? `${amount} LKR` : "—"}
+                      Amount: {amount || 0} LKR
                     </Text>
                   </View>
                 </View>
