@@ -186,15 +186,26 @@ export const apiCall = async (
       body: data ? JSON.stringify(data) : undefined,
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result: any = null;
+    if (text) {
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = null;
+      }
+    }
 
     if (!response.ok) {
-      console.error(`❌ API Error [${response.status}]:`, result.message);
-      throw new Error(result.message || "API Error");
+      const message =
+        (result && result.message) ||
+        `${response.status} ${response.statusText || "Request failed"}`;
+      console.error(`❌ API Error [${response.status}]:`, message);
+      throw new Error(message);
     }
 
     console.log(`✅ API Success: ${method} ${url}`);
-    return result;
+    return result ?? { success: true };
   } catch (error: any) {
     console.error(`❌ Network Error: ${error.message}`, { url, method });
     if (error.message === "Network request failed") {
