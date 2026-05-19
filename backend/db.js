@@ -75,6 +75,29 @@ const initializeDatabase = async () => {
       }
     }
 
+    // Ensure a default admin account exists. Idempotent — only creates one
+    // if no admin with this email is found. Lets the app boot with working
+    // admin credentials on a fresh database (e.g. Render's production DB).
+    try {
+      const Admin = require("./models/Admin");
+      const email =
+        process.env.SEED_ADMIN_EMAIL || "admin@clickfix.com";
+      const existing = await Admin.findOne({ email });
+      if (!existing) {
+        const password = process.env.SEED_ADMIN_PASSWORD || "admin123";
+        await new Admin({
+          name: "System Admin",
+          email,
+          password,
+          role: "admin",
+          isActive: true,
+        }).save();
+        console.log(`✅ Seeded default admin: ${email}`);
+      }
+    } catch (e) {
+      console.error("⚠️  Default admin seed skipped:", e.message);
+    }
+
     console.log("\n✨ Database initialization completed!");
   } catch (error) {
     console.error("❌ Database initialization error:", error.message);
