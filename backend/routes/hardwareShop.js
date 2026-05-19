@@ -15,6 +15,7 @@ const {
   markPacking,
   adminListShops,
   adminDeleteShop,
+  updateShopProfile,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -31,7 +32,8 @@ router.delete("/admin/shops/:id", protect, authorize("admin"), adminDeleteShop);
 // All other routes require hardwareShop authentication
 router.use(protect, authorize("hardwareShop"));
 
-// Profile image
+// Profile
+router.put("/profile", updateShopProfile);
 router.post(
   "/upload-image",
   (req, res, next) => {

@@ -1,4 +1,4 @@
-import { api } from "@/constants/api";
+import { api, apiCall } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const shop = user as any;
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Edit form state
   const [editShopName, setEditShopName] = useState(shop?.shopName || "");
@@ -93,10 +94,36 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleSaveProfile = () => {
-    // TODO: Implement API call to update shop profile
-    Alert.alert("Info", "Profile update functionality coming soon");
-    setEditModalVisible(false);
+  const handleSaveProfile = async () => {
+    if (!token) return;
+    const shopName = editShopName.trim();
+    if (!shopName) {
+      Alert.alert("Required", "Shop name cannot be empty.");
+      return;
+    }
+    try {
+      setSavingProfile(true);
+      const res = await apiCall(
+        api.hardwareShop.updateProfile,
+        "PUT",
+        {
+          shopName,
+          phone: editPhone.trim(),
+          address: editAddress.trim(),
+          city: editCity.trim(),
+        },
+        token,
+      );
+      if (!res?.success) {
+        throw new Error(res?.message || "Update failed");
+      }
+      setUser({ ...(user as any), ...res.data });
+      setEditModalVisible(false);
+    } catch (e: any) {
+      Alert.alert("Update failed", e?.message || "Could not update profile");
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const openEditModal = () => {
@@ -197,12 +224,19 @@ export default function ProfileScreen() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable onPress={() => setEditModalVisible(false)}>
+            <Pressable
+              onPress={() => setEditModalVisible(false)}
+              disabled={savingProfile}
+            >
               <Text style={styles.cancelButton}>Cancel</Text>
             </Pressable>
             <Text style={styles.modalTitle}>Edit Profile</Text>
-            <Pressable onPress={handleSaveProfile}>
-              <Text style={styles.saveButton}>Save</Text>
+            <Pressable onPress={handleSaveProfile} disabled={savingProfile}>
+              {savingProfile ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Text style={styles.saveButton}>Save</Text>
+              )}
             </Pressable>
           </View>
 

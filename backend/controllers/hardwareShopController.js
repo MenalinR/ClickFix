@@ -294,6 +294,42 @@ exports.uploadShopImage = async (req, res) => {
   }
 };
 
+// @desc    Update hardware shop profile
+// @route   PUT /api/hardwareShop/profile
+// @access  Private (hardwareShop)
+exports.updateShopProfile = async (req, res) => {
+  try {
+    const allowed = ["shopName", "phone", "address", "city"];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        const value = String(req.body[key]).trim();
+        if (key === "shopName" && !value) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Shop name cannot be empty" });
+        }
+        updates[key] = value;
+      }
+    }
+
+    const shop = await HardwareShop.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!shop) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Shop not found" });
+    }
+
+    res.status(200).json({ success: true, data: shop });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Upload an image for a hardware item
 // @route   POST /api/hardwareShop/items/upload-image
 // @access  Private (hardwareShop)

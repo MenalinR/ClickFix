@@ -141,6 +141,7 @@ export const api = {
   // Hardware Shop
   hardwareShop: {
     list: `${API_URL}/hardwareShop/list`,
+    updateProfile: `${API_URL}/hardwareShop/profile`,
     uploadShopImage: `${API_URL}/hardwareShop/upload-image`,
     getItems: `${API_URL}/hardwareShop/items`,
     addItem: `${API_URL}/hardwareShop/items`,
