@@ -313,9 +313,12 @@ exports.uploadIDProof = async (req, res) => {
 
     await worker.save();
 
-    // Create notification for all admins
+    // Create notification for admins who opted in to document uploads
     try {
-      const admins = await Admin.find({ isActive: true });
+      const admins = await Admin.find({
+        isActive: true,
+        "notificationPreferences.newDocuments": { $ne: false },
+      });
       const notificationPromises = admins.map((admin) =>
         createNotification({
           recipient: admin._id,

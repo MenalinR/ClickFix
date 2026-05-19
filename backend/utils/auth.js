@@ -45,6 +45,7 @@ exports.sendTokenResponse = (user, statusCode, res, userType) => {
         role: user.role,
         isActive: user.isActive,
         lastLogin: user.lastLogin,
+        notificationPreferences: user.notificationPreferences,
       }),
       ...(userType === "hardwareShop" && {
         shopName: user.shopName,
