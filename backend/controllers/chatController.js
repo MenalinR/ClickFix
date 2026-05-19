@@ -135,25 +135,30 @@ exports.getChats = async (req, res) => {
 
     // Group by chatId and get last message
     const chats = {};
+    const myIdStr = req.user._id.toString();
     messages.forEach((message) => {
+      // Skip messages whose sender or receiver has been deleted —
+      // populate() returns null for missing refs, and reading ._id
+      // on null would crash the whole request.
+      if (!message.senderId || !message.receiverId) return;
+
+      const senderIdStr = message.senderId._id?.toString();
+      const receiverIdStr = message.receiverId._id?.toString();
+      if (!senderIdStr || !receiverIdStr) return;
+
       if (!chats[message.chatId]) {
         chats[message.chatId] = {
           chatId: message.chatId,
           lastMessage: message,
           otherUser:
-            message.senderId._id.toString() === req.user._id.toString()
-              ? message.receiverId
-              : message.senderId,
+            senderIdStr === myIdStr ? message.receiverId : message.senderId,
           job: message.jobId,
           unreadCount: 0,
         };
       }
 
       // Count unread messages
-      if (
-        message.receiverId._id.toString() === req.user._id.toString() &&
-        message.status !== "read"
-      ) {
+      if (receiverIdStr === myIdStr && message.status !== "read") {
         chats[message.chatId].unreadCount++;
       }
     });
