@@ -149,18 +149,10 @@ export default function AdminHardwareShops() {
                   </Text>
                   <View style={styles.shopStats}>
                     <Ionicons
-                      name={
-                        shop.verified
-                          ? "shield-checkmark"
-                          : "shield-outline"
-                      }
+                      name="power-outline"
                       size={14}
-                      color={shop.verified ? "#4CAF50" : Colors.textSecondary}
+                      color={shop.isActive ? "#4CAF50" : Colors.textSecondary}
                     />
-                    <Text style={styles.shopMeta}>
-                      {shop.verified ? "Verified" : "Unverified"}
-                    </Text>
-                    <Text style={styles.shopDivider}>•</Text>
                     <Text style={styles.shopMeta}>
                       {shop.isActive ? "Active" : "Inactive"}
                     </Text>
@@ -230,11 +222,6 @@ export default function AdminHardwareShops() {
                     icon: "document-text-outline",
                     label: "License Number",
                     value: selectedShop.licenseNumber || "—",
-                  },
-                  {
-                    icon: "shield-checkmark-outline",
-                    label: "Verified",
-                    value: selectedShop.verified ? "Yes" : "No",
                   },
                   {
                     icon: "power-outline",
