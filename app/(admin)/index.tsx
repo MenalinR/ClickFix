@@ -1,9 +1,7 @@
-import { api, apiCall } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,8 +15,6 @@ import { useStore } from "../../constants/Store";
 export default function AdminDashboard() {
   const router = useRouter();
   const { workers, jobs, token, logout, fetchWorkers, fetchJobs } = useStore();
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(true);
 
   const handleGoLanding = () => {
     router.dismissAll();
@@ -70,52 +66,6 @@ export default function AdminDashboard() {
       color: "#4CAF50",
     },
   ];
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [token]);
-
-  const fetchNotifications = async () => {
-    if (!token) return;
-
-    try {
-      setLoadingNotifications(true);
-      const response = await apiCall(
-        api.notifications.getAll,
-        "GET",
-        undefined,
-        token,
-      );
-
-      setNotifications(response.data || []);
-    } catch (error) {
-      console.error("Error fetching admin notifications:", error);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
-
-  const recentActivity = useMemo(
-    () =>
-      notifications
-        .filter(
-          (notification) =>
-            notification.type === "DOCUMENT_UPLOADED" ||
-            notification.type === "DOCUMENT_VERIFIED" ||
-            notification.type === "DOCUMENT_REJECTED",
-        )
-        .slice(0, 5)
-        .map((notification) => ({
-          id: notification._id,
-          type: notification.type,
-          text: notification.message,
-          time: formatRelativeTime(notification.createdAt),
-          unread: !notification.read,
-        })),
-    [notifications],
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -193,75 +143,9 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Recent Activity */}
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <View style={styles.activityContainer}>
-          {loadingNotifications ? (
-            <View style={styles.emptyActivityState}>
-              <ActivityIndicator color={Colors.primary} />
-            </View>
-          ) : recentActivity.length > 0 ? (
-            recentActivity.map((activity) => (
-              <TouchableOpacity
-                key={activity.id}
-                style={styles.activityItem}
-                activeOpacity={0.85}
-                onPress={() => router.push("/(admin)/documents")}
-              >
-                <View style={styles.activityIcon}>
-                  <Ionicons
-                    name={getActivityIcon(activity.type)}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityText}>{activity.text}</Text>
-                  <Text style={styles.activityTime}>{activity.time}</Text>
-                </View>
-                {activity.unread ? <View style={styles.unreadDot} /> : null}
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyActivityState}>
-              <Text style={styles.emptyActivityText}>
-                No verification notifications yet
-              </Text>
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function getActivityIcon(type: string) {
-  switch (type) {
-    case "DOCUMENT_UPLOADED":
-      return "document-text";
-    case "DOCUMENT_VERIFIED":
-      return "checkmark-circle";
-    case "DOCUMENT_REJECTED":
-      return "close-circle";
-    default:
-      return "notifications";
-  }
-}
-
-function formatRelativeTime(dateString: string) {
-  const date = new Date(dateString);
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
-
-  if (diffMinutes < 60) return `${diffMinutes} min ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} hr ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-
-  return date.toLocaleDateString();
 }
 
 const styles = StyleSheet.create({
