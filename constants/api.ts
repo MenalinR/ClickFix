@@ -5,6 +5,26 @@ import { config } from "./config";
 
 const API_URL = config.api.baseURL;
 
+// Returns the API host origin (no /api suffix), e.g. http://192.168.1.8:5000
+const apiOrigin = (): string => API_URL.replace(/\/api\/?$/, "");
+
+// Resolves a media URL coming from the backend into something the device can fetch.
+// - Relative paths ("/uploads/...") get the current API origin prepended.
+// - Legacy absolute URLs that bake in a stale host (e.g. localhost, 10.0.2.2, 127.0.0.1)
+//   get rewritten to the current API origin.
+export const resolveMediaUrl = (url?: string | null): string => {
+  if (!url) return "";
+  if (url.startsWith("/")) return `${apiOrigin()}${url}`;
+  const match = url.match(/^https?:\/\/[^/]+(\/uploads\/.+)$/);
+  if (match) return `${apiOrigin()}${match[1]}`;
+  return url;
+};
+
+export const isPdfUrl = (url?: string | null): boolean => {
+  if (!url) return false;
+  return url.toLowerCase().split("?")[0].endsWith(".pdf");
+};
+
 export const api = {
   // Authentication
   auth: {

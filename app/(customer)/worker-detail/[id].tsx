@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -18,7 +19,13 @@ import {
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
-import { api, apiCall, apiUpload } from "../../../constants/api";
+import {
+  api,
+  apiCall,
+  apiUpload,
+  isPdfUrl,
+  resolveMediaUrl,
+} from "../../../constants/api";
 
 export default function WorkerProfile() {
   const router = useRouter();
@@ -386,17 +393,34 @@ export default function WorkerProfile() {
                   {doc.documentType || "Document"}
                 </Text>
                 {!!doc.url ? (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => setPreviewImage(doc.url)}
-                  >
-                    <Image
-                      source={{ uri: doc.url }}
-                      style={styles.certificateImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.viewHint}>Tap to view</Text>
-                  </TouchableOpacity>
+                  isPdfUrl(doc.url) ? (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      style={styles.pdfCard}
+                      onPress={() => Linking.openURL(resolveMediaUrl(doc.url))}
+                    >
+                      <Ionicons
+                        name="document-text"
+                        size={28}
+                        color={Colors.primary}
+                      />
+                      <Text style={styles.pdfCardText}>Open PDF</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() =>
+                        setPreviewImage(resolveMediaUrl(doc.url))
+                      }
+                    >
+                      <Image
+                        source={{ uri: resolveMediaUrl(doc.url) }}
+                        style={styles.certificateImage}
+                        resizeMode="cover"
+                      />
+                      <Text style={styles.viewHint}>Tap to view</Text>
+                    </TouchableOpacity>
+                  )
                 ) : null}
               </View>
             ))
@@ -438,17 +462,34 @@ export default function WorkerProfile() {
                   {doc.documentType || "Document"}
                 </Text>
                 {!!doc.url ? (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => setPreviewImage(doc.url)}
-                  >
-                    <Image
-                      source={{ uri: doc.url }}
-                      style={styles.certificateImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.viewHint}>Tap to view</Text>
-                  </TouchableOpacity>
+                  isPdfUrl(doc.url) ? (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      style={styles.pdfCard}
+                      onPress={() => Linking.openURL(resolveMediaUrl(doc.url))}
+                    >
+                      <Ionicons
+                        name="document-text"
+                        size={28}
+                        color={Colors.primary}
+                      />
+                      <Text style={styles.pdfCardText}>Open PDF</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() =>
+                        setPreviewImage(resolveMediaUrl(doc.url))
+                      }
+                    >
+                      <Image
+                        source={{ uri: resolveMediaUrl(doc.url) }}
+                        style={styles.certificateImage}
+                        resizeMode="cover"
+                      />
+                      <Text style={styles.viewHint}>Tap to view</Text>
+                    </TouchableOpacity>
+                  )
                 ) : null}
               </View>
             ))
@@ -1019,6 +1060,22 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  pdfCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#F4F7FB",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  pdfCardText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
   imagePreviewOverlay: {
     flex: 1,

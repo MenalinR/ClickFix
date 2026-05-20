@@ -290,14 +290,12 @@ exports.uploadIDProof = async (req, res) => {
       });
     }
 
-    // Create accessible URL for the uploaded file
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    // Extract relative path from uploads folder
+    // Store a relative path; the client resolves it against the current API host.
     const relativePath = req.file.path
       .split("uploads")[1]
       .replace(/\\/g, "/")
       .replace(/^\//, "");
-    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    const fileUrl = `/uploads/${relativePath}`;
 
     // Update ID proof with accessible file URL
     worker.idProof = {
@@ -411,12 +409,11 @@ exports.uploadExperienceDocument = async (req, res) => {
     let fileUrl = "";
 
     if (req.file) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
       const relativePath = req.file.path
         .split("uploads")[1]
         .replace(/\\/g, "/")
         .replace(/^\//, "");
-      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+      fileUrl = `/uploads/${relativePath}`;
     }
 
     // Add experience entry; certificate is optional
@@ -503,14 +500,12 @@ exports.uploadEducationDocument = async (req, res) => {
       });
     }
 
-    // Create accessible URL for the uploaded file
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    // Extract relative path from uploads folder
+    // Store a relative path; the client resolves it against the current API host.
     const relativePath = req.file.path
       .split("uploads")[1]
       .replace(/\\/g, "/")
       .replace(/^\//, "");
-    const fileUrl = `${baseUrl}/uploads/${relativePath}`;
+    const fileUrl = `/uploads/${relativePath}`;
 
     // Add education document with accessible file URL
     const newDocument = {
@@ -605,12 +600,11 @@ exports.updateExperienceDocument = async (req, res) => {
 
     let fileUrl = document.url || "";
     if (req.file) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
       const relativePath = req.file.path
         .split("uploads")[1]
         .replace(/\\/g, "/")
         .replace(/^\//, "");
-      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+      fileUrl = `/uploads/${relativePath}`;
     }
 
     document.title = title.trim();
@@ -692,12 +686,11 @@ exports.updateEducationDocument = async (req, res) => {
 
     let fileUrl = document.url || "";
     if (req.file) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
       const relativePath = req.file.path
         .split("uploads")[1]
         .replace(/\\/g, "/")
         .replace(/^\//, "");
-      fileUrl = `${baseUrl}/uploads/${relativePath}`;
+      fileUrl = `/uploads/${relativePath}`;
     }
 
     document.name = documentName.trim();

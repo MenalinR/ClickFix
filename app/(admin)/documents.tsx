@@ -2,7 +2,7 @@ import { Button } from "@/components/Button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useStore } from "@/constants/Store";
-import { api, apiCall } from "@/constants/api";
+import { api, apiCall, resolveMediaUrl } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
@@ -204,12 +204,14 @@ export default function DocumentVerificationScreen() {
       return;
     }
 
+    const resolvedUrl = resolveMediaUrl(url);
+
     // Check if it's a PDF
-    if (url.toLowerCase().endsWith(".pdf")) {
+    if (resolvedUrl.toLowerCase().endsWith(".pdf")) {
       try {
-        const supported = await Linking.canOpenURL(url);
+        const supported = await Linking.canOpenURL(resolvedUrl);
         if (supported) {
-          await WebBrowser.openBrowserAsync(url);
+          await WebBrowser.openBrowserAsync(resolvedUrl);
         } else {
           Alert.alert("Error", "Cannot open PDF viewer");
         }
@@ -219,7 +221,7 @@ export default function DocumentVerificationScreen() {
       }
     } else {
       // It's an image, show in modal
-      setSelectedImageUrl(url);
+      setSelectedImageUrl(resolvedUrl);
       setImageModalVisible(true);
     }
   };
@@ -423,7 +425,7 @@ export default function DocumentVerificationScreen() {
                   <View style={styles.documentPreview}>
                     <ThemedText style={styles.detailLabel}>Preview:</ThemedText>
                     <Image
-                      source={{ uri: item.document.url }}
+                      source={{ uri: resolveMediaUrl(item.document.url) }}
                       style={styles.previewImage}
                       resizeMode="contain"
                       onError={(e) =>

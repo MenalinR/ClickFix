@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
-import { api, apiCall } from '../../constants/api';
+import { api, apiCall, resolveMediaUrl } from '../../constants/api';
 import { useStore } from '../../constants/Store';
 
 type UserRow = {
@@ -267,15 +267,16 @@ function UserDetail({ user }: { user: UserRow }) {
             Alert.alert('Unavailable', 'Certificate URL is not available.');
             return;
         }
-        if (isImageUrl(url)) {
-            setPreviewImage(url);
+        const resolvedUrl = resolveMediaUrl(url);
+        if (isImageUrl(resolvedUrl)) {
+            setPreviewImage(resolvedUrl);
             return;
         }
         try {
-            await WebBrowser.openBrowserAsync(url);
+            await WebBrowser.openBrowserAsync(resolvedUrl);
         } catch {
             try {
-                await Linking.openURL(url);
+                await Linking.openURL(resolvedUrl);
             } catch {
                 Alert.alert('Error', 'Failed to open certificate.');
             }
@@ -420,7 +421,7 @@ function DocCard({
                 >
                     {isImageUrl(url) ? (
                         <Image
-                            source={{ uri: url }}
+                            source={{ uri: resolveMediaUrl(url) }}
                             style={styles.docPreviewImage}
                             resizeMode="contain"
                         />

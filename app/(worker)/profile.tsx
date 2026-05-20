@@ -18,7 +18,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/Button";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
-import { api, apiCall, apiUpload } from "../../constants/api";
+import {
+  api,
+  apiCall,
+  apiUpload,
+  isPdfUrl,
+  resolveMediaUrl,
+} from "../../constants/api";
 
 type DatePickerField = "expStart" | "expEnd" | "eduStart" | "eduEnd";
 
@@ -1162,10 +1168,20 @@ export default function WorkerProfileScreen() {
                 </View>
                 {doc.url && (
                   <View style={styles.certificateThumbnailContainer}>
-                    <Image
-                      source={{ uri: doc.url }}
-                      style={styles.certificateThumbnail}
-                    />
+                    {isPdfUrl(doc.url) ? (
+                      <View style={styles.certificateThumbnail}>
+                        <Ionicons
+                          name="document-text"
+                          size={28}
+                          color={Colors.primary}
+                        />
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: resolveMediaUrl(doc.url) }}
+                        style={styles.certificateThumbnail}
+                      />
+                    )}
                   </View>
                 )}
               </View>
@@ -1240,10 +1256,20 @@ export default function WorkerProfileScreen() {
                 </View>
                 {doc.url && (
                   <View style={styles.certificateThumbnailContainer}>
-                    <Image
-                      source={{ uri: doc.url }}
-                      style={styles.certificateThumbnail}
-                    />
+                    {isPdfUrl(doc.url) ? (
+                      <View style={styles.certificateThumbnail}>
+                        <Ionicons
+                          name="document-text"
+                          size={28}
+                          color={Colors.primary}
+                        />
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: resolveMediaUrl(doc.url) }}
+                        style={styles.certificateThumbnail}
+                      />
+                    )}
                   </View>
                 )}
               </View>
