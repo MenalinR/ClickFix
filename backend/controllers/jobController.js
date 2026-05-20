@@ -742,36 +742,29 @@ exports.respondHardwareCart = async (req, res) => {
         note: "Customer approved hardware suggestion (consent only — worker will source from a shop)",
       });
       await job.save();
+    }
 
-      if (job.workerId) {
-        try {
-          await createNotification({
-            recipient: job.workerId,
-            recipientModel: "Worker",
-            type: "HARDWARE_ORDER",
-            title: "Customer approved hardware",
-            message:
-              "You can now place the order at a hardware shop. Final cost is determined by the shop's prices.",
-            data: { jobId: job._id, messageId: message._id },
-            actionUrl: "/hardware-updates",
-          });
-        } catch (e) {
-          // non-fatal
-        }
-      }
-    } else if (job.workerId) {
+    // Post a follow-up chat message so the worker sees the response inline
+    // in the chat thread (and the Chats tab badge increments via the unread
+    // count) instead of getting a separate Hardware-tab notification.
+    if (message.chatId && message.senderId) {
       try {
-        await createNotification({
-          recipient: job.workerId,
-          recipientModel: "Worker",
-          type: "HARDWARE_ORDER",
-          title: "Hardware declined",
-          message: "Customer declined the hardware cart.",
-          data: { jobId: job._id, messageId: message._id },
-          actionUrl: "/hardware-updates",
+        await Message.create({
+          chatId: message.chatId,
+          senderId: req.user._id,
+          senderModel: "Customer",
+          receiverId: message.senderId,
+          receiverModel: message.senderModel || "Worker",
+          jobId: job._id,
+          messageType: "text",
+          content:
+            action === "approve"
+              ? "✅ I approved your hardware suggestion."
+              : "❌ I declined the hardware cart.",
+          status: "sent",
         });
       } catch (e) {
-        // non-fatal
+        // non-fatal — the cart status update above is the source of truth
       }
     }
 
