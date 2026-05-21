@@ -147,61 +147,6 @@ export default function WorkerDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Today's Jobs */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pending Jobs</Text>
-            <TouchableOpacity onPress={() => router.push("/job-requests")}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          {pendingJobs.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyText}>No pending requests</Text>
-              <Text style={styles.emptySubtext}>
-                Check back soon for new opportunities!
-              </Text>
-            </View>
-          ) : (
-            pendingJobs.slice(0, 2).map((job) => {
-              const jobId = (job as any)._id || job.id;
-              return (
-                <TouchableOpacity
-                  key={jobId}
-                  style={styles.jobCard}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/job-details",
-                      params: { jobId },
-                    })
-                  }
-                >
-                <View style={styles.jobCardContent}>
-                  <View>
-                    <Text style={styles.jobTitle}>{job.serviceType}</Text>
-                    <Text style={styles.jobDesc}>
-                      {(job as any).customerName || "Customer"}
-                    </Text>
-                    <Text style={styles.jobPrice}>
-                      {(job as any).price || 0} LKR
-                    </Text>
-                  </View>
-                  <View style={styles.jobAction}>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={Colors.primary}
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
-
         {/* Active Jobs */}
         {acceptedJobs.length > 0 && (
           <View style={styles.section}>
@@ -253,9 +198,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
   headerRow: {
     flexDirection: "row",
@@ -289,88 +234,107 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: Colors.primary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   welcomeText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "white",
   },
   welcomeSubtext: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.85)",
     marginTop: 4,
   },
   welcomeEmoji: {
-    fontSize: 40,
+    fontSize: 44,
   },
   statsRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
     marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
     backgroundColor: "white",
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: Colors.border,
+    minHeight: 90,
   },
   statNumber: {
-    color: Colors.text,
-    fontSize: 18,
-    fontWeight: "bold",
+    color: Colors.primary,
+    fontSize: 24,
+    fontWeight: "800",
   },
   statLabel: {
     color: Colors.textSecondary,
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 6,
     textAlign: "center",
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 17,
+    fontWeight: "700",
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   quickActionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "space-between",
+    rowGap: 12,
     marginBottom: 24,
   },
   quickActionCard: {
-    width: "48%",
+    width: "48.5%",
     backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    paddingVertical: 22,
+    paddingHorizontal: 12,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: Colors.border,
+    minHeight: 120,
   },
   actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   actionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: Colors.text,
     textAlign: "center",
   },
   actionBadge: {
-    color: Colors.text,
-    fontSize: 14,
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#EF4444",
+    color: "white",
+    fontSize: 11,
     fontWeight: "bold",
-    marginTop: 4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 5,
+    overflow: "hidden",
   },
   section: {
     marginBottom: 24,
