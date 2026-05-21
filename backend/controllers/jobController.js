@@ -869,6 +869,41 @@ exports.cancelJob = async (req, res) => {
 
     await job.save();
 
+    try {
+      const reason = req.body.reason ? ` Reason: ${req.body.reason}` : "";
+      if (req.userType === "worker" && job.customerId) {
+        const worker = await Worker.findById(req.user._id).select("name");
+        await createNotification({
+          recipient: job.customerId,
+          recipientModel: "Customer",
+          type: "JOB_CANCELLED",
+          title: "Booking cancelled",
+          message: `${worker?.name || "Your worker"} cancelled your ${job.serviceType} booking.${reason}`,
+          data: {
+            jobId: job._id.toString(),
+            workerId: req.user._id.toString(),
+          },
+          actionUrl: "/(customer)/(tabs)/bookings",
+        });
+      } else if (req.userType === "customer" && job.workerId) {
+        const customer = await Customer.findById(req.user._id).select("name");
+        await createNotification({
+          recipient: job.workerId,
+          recipientModel: "Worker",
+          type: "JOB_CANCELLED",
+          title: "Booking cancelled",
+          message: `${customer?.name || "The customer"} cancelled the ${job.serviceType} booking.${reason}`,
+          data: {
+            jobId: job._id.toString(),
+            customerId: req.user._id.toString(),
+          },
+          actionUrl: "/(worker)/job-requests",
+        });
+      }
+    } catch (notifErr) {
+      console.error("Error creating cancellation notification:", notifErr);
+    }
+
     res.status(200).json({
       success: true,
       data: job,

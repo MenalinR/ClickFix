@@ -1,7 +1,8 @@
 import { JobReviewActions } from "@/components/JobReviewActions";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { api, apiCall } from "../../../constants/api";
 import {
     ActivityIndicator,
     Alert,
@@ -32,6 +33,41 @@ export default function BookingsScreen() {
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
   const [loading, setLoading] = useState(true);
   const [reviewJob, setReviewJob] = useState<any | null>(null);
+  const [unreadCancelled, setUnreadCancelled] = useState(0);
+
+  const fetchUnreadCancelled = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiCall(
+        `${api.notifications.getUnreadCount}?types=JOB_CANCELLED`,
+        "GET",
+        undefined,
+        token,
+      );
+      setUnreadCancelled(res?.count || 0);
+    } catch {
+      // non-fatal
+    }
+  }, [token]);
+
+  const markCancelledAsRead = useCallback(async () => {
+    if (!token || unreadCancelled === 0) return;
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=JOB_CANCELLED`,
+        "PUT",
+        undefined,
+        token,
+      );
+      setUnreadCancelled(0);
+    } catch {
+      // non-fatal
+    }
+  }, [token, unreadCancelled]);
+
+  useEffect(() => {
+    fetchUnreadCancelled();
+  }, [fetchUnreadCancelled]);
 
   const handleApprove = async (jobId: string) => {
     await customerRespondToJob(jobId, "approve");
@@ -180,7 +216,10 @@ export default function BookingsScreen() {
             (filter) => (
               <TouchableOpacity
                 key={filter}
-                onPress={() => setSelectedFilter(filter)}
+                onPress={() => {
+                  setSelectedFilter(filter);
+                  if (filter === "Cancelled") markCancelledAsRead();
+                }}
                 style={[
                   styles.filterTab,
                   selectedFilter === filter && styles.filterTabActive,
@@ -194,6 +233,13 @@ export default function BookingsScreen() {
                 >
                   {filter}
                 </Text>
+                {filter === "Cancelled" && unreadCancelled > 0 ? (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>
+                      {unreadCancelled > 9 ? "9+" : unreadCancelled}
+                    </Text>
+                  </View>
+                ) : null}
               </TouchableOpacity>
             ),
           )}
@@ -413,7 +459,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: "white",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
+  filterBadge: {
+    backgroundColor: "#EF4444",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterBadgeText: { color: "white", fontSize: 10, fontWeight: "700" },
   filterTabActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
