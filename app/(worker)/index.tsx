@@ -114,9 +114,6 @@ export default function WorkerDashboard() {
               />
             </View>
             <Text style={styles.actionLabel}>Job Requests</Text>
-            {pendingJobs.length > 0 && (
-              <Text style={styles.actionBadge}>{pendingJobs.length}</Text>
-            )}
           </TouchableOpacity>
 
           <TouchableOpacity
