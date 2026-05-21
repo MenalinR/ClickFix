@@ -23,7 +23,9 @@ export default function JobRequestsPage() {
   const router = useRouter();
   const { jobs, fetchJobs, acceptJob, updateJobStatus, cancelJob, token, user } = useStore();
   const workerId = user?._id || (user as any)?.id;
-  const [filter, setFilter] = useState<"all" | "new" | "accepted">("all");
+  const [filter, setFilter] = useState<
+    "all" | "new" | "accepted" | "cancelled"
+  >("all");
   const [loading, setLoading] = useState(true);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -49,18 +51,24 @@ export default function JobRequestsPage() {
   const acceptedJobs = jobList.filter(
     (j) => statusOf(j) === "accepted" && isMine(j),
   );
+  const cancelledJobs = jobList.filter(
+    (j) => statusOf(j) === "cancelled" && isMine(j),
+  );
 
   const displayedJobs =
     filter === "new"
       ? pendingJobs
       : filter === "accepted"
         ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs]
-        : [
-            ...negotiatingJobs,
-            ...pendingJobs,
-            ...awaitingCustomerJobs,
-            ...acceptedJobs,
-          ];
+        : filter === "cancelled"
+          ? cancelledJobs
+          : [
+              ...negotiatingJobs,
+              ...pendingJobs,
+              ...awaitingCustomerJobs,
+              ...acceptedJobs,
+              ...cancelledJobs,
+            ];
 
   const jobId = (j: any) => j._id || j.id;
 
@@ -234,6 +242,22 @@ export default function JobRequestsPage() {
               Accepted ({acceptedJobs.length})
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              filter === "cancelled" && styles.filterTabActive,
+            ]}
+            onPress={() => setFilter("cancelled")}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === "cancelled" && styles.filterTextActive,
+              ]}
+            >
+              Cancelled ({cancelledJobs.length})
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -260,6 +284,7 @@ export default function JobRequestsPage() {
             const isAccepted = status === "accepted";
             const isAwaiting = status === "worker accepted";
             const isNegotiating = status === "negotiating";
+            const isCancelled = status === "cancelled";
             const j = job as any;
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
@@ -282,6 +307,9 @@ export default function JobRequestsPage() {
             } else if (isNegotiating) {
               badgeColor = "#1565C0";
               badgeLabel = "💬 Negotiating";
+            } else if (isCancelled) {
+              badgeColor = "#C62828";
+              badgeLabel = "✕ Cancelled";
             }
             return (
               <TouchableOpacity
