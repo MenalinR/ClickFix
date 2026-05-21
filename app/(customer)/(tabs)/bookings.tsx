@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     Modal,
     Platform,
@@ -27,7 +28,7 @@ type BookingFilter =
 
 export default function BookingsScreen() {
   const router = useRouter();
-  const { jobs, fetchJobs, token, customerRespondToJob } = useStore();
+  const { jobs, fetchJobs, token, customerRespondToJob, cancelJob } = useStore();
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
   const [loading, setLoading] = useState(true);
   const [reviewJob, setReviewJob] = useState<any | null>(null);
@@ -40,6 +41,31 @@ export default function BookingsScreen() {
     await customerRespondToJob(jobId, "deny");
     setReviewJob(null);
   };
+  const handleCancel = (jobId: string) => {
+    Alert.alert(
+      "Cancel booking?",
+      "Are you sure you want to cancel this booking? This cannot be undone.",
+      [
+        { text: "Keep booking", style: "cancel" },
+        {
+          text: "Cancel booking",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cancelJob(jobId, "Cancelled by customer");
+              Alert.alert("Cancelled", "Your booking has been cancelled.");
+            } catch (e: any) {
+              Alert.alert(
+                "Error",
+                e?.message || "Failed to cancel booking.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleNegotiate = async (jobId: string) => {
     const job: any = (jobs as any[]).find(
       (j) => (j._id || j.id) === jobId,
@@ -215,12 +241,27 @@ export default function BookingsScreen() {
                 const status = (job.status || "Pending") as string;
                 const colors = getStatusColor(status);
                 const needsReview = status === "Worker Accepted";
-                const RowWrap: any = needsReview ? TouchableOpacity : View;
+                const cancellableStatuses = [
+                  "pending",
+                  "negotiating",
+                  "accepted",
+                  "on the way",
+                ];
+                const canCancel = cancellableStatuses.includes(
+                  status.toLowerCase(),
+                );
+                const isTappable = needsReview || canCancel;
+                const RowWrap: any = isTappable ? TouchableOpacity : View;
+                const onRowPress = needsReview
+                  ? () => setReviewJob(job)
+                  : canCancel
+                    ? () => handleCancel(id)
+                    : undefined;
                 return (
                   <RowWrap
                     key={id}
                     style={styles.tableRow}
-                    onPress={needsReview ? () => setReviewJob(job) : undefined}
+                    onPress={onRowPress}
                   >
                     <Text style={[styles.tableCell, styles.colDate]}>
                       {formatDate((job as any).scheduledDate || (job as any).createdAt)}
@@ -248,10 +289,25 @@ export default function BookingsScreen() {
                     >
                       {amount(job) ? `${amount(job)} LKR` : "—"}
                     </Text>
-                    <View style={[styles.colStatus, styles.statusBadge, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.statusText, { color: colors.text }]}>
-                        {getStatusLabel(status)}
-                      </Text>
+                    <View style={styles.statusActionsCell}>
+                      <View style={[styles.statusBadge, { backgroundColor: colors.background }]}>
+                        <Text style={[styles.statusText, { color: colors.text }]}>
+                          {getStatusLabel(status)}
+                        </Text>
+                      </View>
+                      {canCancel ? (
+                        <TouchableOpacity
+                          style={styles.cancelIconBtn}
+                          onPress={() => handleCancel(id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={22}
+                            color="#C62828"
+                          />
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   </RowWrap>
                 );
@@ -626,6 +682,16 @@ const styles = StyleSheet.create({
   },
   colIssue: { width: 160, justifyContent: "center" },
   colStatus: { width: 100, justifyContent: "center", alignItems: "center" },
+  statusActionsCell: {
+    width: 100,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  cancelIconBtn: {
+    padding: 2,
+  },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",

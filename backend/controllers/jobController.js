@@ -859,9 +859,10 @@ exports.cancelJob = async (req, res) => {
       });
     }
 
-    job.status = "cancelled";
+    job.status = "Cancelled";
+    job.cancellationReason = req.body.reason;
     job.timeline.push({
-      status: "cancelled",
+      status: "Cancelled",
       timestamp: new Date(),
       note: req.body.reason,
     });

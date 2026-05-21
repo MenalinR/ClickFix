@@ -21,7 +21,7 @@ const { width } = Dimensions.get("window");
 
 export default function JobRequestsPage() {
   const router = useRouter();
-  const { jobs, fetchJobs, acceptJob, updateJobStatus, token, user } = useStore();
+  const { jobs, fetchJobs, acceptJob, updateJobStatus, cancelJob, token, user } = useStore();
   const workerId = user?._id || (user as any)?.id;
   const [filter, setFilter] = useState<"all" | "new" | "accepted">("all");
   const [loading, setLoading] = useState(true);
@@ -127,6 +127,28 @@ export default function JobRequestsPage() {
   const handleRejectJob = (id: string) => {
     updateJobStatus(id, "Rejected");
     Alert.alert("Job Rejected", "This job request has been rejected.");
+  };
+
+  const handleCancelJob = (id: string) => {
+    Alert.alert(
+      "Cancel job?",
+      "Are you sure you want to cancel this job? The customer will be notified.",
+      [
+        { text: "Keep job", style: "cancel" },
+        {
+          text: "Cancel job",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cancelJob(id, "Cancelled by worker");
+              Alert.alert("Cancelled", "The job has been cancelled.");
+            } catch (e: any) {
+              Alert.alert("Error", e?.message || "Failed to cancel job.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleViewDetails = (id: string) => {
@@ -401,6 +423,17 @@ export default function JobRequestsPage() {
                 {(isAwaiting || isNegotiating) && (
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
+                      style={[styles.button, styles.rejectButton]}
+                      onPress={() => handleCancelJob(id)}
+                    >
+                      <Ionicons
+                        name="close-circle-outline"
+                        size={20}
+                        color="#FF6B6B"
+                      />
+                      <Text style={styles.rejectButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={[styles.button, styles.chatButton]}
                       onPress={() =>
                         router.push({
@@ -426,6 +459,17 @@ export default function JobRequestsPage() {
 
                 {isAccepted && (
                   <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.rejectButton]}
+                      onPress={() => handleCancelJob(id)}
+                    >
+                      <Ionicons
+                        name="close-circle-outline"
+                        size={20}
+                        color="#FF6B6B"
+                      />
+                      <Text style={styles.rejectButtonText}>Cancel</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.button, styles.chatButton]}
                       onPress={() =>

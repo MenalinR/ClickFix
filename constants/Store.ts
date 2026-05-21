@@ -92,6 +92,7 @@ interface StoreState {
   workerCounterPrice: (jobId: string, price: number) => Promise<void>;
   finalizeJobPrice: (jobId: string, price: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: string) => Promise<void>;
+  cancelJob: (jobId: string, reason?: string) => Promise<void>;
 }
 
 export const useStore = create<StoreState>()(
@@ -530,6 +531,36 @@ export const useStore = create<StoreState>()(
         api.jobs.updateStatus(jobId),
         "PUT",
         { status },
+        token,
+      );
+
+      const updatedJobs = jobs.map((j) =>
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data, status: response.data.status }
+          : j
+      );
+      set({ jobs: updatedJobs });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  cancelJob: async (jobId: string, reason?: string) => {
+    set({ loading: true, error: null });
+    const { token, jobs } = get();
+
+    if (!token) {
+      throw new Error("Not logged in");
+    }
+
+    try {
+      const response = await apiCall(
+        api.jobs.cancel(jobId),
+        "PUT",
+        reason ? { reason } : {},
         token,
       );
 
