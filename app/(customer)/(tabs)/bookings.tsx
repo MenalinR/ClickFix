@@ -17,7 +17,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
 
-type BookingFilter = "All" | "Pending" | "Completed" | "Cancelled";
+type BookingFilter =
+  | "All"
+  | "Pending"
+  | "Completed"
+  | "Cancelled"
+  | "Rejected"
+  | "Denied";
 
 export default function BookingsScreen() {
   const router = useRouter();
@@ -130,8 +136,21 @@ export default function BookingsScreen() {
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
-          {(["All", "Pending", "Completed", "Cancelled"] as BookingFilter[]).map(
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        >
+          {(
+            [
+              "All",
+              "Pending",
+              "Completed",
+              "Cancelled",
+              "Rejected",
+              "Denied",
+            ] as BookingFilter[]
+          ).map(
             (filter) => (
               <TouchableOpacity
                 key={filter}
@@ -152,7 +171,7 @@ export default function BookingsScreen() {
               </TouchableOpacity>
             ),
           )}
-        </View>
+        </ScrollView>
 
         {/* Summary Stats */}
         {selectedFilter === "All" && !loading && (
