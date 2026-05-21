@@ -33,7 +33,9 @@ export default function BookingsScreen() {
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
   const [loading, setLoading] = useState(true);
   const [reviewJob, setReviewJob] = useState<any | null>(null);
-  const [unreadCancelled, setUnreadCancelled] = useState(0);
+  const unreadCancelled = useStore((s) => s.unreadCancelled);
+  const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
+  const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
 
   const fetchUnreadCancelled = useCallback(async () => {
     if (!token) return;
@@ -48,10 +50,14 @@ export default function BookingsScreen() {
     } catch {
       // non-fatal
     }
-  }, [token]);
+  }, [token, setUnreadCancelled]);
 
+  // Called when the user actually views the Cancelled filter — marks
+  // notifications as read on the server and clears BOTH badges.
   const markCancelledAsRead = useCallback(async () => {
     if (!token || unreadCancelled === 0) return;
+    setUnreadCancelled(0);
+    setLastSeenCancelled(0);
     try {
       await apiCall(
         `${api.notifications.markAllAsRead}?types=JOB_CANCELLED`,
@@ -59,11 +65,16 @@ export default function BookingsScreen() {
         undefined,
         token,
       );
-      setUnreadCancelled(0);
     } catch {
       // non-fatal
     }
-  }, [token, unreadCancelled]);
+  }, [token, unreadCancelled, setUnreadCancelled, setLastSeenCancelled]);
+
+  // Called when the user opens the Bookings tab — dismisses the bottom-nav
+  // badge only, without touching the filter badge or server state.
+  const dismissBookingsTabBadge = useCallback(() => {
+    setLastSeenCancelled(unreadCancelled);
+  }, [unreadCancelled, setLastSeenCancelled]);
 
   useEffect(() => {
     fetchUnreadCancelled();
@@ -125,8 +136,9 @@ export default function BookingsScreen() {
       if (token) {
         setLoading(true);
         fetchJobs().finally(() => setLoading(false));
+        dismissBookingsTabBadge();
       }
-    }, [token, fetchJobs]),
+    }, [token, fetchJobs, dismissBookingsTabBadge]),
   );
 
   const bookings = useMemo(() => (Array.isArray(jobs) ? jobs : []), [jobs]);

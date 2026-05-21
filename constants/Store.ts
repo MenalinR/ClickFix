@@ -93,6 +93,14 @@ interface StoreState {
   finalizeJobPrice: (jobId: string, price: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: string) => Promise<void>;
   cancelJob: (jobId: string, reason?: string) => Promise<void>;
+
+  // Unread cancellation notifications count (shared between tab layout and bookings screen)
+  unreadCancelled: number;
+  setUnreadCancelled: (count: number) => void;
+  // How many cancellations were already "seen" by visiting the Bookings tab —
+  // used to suppress the bottom-nav badge until NEW ones arrive.
+  lastSeenCancelled: number;
+  setLastSeenCancelled: (count: number) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -107,6 +115,10 @@ export const useStore = create<StoreState>()(
   availableJobs: [],
   loading: false,
   error: null,
+  unreadCancelled: 0,
+  setUnreadCancelled: (count: number) => set({ unreadCancelled: count }),
+  lastSeenCancelled: 0,
+  setLastSeenCancelled: (count: number) => set({ lastSeenCancelled: count }),
 
   // ============================================
   // AUTH ACTIONS

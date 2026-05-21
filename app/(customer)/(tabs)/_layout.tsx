@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { api, apiCall } from "../../../constants/api";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
 import { useChatList } from "../../../hooks/useChatList";
 
-const BOOKING_NOTIFICATION_TYPES = ["JOB_CANCELLED", "JOB_ASSIGNED", "JOB_COMPLETED"];
+const BOOKING_NOTIFICATION_TYPES = ["JOB_CANCELLED"];
 
 function ChatsIcon({ color, size }: { color: string; size: number }) {
   const { totalUnread } = useChatList();
@@ -48,7 +48,10 @@ function BookingsIcon({
 
 export default function CustomerTabsLayout() {
   const token = useStore((s) => s.token);
-  const [unreadBookings, setUnreadBookings] = useState(0);
+  const unreadCancelled = useStore((s) => s.unreadCancelled);
+  const lastSeenCancelled = useStore((s) => s.lastSeenCancelled);
+  const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
+  const unreadBookings = Math.max(0, unreadCancelled - lastSeenCancelled);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
@@ -59,11 +62,11 @@ export default function CustomerTabsLayout() {
         undefined,
         token,
       );
-      setUnreadBookings(res?.count || 0);
+      setUnreadCancelled(res?.count || 0);
     } catch (error) {
       console.error("Error fetching booking notification count:", error);
     }
-  }, [token]);
+  }, [token, setUnreadCancelled]);
 
   useEffect(() => {
     if (!token) return;
