@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 
@@ -22,7 +23,26 @@ const { width } = Dimensions.get("window");
 export default function JobRequestsPage() {
   const router = useRouter();
   const { jobs, fetchJobs, acceptJob, updateJobStatus, cancelJob, token, user } = useStore();
+  const unreadCancelled = useStore((s) => s.unreadCancelled);
+  const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
+  const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
   const workerId = user?._id || (user as any)?.id;
+
+  const markCancelledAsRead = useCallback(async () => {
+    if (!token || unreadCancelled === 0) return;
+    setUnreadCancelled(0);
+    setLastSeenCancelled(0);
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=JOB_CANCELLED`,
+        "PUT",
+        undefined,
+        token,
+      );
+    } catch {
+      // non-fatal
+    }
+  }, [token, unreadCancelled, setUnreadCancelled, setLastSeenCancelled]);
   const [filter, setFilter] = useState<
     "all" | "new" | "accepted" | "cancelled"
   >("all");
@@ -247,7 +267,10 @@ export default function JobRequestsPage() {
               styles.filterTab,
               filter === "cancelled" && styles.filterTabActive,
             ]}
-            onPress={() => setFilter("cancelled")}
+            onPress={() => {
+              setFilter("cancelled");
+              markCancelledAsRead();
+            }}
           >
             <Text
               style={[
@@ -257,6 +280,13 @@ export default function JobRequestsPage() {
             >
               Cancelled ({cancelledJobs.length})
             </Text>
+            {unreadCancelled > 0 ? (
+              <View style={styles.cancelFilterBadge}>
+                <Text style={styles.cancelFilterBadgeText}>
+                  {unreadCancelled > 9 ? "9+" : unreadCancelled}
+                </Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         </View>
 
@@ -583,7 +613,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.lightBackground,
     borderWidth: 1,
     borderColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
+  cancelFilterBadge: {
+    backgroundColor: "#EF4444",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelFilterBadgeText: { color: "white", fontSize: 10, fontWeight: "700" },
   filterTabActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,

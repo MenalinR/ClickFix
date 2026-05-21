@@ -26,14 +26,20 @@ const HARDWARE_NOTIFICATION_TYPES = ["HARDWARE_REQUEST", "HARDWARE_ORDER"];
 export default function WorkerLayout() {
   const { totalUnread } = useChatList();
   const token = useStore((s) => s.token);
+  const unreadCancelled = useStore((s) => s.unreadCancelled);
+  const lastSeenCancelled = useStore((s) => s.lastSeenCancelled);
+  const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
+  const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
   const [unreadJobs, setUnreadJobs] = useState(0);
   const [unreadDocuments, setUnreadDocuments] = useState(0);
   const [unreadHardware, setUnreadHardware] = useState(0);
+  const visibleCancelled = Math.max(0, unreadCancelled - lastSeenCancelled);
+  const jobsBadgeCount = unreadJobs + visibleCancelled;
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const [jobsRes, docsRes, hwRes] = await Promise.all([
+      const [jobsRes, docsRes, hwRes, cancelledRes] = await Promise.all([
         apiCall(
           `${api.notifications.getUnreadCount}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
           "GET",
@@ -52,14 +58,21 @@ export default function WorkerLayout() {
           undefined,
           token,
         ),
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=JOB_CANCELLED`,
+          "GET",
+          undefined,
+          token,
+        ),
       ]);
       setUnreadJobs(jobsRes.count || 0);
       setUnreadDocuments(docsRes.count || 0);
       setUnreadHardware(hwRes.count || 0);
+      setUnreadCancelled(cancelledRes.count || 0);
     } catch (error) {
       console.error("Error fetching notification count:", error);
     }
-  }, [token]);
+  }, [token, setUnreadCancelled]);
 
   useEffect(() => {
     if (!token) return;
@@ -69,6 +82,11 @@ export default function WorkerLayout() {
   }, [token, fetchUnreadCount]);
 
   const handleJobsTabPress = async () => {
+    // Dismiss the bottom-nav badge for cancellations without marking them
+    // read on the server — that happens only when the Cancelled filter
+    // inside the Jobs screen is actually opened.
+    setLastSeenCancelled(unreadCancelled);
+
     if (!token || unreadJobs === 0) return;
     try {
       await apiCall(
@@ -143,7 +161,7 @@ export default function WorkerLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase-outline" size={size} color={color} />
           ),
-          tabBarBadge: unreadJobs > 0 ? unreadJobs : undefined,
+          tabBarBadge: jobsBadgeCount > 0 ? jobsBadgeCount : undefined,
           tabBarBadgeStyle: { backgroundColor: "#EF4444", color: "white" },
         }}
         listeners={{
