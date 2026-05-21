@@ -24,9 +24,6 @@ export default function WorkerDashboard() {
     (j.workerId as any)?._id === workerId ||
     (j.workerId as any) === workerId;
   const pendingJobs = jobs.filter((j) => statusOf(j) === "pending");
-  const acceptedJobs = jobs.filter(
-    (j) => statusOf(j) === "accepted" && isMine(j),
-  );
   const earnings = jobs
     .filter((j) => statusOf(j) === "completed" && isMine(j))
     .reduce(
@@ -144,46 +141,6 @@ export default function WorkerDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Active Jobs */}
-        {acceptedJobs.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Active Jobs ({acceptedJobs.length})
-            </Text>
-            {acceptedJobs.slice(0, 2).map((job) => {
-              const jobId = (job as any)._id || job.id;
-              return (
-                <TouchableOpacity
-                  key={jobId}
-                  style={[styles.jobCard, styles.activeJobCard]}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/job-details",
-                      params: { jobId },
-                    })
-                  }
-                >
-                <View style={styles.jobCardContent}>
-                  <View>
-                    <Text style={styles.jobTitle}>{job.serviceType}</Text>
-                    <Text style={styles.jobDesc}>
-                      {(job as any).customerName || "Customer"}
-                    </Text>
-                    <Text style={styles.jobStatus}>In Progress</Text>
-                  </View>
-                  <View style={styles.jobAction}>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={Colors.primary}
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
