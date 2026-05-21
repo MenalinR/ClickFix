@@ -438,18 +438,19 @@ export default function ScheduleScreen() {
 
             {(() => {
               const status = (detailJob?.status || "").toLowerCase();
+              const isPending = status === "pending";
               const isFinalized =
                 status !== "pending" &&
                 status !== "worker accepted" &&
                 status !== "negotiating";
-              const price = isFinalized
-                ? detailJob?.pricing?.totalAmount ||
-                  detailJob?.pricing?.serviceCharge
-                : detailJob?.pricing?.negotiatedPrice ||
-                  detailJob?.pricing?.proposedPrice ||
-                  detailJob?.pricing?.totalAmount ||
-                  detailJob?.pricing?.serviceCharge;
-              if (!price) return null;
+              const price = isPending
+                ? 0
+                : isFinalized
+                  ? detailJob?.pricing?.totalAmount ||
+                    detailJob?.pricing?.serviceCharge
+                  : detailJob?.pricing?.negotiatedPrice ||
+                    detailJob?.pricing?.proposedPrice ||
+                    0;
               return (
                 <View style={styles.modalPriceBlock}>
                   <Text style={styles.modalPriceLabel}>
