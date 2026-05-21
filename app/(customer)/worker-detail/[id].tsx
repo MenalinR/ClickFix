@@ -119,6 +119,30 @@ export default function WorkerProfile() {
     if (modalVisible) loadBusySlots();
   }, [modalVisible, loadBusySlots]);
 
+  const findConflictingSlot = React.useCallback(
+    (when: Date) => {
+      const SLOT_MS = 2 * 60 * 60 * 1000;
+      const wantStart = when.getTime();
+      const wantEnd = wantStart + SLOT_MS;
+      const BLOCKING_STATUSES = [
+        "worker accepted",
+        "accepted",
+        "negotiating",
+        "on the way",
+        "in progress",
+      ];
+      return busySlots.find((s) => {
+        const status = (s.status || "").toLowerCase();
+        if (!BLOCKING_STATUSES.includes(status)) return false;
+        const bStart = new Date(s.start).getTime();
+        const bEnd = bStart + (s.durationMinutes || 120) * 60000;
+        return bStart < wantEnd && bEnd > wantStart;
+      });
+    },
+    [busySlots],
+  );
+  const conflictingSlot = findConflictingSlot(scheduledAt);
+
   if (!worker) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -139,6 +163,20 @@ export default function WorkerProfile() {
     }
     if (scheduledAt.getTime() < Date.now()) {
       Alert.alert("Invalid time", "Please pick a date and time in the future.");
+      return;
+    }
+    const conflict = findConflictingSlot(scheduledAt);
+    if (conflict) {
+      const when = new Date(conflict.start).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      Alert.alert(
+        "Worker not available",
+        `This worker already has a ${conflict.status?.toLowerCase() || "booked"} job at ${when}. Please choose a different time.`,
+      );
       return;
     }
     setBooking(true);
@@ -780,6 +818,28 @@ export default function WorkerProfile() {
               </ScrollView>
             </View>
 
+            {conflictingSlot ? (
+              <View style={styles.conflictWarning}>
+                <Ionicons name="alert-circle" size={18} color="#C62828" />
+                <Text style={styles.conflictWarningText}>
+                  Worker is already booked at this time
+                  {(() => {
+                    const t = new Date(conflictingSlot.start).toLocaleString(
+                      "en-GB",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    );
+                    return ` (${t})`;
+                  })()}
+                  . Please pick a different time.
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.modalActions}>
               <Button
                 title="Cancel"
@@ -793,7 +853,7 @@ export default function WorkerProfile() {
                 onPress={handleBook}
                 style={{ flex: 1 }}
                 loading={booking}
-                disabled={booking}
+                disabled={booking || !!conflictingSlot}
               />
             </View>
           </View>
@@ -964,6 +1024,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalActions: { flexDirection: "row", gap: 12, marginTop: 8 },
+  conflictWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FFEBEE",
+    borderLeftWidth: 4,
+    borderLeftColor: "#C62828",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  conflictWarningText: {
+    flex: 1,
+    color: "#C62828",
+    fontSize: 13,
+    lineHeight: 18,
+  },
   backBtn: {
     position: "absolute",
     top: 40,

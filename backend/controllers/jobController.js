@@ -54,6 +54,30 @@ exports.createJob = async (req, res) => {
     };
     if (requestedWorkerId) {
       jobPayload.requestedWorkerId = requestedWorkerId;
+
+      const requestedTime = jobPayload.scheduledDate.getTime();
+      const SLOT_MS = 2 * 60 * 60 * 1000;
+      const windowStart = new Date(requestedTime - SLOT_MS);
+      const windowEnd = new Date(requestedTime + SLOT_MS);
+
+      const conflict = await Job.findOne({
+        $or: [
+          { workerId: requestedWorkerId },
+          { requestedWorkerId: requestedWorkerId },
+        ],
+        status: {
+          $in: ["Worker Accepted", "Accepted", "On the way", "In progress"],
+        },
+        scheduledDate: { $gte: windowStart, $lte: windowEnd },
+      }).select("scheduledDate status");
+
+      if (conflict) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "This worker is not available at the selected time. Please choose a different time slot.",
+        });
+      }
     }
 
     const job = await Job.create(jobPayload);
@@ -273,6 +297,28 @@ exports.assignWorker = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "This job was requested for another worker",
+      });
+    }
+
+    const requestedTime = new Date(job.scheduledDate).getTime();
+    const SLOT_MS = 2 * 60 * 60 * 1000;
+    const windowStart = new Date(requestedTime - SLOT_MS);
+    const windowEnd = new Date(requestedTime + SLOT_MS);
+
+    const conflict = await Job.findOne({
+      _id: { $ne: job._id },
+      workerId: req.user._id,
+      status: {
+        $in: ["Worker Accepted", "Accepted", "On the way", "In progress"],
+      },
+      scheduledDate: { $gte: windowStart, $lte: windowEnd },
+    }).select("scheduledDate status");
+
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "You already accepted another job at this time. You cannot accept two jobs in the same time slot.",
       });
     }
 
