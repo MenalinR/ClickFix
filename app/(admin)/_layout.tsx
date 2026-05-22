@@ -14,8 +14,8 @@ export default function AdminLayout() {
 
   useEffect(() => {
     fetchUnreadCount();
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000);
+    // Poll for new notifications every 3 seconds (demo mode)
+    const interval = setInterval(fetchUnreadCount, 3000);
     return () => clearInterval(interval);
   }, []);
 

@@ -77,7 +77,7 @@ export default function WorkerLayout() {
   useEffect(() => {
     if (!token) return;
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 3000);
     return () => clearInterval(interval);
   }, [token, fetchUnreadCount]);
 
