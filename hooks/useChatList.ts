@@ -44,6 +44,11 @@ const fetchChats = async () => {
   }
 };
 
+// Public helper so other hooks (useChat) can force a badge refresh
+// immediately after marking a chat as read, instead of waiting up
+// to 15 seconds for the next poll.
+export const refreshChatList = fetchChats;
+
 const startSession = (token: string, userId: string) => {
   currentToken = token;
   currentUserId = userId;

@@ -4,6 +4,7 @@ import { io, Socket } from "socket.io-client";
 import { api, apiCall } from "../constants/api";
 import { config } from "../constants/config";
 import { useStore } from "../constants/Store";
+import { refreshChatList } from "./useChatList";
 
 export interface CartItem {
   _id?: string;
@@ -73,6 +74,9 @@ export function useChat({
     if (!chatId || !token) return;
     try {
       await apiCall(api.chat.markChatAsRead(chatId), "PUT", {}, token);
+      // Force an immediate badge refresh so the Chats tab counter
+      // updates without waiting for the next 15s poll.
+      refreshChatList();
     } catch (e) {
       // silent
     }
@@ -80,12 +84,14 @@ export function useChat({
 
   // Refetch on screen focus so things like cart status flips
   // ("approved" → "ordered") show up after returning from another screen.
+  // Also mark messages as read so the Chats tab badge clears.
   useFocusEffect(
     useCallback(() => {
       if (chatId && token) {
         fetchMessages();
+        markAsRead();
       }
-    }, [chatId, token, fetchMessages]),
+    }, [chatId, token, fetchMessages, markAsRead]),
   );
 
   useEffect(() => {
