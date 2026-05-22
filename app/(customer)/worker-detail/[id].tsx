@@ -1,4 +1,6 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -259,6 +261,49 @@ export default function WorkerProfile() {
         selected.getDate(),
       );
       setScheduledAt(next);
+    }
+  };
+
+  const openDatePicker = () => {
+    if (Platform.OS === "android") {
+      // Use imperative API on Android — opens a native modal detached
+      // from React's render cycle so polling re-renders don't reset it.
+      DateTimePickerAndroid.open({
+        value: scheduledAt,
+        mode: "date",
+        minimumDate: minPickableDate,
+        onChange: (event, selected) => {
+          if (event.type === "set" && selected) {
+            const next = new Date(scheduledAt);
+            next.setFullYear(
+              selected.getFullYear(),
+              selected.getMonth(),
+              selected.getDate(),
+            );
+            setScheduledAt(next);
+          }
+        },
+      });
+    } else {
+      setShowDatePicker(true);
+    }
+  };
+
+  const openTimePicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: scheduledAt,
+        mode: "time",
+        onChange: (event, selected) => {
+          if (event.type === "set" && selected) {
+            const next = new Date(scheduledAt);
+            next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+            setScheduledAt(next);
+          }
+        },
+      });
+    } else {
+      setShowTimePicker(true);
     }
   };
   const slotsOnSelectedDate = busySlots.filter((s) => {
@@ -597,7 +642,7 @@ export default function WorkerProfile() {
             <View style={styles.scheduleRow}>
               <TouchableOpacity
                 style={styles.scheduleBtn}
-                onPress={() => setShowDatePicker(true)}
+                onPress={openDatePicker}
               >
                 <Ionicons
                   name="calendar-outline"
@@ -610,7 +655,7 @@ export default function WorkerProfile() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.scheduleBtn}
-                onPress={() => setShowTimePicker(true)}
+                onPress={openTimePicker}
               >
                 <Ionicons
                   name="time-outline"
