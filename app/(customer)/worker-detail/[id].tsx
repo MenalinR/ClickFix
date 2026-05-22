@@ -2,7 +2,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -41,6 +41,9 @@ export default function WorkerProfile() {
   const [scheduledAt, setScheduledAt] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  // Stable reference across re-renders so the date picker doesn't reset
+  // its calendar view when parent state polls update.
+  const minPickableDate = useMemo(() => new Date(), []);
   const [busySlots, setBusySlots] = useState<
     { start: string; durationMinutes: number; status: string }[]
   >([]);
@@ -623,7 +626,7 @@ export default function WorkerProfile() {
               <DateTimePicker
                 value={scheduledAt}
                 mode="date"
-                minimumDate={new Date()}
+                minimumDate={minPickableDate}
                 onChange={handleDateChange}
               />
             )}
