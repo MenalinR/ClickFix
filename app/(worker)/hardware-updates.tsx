@@ -3,10 +3,12 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +21,7 @@ type OrderStatus =
   | "approved"
   | "packing"
   | "ready"
+  | "coming"
   | "picked_up"
   | "rejected"
   | "delivered";
@@ -46,6 +49,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   approved: "Accepted",
   packing: "Packing",
   ready: "Ready for Pickup",
+  coming: "On the Way",
   picked_up: "Picked Up",
   rejected: "Rejected",
   delivered: "Delivered",
@@ -56,6 +60,7 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   approved: "#2E7D32",
   packing: "#8E24AA",
   ready: "#0288D1",
+  coming: "#00897B",
   picked_up: "#1565C0",
   rejected: "#C62828",
   delivered: "#1565C0",
@@ -66,6 +71,7 @@ const STATUS_HINT: Record<OrderStatus, string> = {
   approved: "Shop accepted. They'll start packing soon.",
   packing: "Shop is packing your order.",
   ready: "Your order is ready — collect it from the shop.",
+  coming: "You're on the way. The shop has been notified.",
   picked_up: "You collected this order.",
   rejected: "Shop rejected this order.",
   delivered: "Order delivered.",
@@ -76,6 +82,7 @@ export default function HardwareUpdatesScreen() {
   const [orders, setOrders] = useState<HardwareRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!token) return;
@@ -106,6 +113,31 @@ export default function HardwareUpdatesScreen() {
     setRefreshing(true);
     fetchOrders();
   };
+
+  const confirmComing = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      try {
+        setBusyId(id);
+        const res = await apiCall(
+          api.hardware.confirmComing(id),
+          "PUT",
+          undefined,
+          token,
+        );
+        if (!res.success) {
+          Alert.alert("Error", res.message || "Couldn't update order");
+          return;
+        }
+        await fetchOrders();
+      } catch (e: any) {
+        Alert.alert("Error", e?.message || "Couldn't update order");
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token, fetchOrders],
+  );
 
   const renderItem = ({ item }: { item: HardwareRequest }) => {
     const status = item.status;
@@ -188,6 +220,23 @@ export default function HardwareUpdatesScreen() {
             })}
           </Text>
         </View>
+
+        {status === "ready" && (
+          <TouchableOpacity
+            style={styles.comingBtn}
+            disabled={busyId === item._id}
+            onPress={() => confirmComing(item._id)}
+          >
+            {busyId === item._id ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="walk-outline" size={16} color="white" />
+                <Text style={styles.comingBtnText}>I&apos;m on my way</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -326,4 +375,15 @@ const styles = StyleSheet.create({
   },
   totalText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   dateText: { fontSize: 11, color: Colors.textSecondary },
+  comingBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#00897B",
+    borderRadius: 8,
+    paddingVertical: 11,
+    marginTop: 12,
+  },
+  comingBtnText: { color: "white", fontWeight: "700", fontSize: 13 },
 });

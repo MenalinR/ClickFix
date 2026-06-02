@@ -24,6 +24,7 @@ type OrderStatus =
   | "approved"
   | "packing"
   | "ready"
+  | "coming"
   | "picked_up"
   | "rejected"
   | "delivered";
@@ -48,7 +49,7 @@ export default function OrdersScreen() {
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const statuses = ["pending", "approved", "packing", "ready", "delivered"];
+  const statuses = ["pending", "approved", "packing", "ready", "coming", "delivered"];
 
   const fetchOrders = async () => {
     try {
@@ -91,6 +92,8 @@ export default function OrdersScreen() {
         return "#8E24AA";
       case "ready":
         return "#0288D1";
+      case "coming":
+        return "#00897B";
       case "picked_up":
       case "delivered":
         return "#2196F3";
@@ -104,7 +107,9 @@ export default function OrdersScreen() {
   const prettyStatus = (status: string) =>
     status === "picked_up"
       ? "Picked Up"
-      : status.charAt(0).toUpperCase() + status.slice(1);
+      : status === "coming"
+        ? "On the Way"
+        : status.charAt(0).toUpperCase() + status.slice(1);
 
   const runAction = async (
     orderId: string,
@@ -151,6 +156,14 @@ export default function OrdersScreen() {
       api.hardwareShop.markReady(orderId),
       undefined,
       "Marked ready for pickup. The worker has been notified.",
+    );
+
+  const handleComplete = (orderId: string) =>
+    runAction(
+      orderId,
+      api.hardwareShop.completeOrder(orderId),
+      undefined,
+      "Order completed. The worker has been notified.",
     );
 
   const submitReject = async () => {
@@ -243,6 +256,26 @@ export default function OrdersScreen() {
               <>
                 <Ionicons name="checkmark-done-outline" size={16} color="white" />
                 <Text style={styles.acceptBtnText}>Mark Ready for Pickup</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (item.status === "coming") {
+      return (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.completeBtn]}
+            disabled={isBusy}
+            onPress={() => handleComplete(item._id)}
+          >
+            {isBusy ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={16} color="white" />
+                <Text style={styles.acceptBtnText}>Mark Completed</Text>
               </>
             )}
           </TouchableOpacity>
@@ -587,6 +620,7 @@ const styles = StyleSheet.create({
   acceptBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
   packingBtn: { backgroundColor: "#8E24AA" },
   readyBtn: { backgroundColor: "#0288D1" },
+  completeBtn: { backgroundColor: "#00897B" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

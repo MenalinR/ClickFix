@@ -14,6 +14,7 @@ const {
   rejectOrder,
   markPacking,
   markReady,
+  completeOrder,
   adminListShops,
   adminDeleteShop,
   updateShopProfile,
@@ -68,5 +69,6 @@ router.put("/orders/:id/accept", acceptOrder);
 router.put("/orders/:id/reject", rejectOrder);
 router.put("/orders/:id/mark-packing", markPacking);
 router.put("/orders/:id/mark-ready", markReady);
+router.put("/orders/:id/complete", completeOrder);
 
 module.exports = router;

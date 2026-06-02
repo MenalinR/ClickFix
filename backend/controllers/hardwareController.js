@@ -1,6 +1,7 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const Job = require("../models/Job");
 const HardwareShop = require("../models/HardwareShop");
+const Worker = require("../models/Worker");
 const Message = require("../models/Message");
 
 // @desc    Get all hardware items
@@ -436,6 +437,71 @@ exports.markAsDelivered = async (req, res) => {
     request.status = "delivered";
     request.deliveredAt = new Date();
     await request.save();
+
+    res.status(200).json({
+      success: true,
+      data: request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Worker confirms they're on the way to pick up the order
+// @route   PUT /api/hardware/requests/:id/coming
+// @access  Private (Worker only)
+exports.confirmComing = async (req, res) => {
+  try {
+    const request = await HardwareRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Hardware request not found",
+      });
+    }
+
+    if (request.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    if (request.status !== "ready") {
+      return res.status(400).json({
+        success: false,
+        message: "Order must be ready for pickup before confirming you're coming",
+      });
+    }
+
+    request.status = "coming";
+    await request.save();
+
+    // Notify the hardware shop that the worker is on the way
+    if (request.shopId) {
+      try {
+        const worker = await Worker.findById(request.workerId).select("name");
+        const { createNotification } = require("./notificationController");
+        await createNotification({
+          recipient: request.shopId,
+          recipientModel: "HardwareShop",
+          type: "HARDWARE_ORDER",
+          title: "Worker on the way",
+          message: `${worker?.name || "The worker"} is coming to pick up order #${request._id
+            .toString()
+            .slice(-6)
+            .toUpperCase()}.`,
+          data: { jobId: request.jobId, requestId: request._id },
+          actionUrl: "/(hardwareShop)/(tabs)/orders",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -8,6 +8,7 @@ const {
   getHardwareRequest,
   updateRequestStatus,
   markAsDelivered,
+  confirmComing,
   getAdminHardwareItems,
   createHardwareItem,
   updateHardwareItem,
@@ -44,6 +45,12 @@ router.put(
   protect,
   authorize("worker"),
   markAsDelivered,
+);
+router.put(
+  "/requests/:id/coming",
+  protect,
+  authorize("worker"),
+  confirmComing,
 );
 
 // ADMIN ROUTES - Hardware Management

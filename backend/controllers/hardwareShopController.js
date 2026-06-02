@@ -498,6 +498,30 @@ exports.markReady = async (req, res) => {
   }
 };
 
+// @desc    Shop marks order as completed (worker has collected the items)
+// @route   PUT /api/hardwareShop/orders/:id/complete
+// @access  Private (hardwareShop)
+exports.completeOrder = async (req, res) => {
+  try {
+    const { order, error } = await loadShopOrder(req, ["ready", "coming"]);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    order.status = "picked_up";
+    await order.save();
+
+    const shop = await HardwareShop.findById(req.user._id).select("shopName");
+    await notifyWorker(
+      order,
+      "Order completed",
+      `You picked up your order from ${shop?.shopName || "the shop"}.`,
+    );
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get hardware orders for shop
 // @route   GET /api/hardwareShop/orders
 // @access  Private (hardwareShop)

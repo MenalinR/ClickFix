@@ -156,6 +156,8 @@ export const api = {
       `${API_URL}/hardware/requests/${id}/status`,
     markDelivered: (id: string) =>
       `${API_URL}/hardware/requests/${id}/delivered`,
+    confirmComing: (id: string) =>
+      `${API_URL}/hardware/requests/${id}/coming`,
   },
 
   // Hardware Shop
@@ -179,6 +181,8 @@ export const api = {
       `${API_URL}/hardwareShop/orders/${id}/mark-packing`,
     markReady: (id: string) =>
       `${API_URL}/hardwareShop/orders/${id}/mark-ready`,
+    completeOrder: (id: string) =>
+      `${API_URL}/hardwareShop/orders/${id}/complete`,
   },
 
   // Health

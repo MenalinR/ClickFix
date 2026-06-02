@@ -82,6 +82,7 @@ const hardwareRequestSchema = new mongoose.Schema(
         "rejected",
         "packing",
         "ready",
+        "coming",
         "picked_up",
         "delivered",
       ],
