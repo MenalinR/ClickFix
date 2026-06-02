@@ -66,7 +66,11 @@ export default function OrderHardwarePage() {
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [loading, setLoading] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  const selectedShop = useMemo(
+    () => shops.find((s) => s._id === selectedShopId) || null,
+    [shops, selectedShopId],
+  );
 
   // Approved suggestions from chat (read-only reference)
   const approvedSuggestions = useMemo(() => {
@@ -169,8 +173,8 @@ export default function OrderHardwarePage() {
     });
   };
 
-  const handleSubmit = async () => {
-    if (!selectedShopId) {
+  const handleCheckout = () => {
+    if (!selectedShopId || !selectedShop) {
       Alert.alert("Pick a shop", "Please select a hardware shop first.");
       return;
     }
@@ -178,55 +182,19 @@ export default function OrderHardwarePage() {
       Alert.alert("Empty cart", "Add at least one item from the shop.");
       return;
     }
-    setSubmitting(true);
-    try {
-      const res = await apiCall(
-        api.hardware.createOrderFromJob,
-        "POST",
-        {
-          jobId,
-          shopId: selectedShopId,
-          items: cartLines.map((l) => ({
-            hardwareItemId: l.hardwareItemId,
-            quantity: l.quantity,
-          })),
-        },
-        token,
-      );
-      const total = res?.data?.request?.totalCost || cartTotal;
-      const itemCount = cartLines.length;
-
-      // Post a follow-up text message in chat so the customer sees it
-      if (customerId) {
-        try {
-          await apiCall(
-            api.chat.sendMessage,
-            "POST",
-            {
-              chatId: jobId,
-              receiverId: customerId,
-              receiverModel: "Customer",
-              jobId,
-              messageType: "text",
-              content: `Hardware ordered — ${itemCount} item${
-                itemCount > 1 ? "s" : ""
-              }, ${total} LKR added to your bill.`,
-            },
-            token,
-          );
-        } catch {
-          // non-fatal
-        }
-      }
-
-      Alert.alert("Order placed", `Total ${total} LKR added to the bill.`, [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (e: any) {
-      Alert.alert("Error", e?.message || "Failed to create order");
-    } finally {
-      setSubmitting(false);
-    }
+    router.push({
+      pathname: "/(worker)/hardware-checkout",
+      params: {
+        jobId,
+        customerId,
+        shopId: selectedShopId,
+        shopName: selectedShop.shopName,
+        shopAddress: [selectedShop.address, selectedShop.city]
+          .filter(Boolean)
+          .join(", "),
+        cart: JSON.stringify(cartLines),
+      },
+    });
   };
 
   if (loading) {
@@ -425,15 +393,10 @@ export default function OrderHardwarePage() {
             <Text style={styles.cartSummaryTotal}>{cartTotal} LKR</Text>
           </View>
           <TouchableOpacity
-            style={[styles.submitButton, submitting && { opacity: 0.6 }]}
-            onPress={handleSubmit}
-            disabled={submitting}
+            style={styles.submitButton}
+            onPress={handleCheckout}
           >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.submitText}>Send Order to Shop</Text>
-            )}
+            <Text style={styles.submitText}>Checkout</Text>
           </TouchableOpacity>
         </View>
       )}

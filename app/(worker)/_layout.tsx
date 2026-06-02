@@ -271,6 +271,12 @@ export default function WorkerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="hardware-checkout"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
