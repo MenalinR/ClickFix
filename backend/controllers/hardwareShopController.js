@@ -474,6 +474,30 @@ exports.markPacking = async (req, res) => {
   }
 };
 
+// @desc    Shop marks order as ready for pickup
+// @route   PUT /api/hardwareShop/orders/:id/mark-ready
+// @access  Private (hardwareShop)
+exports.markReady = async (req, res) => {
+  try {
+    const { order, error } = await loadShopOrder(req, ["approved", "packing"]);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    order.status = "ready";
+    await order.save();
+
+    const shop = await HardwareShop.findById(req.user._id).select("shopName");
+    await notifyWorker(
+      order,
+      "Order ready for pickup",
+      `${shop?.shopName || "The shop"} packed your order. It's ready for pickup.`,
+    );
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get hardware orders for shop
 // @route   GET /api/hardwareShop/orders
 // @access  Private (hardwareShop)

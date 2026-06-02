@@ -177,6 +177,8 @@ export const api = {
       `${API_URL}/hardwareShop/orders/${id}/reject`,
     markPacking: (id: string) =>
       `${API_URL}/hardwareShop/orders/${id}/mark-packing`,
+    markReady: (id: string) =>
+      `${API_URL}/hardwareShop/orders/${id}/mark-ready`,
   },
 
   // Health

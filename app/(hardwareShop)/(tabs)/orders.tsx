@@ -48,7 +48,7 @@ export default function OrdersScreen() {
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const statuses = ["pending", "approved", "packing", "delivered"];
+  const statuses = ["pending", "approved", "packing", "ready", "delivered"];
 
   const fetchOrders = async () => {
     try {
@@ -145,6 +145,14 @@ export default function OrdersScreen() {
       "Marked as packing. The worker has been notified.",
     );
 
+  const handleMarkReady = (orderId: string) =>
+    runAction(
+      orderId,
+      api.hardwareShop.markReady(orderId),
+      undefined,
+      "Marked ready for pickup. The worker has been notified.",
+    );
+
   const submitReject = async () => {
     if (!rejectFor) return;
     const reason = rejectReason.trim();
@@ -215,6 +223,26 @@ export default function OrdersScreen() {
               <>
                 <Ionicons name="cube-outline" size={16} color="white" />
                 <Text style={styles.acceptBtnText}>Mark Packing</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (item.status === "packing") {
+      return (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.readyBtn]}
+            disabled={isBusy}
+            onPress={() => handleMarkReady(item._id)}
+          >
+            {isBusy ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-done-outline" size={16} color="white" />
+                <Text style={styles.acceptBtnText}>Mark Ready for Pickup</Text>
               </>
             )}
           </TouchableOpacity>
@@ -558,6 +586,7 @@ const styles = StyleSheet.create({
   acceptBtn: { backgroundColor: "#2E7D32" },
   acceptBtnText: { color: "white", fontWeight: "600", fontSize: 13 },
   packingBtn: { backgroundColor: "#8E24AA" },
+  readyBtn: { backgroundColor: "#0288D1" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
