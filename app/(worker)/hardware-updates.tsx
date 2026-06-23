@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
+import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 
 type OrderStatus =
   | "pending"
@@ -83,6 +84,19 @@ export default function HardwareUpdatesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // While an order is "coming" (worker travelling to the shop) broadcast the
+  // worker's location so the customer can see the trip from pickup onward.
+  const comingOrder = orders.find((o) => o.status === "coming");
+  const comingJobId =
+    (comingOrder?.jobId as any)?._id ||
+    (typeof comingOrder?.jobId === "string" ? comingOrder?.jobId : null);
+  useLocationBroadcast({
+    jobId: comingOrder ? comingJobId : null,
+    phase: "coming",
+    active: !!comingOrder && !!comingJobId,
+    token,
+  });
 
   const fetchOrders = useCallback(async () => {
     if (!token) return;

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     Image,
     Modal,
@@ -10,8 +10,12 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { io, Socket } from "socket.io-client";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { config } from "../../constants/config";
 import { useStore } from "../../constants/Store";
 
 type JobStatus =
@@ -21,13 +25,117 @@ type JobStatus =
   | "In progress"
   | "Completed";
 
+interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
+const socketBaseURL = () => {
+  const base = config.api.baseURL || "";
+  return base.replace(/\/api\/?$/, "");
+};
+
+// What leg of the trip the worker is on (sent with each location ping).
+const PHASE_LABEL: Record<string, string> = {
+  coming: "Heading to the hardware shop",
+  "On the way": "On the way to your location",
+  "In progress": "Working at your location",
+};
+
+// Map the backend's full status enum onto the 5 timeline stages.
+const normalizeStatus = (status?: string): JobStatus => {
+  if (status === "On the way") return "On the way";
+  if (status === "In progress") return "In progress";
+  if (status === "Completed") return "Completed";
+  if (status === "Accepted") return "Accepted";
+  return "Waiting";
+};
+
 export default function JobTrackingPage() {
   const router = useRouter();
-  const { workerId } = useLocalSearchParams();
-  const { workers } = useStore();
+  const { jobId, workerId } = useLocalSearchParams();
+  const { workers, token } = useStore();
   const worker = workers.find((w) => w.id === workerId);
   const [jobStatus, setJobStatus] = useState<JobStatus>("Accepted");
   const [showHardwareModal, setShowHardwareModal] = useState(false);
+
+  const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
+  const [destination, setDestination] = useState<LatLng | null>(null);
+  const [trackingPhase, setTrackingPhase] = useState<string>("");
+  const mapRef = useRef<MapView | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  const id = Array.isArray(jobId) ? jobId[0] : jobId;
+
+  // Fetch the last known position once, then subscribe to the live stream.
+  useEffect(() => {
+    if (!id || !token) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await apiCall(
+          api.jobs.liveLocation(id),
+          "GET",
+          undefined,
+          token,
+        );
+        if (cancelled || !res?.success) return;
+        const d = res.data;
+        if (d?.destination?.coordinates?.length === 2) {
+          setDestination({
+            longitude: d.destination.coordinates[0],
+            latitude: d.destination.coordinates[1],
+          });
+        }
+        if (d?.worker?.coordinates?.length === 2) {
+          setWorkerCoords({
+            longitude: d.worker.coordinates[0],
+            latitude: d.worker.coordinates[1],
+          });
+          if (d.worker.phase) setTrackingPhase(d.worker.phase);
+        }
+        if (d?.status) setJobStatus(normalizeStatus(d.status));
+      } catch {
+        // silent — the socket stream will fill in shortly
+      }
+    })();
+
+    const socket = io(socketBaseURL(), { transports: ["websocket"] });
+    socketRef.current = socket;
+    socket.emit("join-job-tracking", id);
+    socket.on("worker-location", (payload: any) => {
+      if (!payload?.coords) return;
+      setWorkerCoords({
+        latitude: payload.coords.latitude,
+        longitude: payload.coords.longitude,
+      });
+      if (payload.phase) setTrackingPhase(payload.phase);
+    });
+
+    return () => {
+      cancelled = true;
+      socket.emit("leave-job-tracking", id);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [id, token]);
+
+  // Keep the map framed on the worker, plus the destination when we know it.
+  useEffect(() => {
+    if (!workerCoords || !mapRef.current) return;
+    if (destination) {
+      mapRef.current.fitToCoordinates([workerCoords, destination], {
+        edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
+        animated: true,
+      });
+    } else {
+      mapRef.current.animateToRegion(
+        { ...workerCoords, latitudeDelta: 0.02, longitudeDelta: 0.02 },
+        500,
+      );
+    }
+  }, [workerCoords, destination]);
 
   const statusStages: JobStatus[] = [
     "Waiting",
@@ -58,6 +166,57 @@ export default function JobTrackingPage() {
             <Ionicons name="call-outline" size={20} color={Colors.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* Live Map */}
+        {id && (workerCoords || destination) ? (
+          <View style={styles.mapWrap}>
+            <MapView
+              ref={mapRef}
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                latitude: (workerCoords || destination)!.latitude,
+                longitude: (workerCoords || destination)!.longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }}
+            >
+              {destination && (
+                <Marker
+                  coordinate={destination}
+                  title="Your location"
+                  pinColor={Colors.accent}
+                />
+              )}
+              {workerCoords && (
+                <Marker
+                  coordinate={workerCoords}
+                  title={worker?.name || "Worker"}
+                  description={PHASE_LABEL[trackingPhase] || "On the move"}
+                >
+                  <View style={styles.workerMarker}>
+                    <Ionicons name="navigate" size={16} color="white" />
+                  </View>
+                </Marker>
+              )}
+            </MapView>
+            {!!trackingPhase && (
+              <View style={styles.mapBanner}>
+                <View style={styles.liveDot} />
+                <Text style={styles.mapBannerText}>
+                  {PHASE_LABEL[trackingPhase] || "Live location"}
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : id ? (
+          <View style={styles.mapPlaceholder}>
+            <Ionicons name="map-outline" size={28} color={Colors.textSecondary} />
+            <Text style={styles.mapPlaceholderText}>
+              The worker&apos;s live location will appear here once they head out.
+            </Text>
+          </View>
+        ) : null}
 
         {/* Worker Card */}
         {worker && (
@@ -315,6 +474,67 @@ const styles = StyleSheet.create({
   callButton: {
     padding: 8,
     borderRadius: 8,
+  },
+  mapWrap: {
+    height: 240,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  workerMarker: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "white",
+  },
+  mapBanner: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#4CAF50",
+  },
+  mapBannerText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  mapPlaceholder: {
+    height: 140,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.lightBackground,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+  },
+  mapPlaceholderText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: "center",
   },
   heading: {
     fontSize: 24,

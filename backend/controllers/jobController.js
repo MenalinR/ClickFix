@@ -738,6 +738,111 @@ exports.updateJobStatus = async (req, res) => {
   }
 };
 
+// Helper: confirm the requester is a party to this job (its worker or customer).
+function isJobParticipant(job, req) {
+  const me = req.user._id.toString();
+  if (req.userType === "worker") {
+    return (
+      (job.workerId && job.workerId.toString() === me) ||
+      (job.requestedWorkerId && job.requestedWorkerId.toString() === me)
+    );
+  }
+  if (req.userType === "customer") {
+    return job.customerId && job.customerId.toString() === me;
+  }
+  return false;
+}
+
+// @desc    Get the worker's last known live location for a job + destination
+// @route   GET /api/jobs/:id/live-location
+// @access  Private (job participant)
+exports.getJobLiveLocation = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id).select(
+      "status location workerLiveLocation customerId workerId requestedWorkerId",
+    );
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (!isJobParticipant(job, req)) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        status: job.status,
+        destination: job.location, // GeoJSON Point + address
+        worker: job.workerLiveLocation?.coordinates
+          ? {
+              coordinates: job.workerLiveLocation.coordinates,
+              heading: job.workerLiveLocation.heading,
+              speed: job.workerLiveLocation.speed,
+              phase: job.workerLiveLocation.phase,
+              updatedAt: job.workerLiveLocation.updatedAt,
+            }
+          : null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Worker pushes a live location update (used by the background task,
+//          where a socket connection may not be alive). Persists and relays
+//          over Socket.io to anyone tracking this job.
+// @route   PUT /api/jobs/:id/live-location
+// @access  Private (Worker only)
+exports.updateJobLiveLocation = async (req, res) => {
+  try {
+    const { latitude, longitude, heading, speed, phase } = req.body || {};
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return res.status(400).json({
+        success: false,
+        message: "latitude and longitude are required numbers",
+      });
+    }
+
+    const job = await Job.findById(req.params.id).select(
+      "workerId requestedWorkerId",
+    );
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    const me = req.user._id.toString();
+    const isWorker =
+      (job.workerId && job.workerId.toString() === me) ||
+      (job.requestedWorkerId && job.requestedWorkerId.toString() === me);
+    if (!isWorker) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    job.workerLiveLocation = {
+      coordinates: [longitude, latitude],
+      heading,
+      speed,
+      phase,
+      updatedAt: new Date(),
+    };
+    await job.save();
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`track:${job._id}`).emit("worker-location", {
+        jobId: job._id.toString(),
+        coords: { latitude, longitude, heading, speed },
+        phase,
+        at: Date.now(),
+      });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Customer responds to a worker's hardware cart proposal
 // @route   PUT /api/jobs/:id/hardware-cart/respond
 // @access  Private (Customer only)

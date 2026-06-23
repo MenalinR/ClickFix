@@ -7,10 +7,15 @@
     "icon": "./assets/images/icon.png",
     "scheme": "clickfix",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ClickFix"
+      "bundleIdentifier": "com.anonymous.ClickFix",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ClickFix shares your live location with the customer while you travel to the job so they can track your arrival.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ClickFix keeps sharing your location in the background while a job is active so the customer can track your arrival.",
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +26,14 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.ClickFix"
+      "package": "com.anonymous.ClickFix",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -42,7 +54,16 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "ClickFix keeps sharing your location in the background while a job is active so the customer can track your arrival.",
+          "locationWhenInUsePermission": "ClickFix shares your live location with the customer while you travel to the job so they can track your arrival.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

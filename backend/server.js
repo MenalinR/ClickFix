@@ -72,10 +72,59 @@ io.on("connection", (socket) => {
     socket.to(data.chatId).emit("user-typing", data);
   });
 
+  // --- Live job tracking ---
+  // Customer (or worker) joins a per-job room to receive live location pings.
+  socket.on("join-job-tracking", (jobId) => {
+    if (jobId) socket.join(`track:${jobId}`);
+  });
+
+  socket.on("leave-job-tracking", (jobId) => {
+    if (jobId) socket.leave(`track:${jobId}`);
+  });
+
+  // Worker streams its position. We relay every ping live to everyone in the
+  // room, but only persist to the DB every PERSIST_INTERVAL ms so a customer
+  // who opens the screen late still sees the last known position.
+  socket.on("worker-location-update", async (data) => {
+    const { jobId, coords, phase } = data || {};
+    if (!jobId || !coords) return;
+
+    io.to(`track:${jobId}`).emit("worker-location", {
+      jobId,
+      coords,
+      phase,
+      at: Date.now(),
+    });
+
+    try {
+      const now = Date.now();
+      const last = lastLocationPersist.get(jobId) || 0;
+      if (now - last >= PERSIST_INTERVAL) {
+        lastLocationPersist.set(jobId, now);
+        const Job = require("./models/Job");
+        await Job.findByIdAndUpdate(jobId, {
+          workerLiveLocation: {
+            coordinates: [coords.longitude, coords.latitude],
+            heading: coords.heading,
+            speed: coords.speed,
+            phase,
+            updatedAt: new Date(),
+          },
+        });
+      }
+    } catch (e) {
+      // non-fatal — live relay already happened
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
 });
+
+// Throttle DB writes for live location (relay stays real-time).
+const PERSIST_INTERVAL = 12000;
+const lastLocationPersist = new Map();
 
 // Make io accessible to routes
 app.set("io", io);

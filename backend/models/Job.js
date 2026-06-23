@@ -124,6 +124,18 @@ const jobSchema = new mongoose.Schema(
     actualEndTime: Date,
     cancellationReason: String,
     rejectionReason: String,
+    // Live location of the worker while travelling to/working on the job.
+    // coordinates are [longitude, latitude] to match the GeoJSON convention
+    // used by `location` above.
+    workerLiveLocation: {
+      coordinates: { type: [Number], default: undefined },
+      heading: Number,
+      speed: Number,
+      // Which leg of the trip this ping belongs to: "coming" (to shop),
+      // "On the way" (to customer) or "In progress".
+      phase: String,
+      updatedAt: Date,
+    },
   },
   {
     timestamps: true,

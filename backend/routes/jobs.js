@@ -13,6 +13,8 @@ const {
   getWorkerBusySlots,
   uploadJobImage,
   respondHardwareCart,
+  getJobLiveLocation,
+  updateJobLiveLocation,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -47,5 +49,12 @@ router.put(
 );
 router.put("/:id/status", protect, updateJobStatus);
 router.put("/:id/cancel", protect, cancelJob);
+router.get("/:id/live-location", protect, getJobLiveLocation);
+router.put(
+  "/:id/live-location",
+  protect,
+  authorize("worker"),
+  updateJobLiveLocation,
+);
 
 module.exports = router;

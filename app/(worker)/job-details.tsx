@@ -14,15 +14,30 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
+import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 
 export default function JobDetailsPage() {
   const router = useRouter();
   const { jobId } = useLocalSearchParams();
-  const { jobs, updateJobStatus } = useStore();
+  const { jobs, updateJobStatus, token } = useStore();
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const job = jobs.find((j) => j.id === jobId);
+
+  // Live-location broadcasting: active once the worker is heading to or working
+  // on the job. Hook is called unconditionally (before the early return) to
+  // respect the rules of hooks.
+  const trackedJobId = (job as any)?._id || (job as any)?.id || (jobId as string);
+  const jobStatus = (job as any)?.status as string | undefined;
+  const trackingActive =
+    jobStatus === "On the way" || jobStatus === "In progress";
+  useLocationBroadcast({
+    jobId: trackingActive ? trackedJobId : null,
+    phase: jobStatus || "",
+    active: trackingActive,
+    token,
+  });
 
   if (!job) {
     return (
@@ -47,6 +62,15 @@ export default function JobDetailsPage() {
       pathname: "/hardware-request",
       params: { jobId: job.id },
     });
+  };
+
+  const advanceStatus = async (status: string, message: string) => {
+    try {
+      await updateJobStatus(trackedJobId, status);
+      Alert.alert("Updated", message);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to update status");
+    }
   };
 
   return (
@@ -213,16 +237,19 @@ export default function JobDetailsPage() {
 
         {/* Action Buttons */}
         <View style={styles.section}>
-          {job.status === "Accepted" && (
+          {jobStatus === "Accepted" && (
             <>
               <TouchableOpacity
                 style={styles.primaryButton}
-                onPress={() => {
-                  Alert.alert("Success", "Job marked as Started");
-                }}
+                onPress={() =>
+                  advanceStatus(
+                    "On the way",
+                    "The customer can now track you on the map.",
+                  )
+                }
               >
-                <Ionicons name="play-circle-outline" size={20} color="white" />
-                <Text style={styles.primaryButtonText}>Start Job</Text>
+                <Ionicons name="navigate-outline" size={20} color="white" />
+                <Text style={styles.primaryButtonText}>On My Way</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -240,16 +267,27 @@ export default function JobDetailsPage() {
             </>
           )}
 
-          {job.status === "Accepted" && (
+          {jobStatus === "On the way" && (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() =>
+                advanceStatus("In progress", "Job started. Tracking continues.")
+              }
+            >
+              <Ionicons name="play-circle-outline" size={20} color="white" />
+              <Text style={styles.primaryButtonText}>Start Job</Text>
+            </TouchableOpacity>
+          )}
+
+          {jobStatus === "In progress" && (
             <TouchableOpacity
               style={[
                 styles.primaryButton,
-                { backgroundColor: "#4CAF50", marginTop: 10 },
+                { backgroundColor: "#4CAF50" },
               ]}
-              onPress={() => {
-                updateJobStatus(job.id, "Completed");
-                Alert.alert("Success", "Job marked as Completed");
-              }}
+              onPress={() =>
+                advanceStatus("Completed", "Job marked as completed.")
+              }
             >
               <Ionicons
                 name="checkmark-circle-outline"
