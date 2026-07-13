@@ -2,7 +2,7 @@ import { api, apiCall } from "@/constants/api";
 import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -36,10 +36,12 @@ interface Order {
   items: Array<{ name: string; quantity: number; price: number }>;
   workerId: { name: string; phone: string };
   customerId: { name: string; phone: string };
+  jobId?: { _id?: string } | string;
   createdAt: string;
 }
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const { token } = useStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,8 +265,24 @@ export default function OrdersScreen() {
       );
     }
     if (item.status === "coming") {
+      const jobId =
+        (item.jobId as any)?._id ||
+        (typeof item.jobId === "string" ? item.jobId : "");
       return (
         <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.trackBtn]}
+            disabled={isBusy || !jobId}
+            onPress={() =>
+              router.push({
+                pathname: "/track-worker",
+                params: { jobId, workerName: item.workerId?.name || "Worker" },
+              })
+            }
+          >
+            <Ionicons name="navigate" size={16} color={Colors.primary} />
+            <Text style={styles.trackBtnText}>Track worker</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.completeBtn]}
             disabled={isBusy}
@@ -621,6 +639,12 @@ const styles = StyleSheet.create({
   packingBtn: { backgroundColor: "#8E24AA" },
   readyBtn: { backgroundColor: "#0288D1" },
   completeBtn: { backgroundColor: "#00897B" },
+  trackBtn: {
+    backgroundColor: "#E3F2FD",
+    borderWidth: 1,
+    borderColor: "#90CAF9",
+  },
+  trackBtnText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

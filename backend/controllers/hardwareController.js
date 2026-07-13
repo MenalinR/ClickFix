@@ -300,7 +300,7 @@ exports.getHardwareRequests = async (req, res) => {
       .populate("jobId", "serviceType status")
       .populate("workerId", "name phone")
       .populate("customerId", "name phone")
-      .populate("shopId", "shopName phone address city")
+      .populate("shopId", "shopName phone address city location")
       .sort("-createdAt");
 
     res.status(200).json({
@@ -480,6 +480,26 @@ exports.confirmComing = async (req, res) => {
 
     request.status = "coming";
     await request.save();
+
+    // Start the job at the same time — the worker heading to the shop marks
+    // the job as actively in progress.
+    if (request.jobId) {
+      try {
+        const job = await Job.findById(request.jobId);
+        if (job && job.status !== "In progress" && job.status !== "Completed") {
+          job.status = "In progress";
+          if (!job.actualStartTime) job.actualStartTime = new Date();
+          job.timeline.push({
+            status: "In progress",
+            timestamp: new Date(),
+            note: "Worker heading to hardware shop for pickup",
+          });
+          await job.save();
+        }
+      } catch (e) {
+        // non-fatal — the pickup flow still proceeds
+      }
+    }
 
     // Notify the hardware shop that the worker is on the way
     if (request.shopId) {

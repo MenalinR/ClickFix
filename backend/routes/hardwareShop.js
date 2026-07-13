@@ -18,6 +18,7 @@ const {
   adminListShops,
   adminDeleteShop,
   updateShopProfile,
+  updateShopLocation,
 } = require("../controllers/hardwareShopController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -36,6 +37,7 @@ router.use(protect, authorize("hardwareShop"));
 
 // Profile
 router.put("/profile", updateShopProfile);
+router.put("/location", updateShopLocation);
 router.post(
   "/upload-image",
   (req, res, next) => {

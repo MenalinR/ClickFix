@@ -1,6 +1,5 @@
-import { useRouter } from "expo-router";
-import React from "react";
 import { Stack } from "expo-router";
+import React from "react";
 
 export default function HardwareShopLayout() {
   return (
@@ -10,6 +9,7 @@ export default function HardwareShopLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="track-worker" />
     </Stack>
   );
 }

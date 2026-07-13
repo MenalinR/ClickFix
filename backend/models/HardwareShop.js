@@ -33,6 +33,17 @@ const hardwareShopSchema = new mongoose.Schema(
       type: String,
       required: [true, "City is required"],
     },
+    // Shop's map location, captured from the shop's device GPS. coordinates
+    // are [longitude, latitude] to match the GeoJSON convention used elsewhere.
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: { type: [Number], default: undefined },
+      updatedAt: Date,
+    },
     licenseNumber: {
       type: String,
       required: [true, "License number is required"],

@@ -1,6 +1,36 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const HardwareShop = require("../models/HardwareShop");
 
+// @desc    Set the shop's map location from the shop device's GPS
+// @route   PUT /api/hardwareShop/location
+// @access  Private (hardwareShop)
+exports.updateShopLocation = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body || {};
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return res.status(400).json({
+        success: false,
+        message: "latitude and longitude are required numbers",
+      });
+    }
+    const shop = await HardwareShop.findByIdAndUpdate(
+      req.user._id,
+      {
+        location: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+          updatedAt: new Date(),
+        },
+      },
+      { new: true },
+    ).select("-password");
+
+    res.status(200).json({ success: true, data: shop });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    List active hardware shops (public to authenticated workers)
 // @route   GET /api/hardwareShop/list
 // @access  Private (Worker)

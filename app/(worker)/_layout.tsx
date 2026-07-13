@@ -277,6 +277,12 @@ export default function WorkerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="pickup-route"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

@@ -1,0 +1,120 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
+import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
+import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
+
+export default function PickupRouteScreen() {
+  const router = useRouter();
+  const { token } = useStore();
+  const params = useLocalSearchParams();
+
+  const jobId = (Array.isArray(params.jobId) ? params.jobId[0] : params.jobId) as
+    | string
+    | undefined;
+  const shopName = (params.shopName as string) || "Hardware shop";
+  const shopLat = params.shopLat ? Number(params.shopLat) : NaN;
+  const shopLng = params.shopLng ? Number(params.shopLng) : NaN;
+  const destination: LatLng | null =
+    Number.isFinite(shopLat) && Number.isFinite(shopLng)
+      ? { latitude: shopLat, longitude: shopLng }
+      : null;
+
+  const [myCoords, setMyCoords] = useState<LatLng | null>(null);
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Keep streaming our position to the shop/customer while this screen is open.
+  useLocationBroadcast({
+    jobId: jobId || null,
+    phase: "coming",
+    active: !!jobId,
+    token,
+  });
+
+  // Watch our own position so we can draw ourselves on the map.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fg = await Location.requestForegroundPermissionsAsync();
+      if (!fg.granted || cancelled) return;
+      watchRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 4000, distanceInterval: 10 },
+        (loc) =>
+          setMyCoords({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+      watchRef.current?.remove();
+      watchRef.current = null;
+    };
+  }, []);
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>On the way to shop</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.body}>
+        <LiveTrackingMap
+          workerCoords={myCoords}
+          destination={destination}
+          workerLabel="You"
+          destinationLabel={shopName}
+          bannerText={`Heading to ${shopName}`}
+          emptyText="Getting your location…"
+          height={360}
+        />
+
+        <View style={styles.infoCard}>
+          <Ionicons name="navigate" size={18} color={Colors.primary} />
+          <Text style={styles.infoText}>
+            {destination
+              ? `Follow the route to ${shopName}. The shop can see your live location while you're on the way.`
+              : `${shopName} hasn't set its map location yet, so the route can't be drawn — but your live location is still shared with the shop.`}
+          </Text>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  back: { padding: 4 },
+  title: { fontSize: 18, fontWeight: "700", color: Colors.text },
+  body: { padding: 16, gap: 14 },
+  infoCard: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    backgroundColor: "#E3F2FD",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#90CAF9",
+  },
+  infoText: { flex: 1, fontSize: 13, color: "#1565C0", lineHeight: 18 },
+});

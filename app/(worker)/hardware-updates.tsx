@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -38,6 +38,7 @@ interface HardwareRequest {
     phone?: string;
     address?: string;
     city?: string;
+    location?: { coordinates?: number[] };
   };
   jobId?: { _id?: string; serviceType?: string };
   customerNote?: string;
@@ -79,6 +80,7 @@ const STATUS_HINT: Record<OrderStatus, string> = {
 };
 
 export default function HardwareUpdatesScreen() {
+  const router = useRouter();
   const { token } = useStore();
   const [orders, setOrders] = useState<HardwareRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,12 +131,12 @@ export default function HardwareUpdatesScreen() {
   };
 
   const confirmComing = useCallback(
-    async (id: string) => {
+    async (item: HardwareRequest) => {
       if (!token) return;
       try {
-        setBusyId(id);
+        setBusyId(item._id);
         const res = await apiCall(
-          api.hardware.confirmComing(id),
+          api.hardware.confirmComing(item._id),
           "PUT",
           undefined,
           token,
@@ -144,13 +146,30 @@ export default function HardwareUpdatesScreen() {
           return;
         }
         await fetchOrders();
+
+        // Open the route-to-shop map. The job is now In progress and the
+        // shop can see the live location.
+        const jobId =
+          (item.jobId as any)?._id ||
+          (typeof item.jobId === "string" ? item.jobId : "");
+        const coords = item.shopId?.location?.coordinates; // [lng, lat]
+        router.push({
+          pathname: "/pickup-route",
+          params: {
+            jobId,
+            shopName: item.shopId?.shopName || "Hardware shop",
+            ...(coords && coords.length === 2
+              ? { shopLng: String(coords[0]), shopLat: String(coords[1]) }
+              : {}),
+          },
+        });
       } catch (e: any) {
         Alert.alert("Error", e?.message || "Couldn't update order");
       } finally {
         setBusyId(null);
       }
     },
-    [token, fetchOrders],
+    [token, fetchOrders, router],
   );
 
   const renderItem = ({ item }: { item: HardwareRequest }) => {
@@ -239,7 +258,7 @@ export default function HardwareUpdatesScreen() {
           <TouchableOpacity
             style={styles.comingBtn}
             disabled={busyId === item._id}
-            onPress={() => confirmComing(item._id)}
+            onPress={() => confirmComing(item)}
           >
             {busyId === item._id ? (
               <ActivityIndicator size="small" color="white" />

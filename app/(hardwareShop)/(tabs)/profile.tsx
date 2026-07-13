@@ -3,6 +3,7 @@ import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
 
   // Edit form state
   const [editShopName, setEditShopName] = useState(shop?.shopName || "");
@@ -126,6 +128,43 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSetLocation = async () => {
+    if (!token) return;
+    try {
+      setSavingLocation(true);
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow location access to set your shop's map location.",
+        );
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const res = await apiCall(
+        api.hardwareShop.setLocation,
+        "PUT",
+        {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        },
+        token,
+      );
+      if (!res?.success) throw new Error(res?.message || "Could not save location");
+      setUser({ ...(user as any), location: res.data?.location });
+      Alert.alert(
+        "Location saved",
+        "Workers heading to your shop can now be routed to you.",
+      );
+    } catch (e: any) {
+      Alert.alert("Failed", e?.message || "Could not set location");
+    } finally {
+      setSavingLocation(false);
+    }
+  };
+
   const openEditModal = () => {
     setEditShopName(shop?.shopName || "");
     setEditPhone(shop?.phone || "");
@@ -196,7 +235,33 @@ export default function ProfileScreen() {
               value={shop?.address || "N/A"}
             />
             <InfoRow icon="map" label="City" value={shop?.city || "N/A"} />
+            <InfoRow
+              icon="navigate"
+              label="Map location"
+              value={
+                shop?.location?.coordinates?.length === 2 ? "Set" : "Not set"
+              }
+            />
           </View>
+
+          <Pressable
+            style={styles.locationBtn}
+            onPress={handleSetLocation}
+            disabled={savingLocation}
+          >
+            {savingLocation ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <Ionicons name="locate" size={16} color="white" />
+                <Text style={styles.locationBtnText}>
+                  {shop?.location?.coordinates?.length === 2
+                    ? "Update shop location"
+                    : "Use my current location"}
+                </Text>
+              </>
+            )}
+          </Pressable>
         </View>
 
         {/* Actions */}
@@ -401,6 +466,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: "hidden",
   },
+  locationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  locationBtnText: { color: "white", fontWeight: "600", fontSize: 14 },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
