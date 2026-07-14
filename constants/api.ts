@@ -124,6 +124,10 @@ export const api = {
     respondHardwareCart: (id: string) =>
       `${API_URL}/jobs/${id}/hardware-cart/respond`,
     liveLocation: (id: string) => `${API_URL}/jobs/${id}/live-location`,
+    directions: (origin: string, destination: string) =>
+      `${API_URL}/jobs/directions?origin=${encodeURIComponent(
+        origin,
+      )}&destination=${encodeURIComponent(destination)}`,
   },
 
   // Chat

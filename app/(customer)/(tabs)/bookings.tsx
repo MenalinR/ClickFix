@@ -308,6 +308,9 @@ export default function BookingsScreen() {
                 const canCancel = cancellableStatuses.includes(
                   status.toLowerCase(),
                 );
+                const canTrack = ["on the way", "in progress"].includes(
+                  status.toLowerCase(),
+                );
                 const isTappable = needsReview || canCancel;
                 const RowWrap: any = isTappable ? TouchableOpacity : View;
                 const onRowPress = needsReview
@@ -353,6 +356,30 @@ export default function BookingsScreen() {
                           {getStatusLabel(status)}
                         </Text>
                       </View>
+                      {canTrack ? (
+                        <TouchableOpacity
+                          style={styles.trackIconBtn}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/(customer)/job-tracking",
+                              params: {
+                                jobId: id,
+                                workerId:
+                                  (job.workerId as any)?._id ||
+                                  (job.workerId as any) ||
+                                  "",
+                              },
+                            })
+                          }
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons
+                            name="navigate-circle"
+                            size={24}
+                            color={Colors.primary}
+                          />
+                        </TouchableOpacity>
+                      ) : null}
                       {canCancel ? (
                         <TouchableOpacity
                           style={styles.cancelIconBtn}
@@ -761,6 +788,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cancelIconBtn: {
+    padding: 2,
+  },
+  trackIconBtn: {
     padding: 2,
   },
   tableRow: {

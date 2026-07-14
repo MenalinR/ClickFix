@@ -279,6 +279,24 @@ export default function JobDetailsPage() {
             </TouchableOpacity>
           )}
 
+          {(jobStatus === "On the way" || jobStatus === "In progress") && (
+            <TouchableOpacity
+              style={[styles.primaryButton, { marginBottom: 10 }]}
+              onPress={() =>
+                router.push({
+                  pathname: "/job-route",
+                  params: {
+                    jobId: trackedJobId,
+                    customerName: (job as any).customerName || "",
+                  },
+                })
+              }
+            >
+              <Ionicons name="navigate-outline" size={20} color="white" />
+              <Text style={styles.primaryButtonText}>Navigate to customer</Text>
+            </TouchableOpacity>
+          )}
+
           {jobStatus === "In progress" && (
             <TouchableOpacity
               style={[

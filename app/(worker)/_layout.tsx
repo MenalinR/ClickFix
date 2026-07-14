@@ -283,6 +283,12 @@ export default function WorkerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="job-route"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

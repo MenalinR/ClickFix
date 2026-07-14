@@ -8,6 +8,7 @@ import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
 import { Colors } from "../../constants/Colors";
 import { config } from "../../constants/config";
 import { useStore } from "../../constants/Store";
+import { useRoadRoute } from "../../hooks/useRoadRoute";
 
 const socketBaseURL = () => {
   const base = config.api.baseURL || "";
@@ -16,7 +17,7 @@ const socketBaseURL = () => {
 
 export default function TrackWorkerScreen() {
   const router = useRouter();
-  const { user } = useStore();
+  const { user, token } = useStore();
   const shop = user as any;
   const params = useLocalSearchParams();
 
@@ -35,8 +36,14 @@ export default function TrackWorkerScreen() {
       : null;
 
   const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  // Real road route from the worker's live position to the shop.
+  const { routeCoords, distanceText, durationText } = useRoadRoute(
+    workerCoords,
+    shopCoords,
+    token,
+  );
 
   useEffect(() => {
     if (!jobId) return;
@@ -49,7 +56,6 @@ export default function TrackWorkerScreen() {
         latitude: payload.coords.latitude,
         longitude: payload.coords.longitude,
       });
-      setLastUpdate(payload.at || Date.now());
     });
     return () => {
       socket.emit("leave-job-tracking", jobId);
@@ -72,9 +78,18 @@ export default function TrackWorkerScreen() {
         <LiveTrackingMap
           workerCoords={workerCoords}
           destination={shopCoords}
+          routeCoords={routeCoords}
           workerLabel={workerName}
           destinationLabel="Your shop"
-          bannerText={workerCoords ? `${workerName} is on the way` : undefined}
+          bannerText={
+            durationText
+              ? `${workerName} · ${durationText} away${
+                  distanceText ? ` · ${distanceText}` : ""
+                }`
+              : workerCoords
+                ? `${workerName} is on the way`
+                : undefined
+          }
           emptyText={`Waiting for ${workerName} to share their location…`}
           height={360}
         />

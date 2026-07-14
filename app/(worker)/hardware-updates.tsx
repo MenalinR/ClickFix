@@ -270,6 +270,21 @@ export default function HardwareUpdatesScreen() {
             )}
           </TouchableOpacity>
         )}
+
+        {status === "picked_up" && (
+          <TouchableOpacity
+            style={styles.navigateBtn}
+            onPress={() => {
+              const jobId =
+                (item.jobId as any)?._id ||
+                (typeof item.jobId === "string" ? item.jobId : "");
+              router.push({ pathname: "/job-route", params: { jobId } });
+            }}
+          >
+            <Ionicons name="navigate-outline" size={16} color="white" />
+            <Text style={styles.comingBtnText}>Navigate to customer</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -419,4 +434,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   comingBtnText: { color: "white", fontWeight: "700", fontSize: 13 },
+  navigateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 11,
+    marginTop: 12,
+  },
 });

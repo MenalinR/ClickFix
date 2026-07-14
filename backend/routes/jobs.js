@@ -15,6 +15,7 @@ const {
   respondHardwareCart,
   getJobLiveLocation,
   updateJobLiveLocation,
+  getDirections,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -35,6 +36,7 @@ router.post(
 );
 router.get("/", protect, getJobs);
 router.get("/available", protect, authorize("worker"), getAvailableJobs);
+router.get("/directions", protect, getDirections);
 router.get("/worker/:workerId/busy", protect, getWorkerBusySlots);
 router.get("/:id", protect, getJob);
 router.put("/:id/assign", protect, authorize("worker"), assignWorker);

@@ -10,13 +10,14 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { config } from "../../constants/config";
 import { useStore } from "../../constants/Store";
+import { useRoadRoute } from "../../hooks/useRoadRoute";
 
 type JobStatus =
   | "Waiting"
@@ -64,6 +65,9 @@ export default function JobTrackingPage() {
   const [trackingPhase, setTrackingPhase] = useState<string>("");
   const mapRef = useRef<MapView | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  // Real road route from the worker to the customer's location.
+  const { routeCoords } = useRoadRoute(workerCoords, destination, token);
 
   const id = Array.isArray(jobId) ? jobId[0] : jobId;
 
@@ -124,7 +128,12 @@ export default function JobTrackingPage() {
   // Keep the map framed on the worker, plus the destination when we know it.
   useEffect(() => {
     if (!workerCoords || !mapRef.current) return;
-    if (destination) {
+    if (routeCoords.length > 1) {
+      mapRef.current.fitToCoordinates(routeCoords, {
+        edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
+        animated: true,
+      });
+    } else if (destination) {
       mapRef.current.fitToCoordinates([workerCoords, destination], {
         edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
         animated: true,
@@ -135,7 +144,7 @@ export default function JobTrackingPage() {
         500,
       );
     }
-  }, [workerCoords, destination]);
+  }, [workerCoords, destination, routeCoords]);
 
   const statusStages: JobStatus[] = [
     "Waiting",
@@ -198,6 +207,13 @@ export default function JobTrackingPage() {
                     <Ionicons name="navigate" size={16} color="white" />
                   </View>
                 </Marker>
+              )}
+              {routeCoords.length > 1 && (
+                <Polyline
+                  coordinates={routeCoords}
+                  strokeColor={Colors.primary}
+                  strokeWidth={4}
+                />
               )}
             </MapView>
             {!!trackingPhase && (

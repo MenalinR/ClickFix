@@ -5,12 +5,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 import { useRoadRoute } from "../../hooks/useRoadRoute";
 
-export default function PickupRouteScreen() {
+export default function JobRouteScreen() {
   const router = useRouter();
   const { token } = useStore();
   const params = useLocalSearchParams();
@@ -18,33 +19,54 @@ export default function PickupRouteScreen() {
   const jobId = (Array.isArray(params.jobId) ? params.jobId[0] : params.jobId) as
     | string
     | undefined;
-  const shopName = (params.shopName as string) || "Hardware shop";
-  const shopLat = params.shopLat ? Number(params.shopLat) : NaN;
-  const shopLng = params.shopLng ? Number(params.shopLng) : NaN;
-  const destination: LatLng | null =
-    Number.isFinite(shopLat) && Number.isFinite(shopLng)
-      ? { latitude: shopLat, longitude: shopLng }
-      : null;
+  const customerName = (params.customerName as string) || "the customer";
 
+  const [destination, setDestination] = useState<LatLng | null>(null);
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
 
-  // Real road route from us to the shop.
+  // Stream our position to the customer while heading to the job site.
+  useLocationBroadcast({
+    jobId: jobId || null,
+    phase: "On the way",
+    active: !!jobId,
+    token,
+  });
+
+  // Road route to the customer.
   const { routeCoords, distanceText, durationText } = useRoadRoute(
     myCoords,
     destination,
     token,
   );
 
-  // Keep streaming our position to the shop/customer while this screen is open.
-  useLocationBroadcast({
-    jobId: jobId || null,
-    phase: "coming",
-    active: !!jobId,
-    token,
-  });
+  // Fetch the customer's location (job destination) once.
+  useEffect(() => {
+    if (!jobId || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiCall(
+          api.jobs.liveLocation(jobId),
+          "GET",
+          undefined,
+          token,
+        );
+        if (cancelled || !res?.success) return;
+        const coords = res.data?.destination?.coordinates; // [lng, lat]
+        if (coords?.length === 2) {
+          setDestination({ longitude: coords[0], latitude: coords[1] });
+        }
+      } catch {
+        // silent
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, token]);
 
-  // Watch our own position so we can draw ourselves on the map.
+  // Watch our own position to draw ourselves on the map.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -72,7 +94,7 @@ export default function PickupRouteScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>On the way to shop</Text>
+        <Text style={styles.title}>On the way to customer</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -82,11 +104,11 @@ export default function PickupRouteScreen() {
           destination={destination}
           routeCoords={routeCoords}
           workerLabel="You"
-          destinationLabel={shopName}
+          destinationLabel="Customer"
           bannerText={
             durationText
               ? `${durationText} away${distanceText ? ` · ${distanceText}` : ""}`
-              : `Heading to ${shopName}`
+              : "Heading to the job"
           }
           emptyText="Getting your location…"
           height={360}
@@ -96,8 +118,8 @@ export default function PickupRouteScreen() {
           <Ionicons name="navigate" size={18} color={Colors.primary} />
           <Text style={styles.infoText}>
             {destination
-              ? `Follow the route to ${shopName}. The shop can see your live location while you're on the way.`
-              : `${shopName} hasn't set its map location yet, so the route can't be drawn — but your live location is still shared with the shop.`}
+              ? `Follow the route to ${customerName}'s location. They can see your live location on the way.`
+              : `Couldn't load the job location, but your live location is still shared with ${customerName}.`}
           </Text>
         </View>
       </View>

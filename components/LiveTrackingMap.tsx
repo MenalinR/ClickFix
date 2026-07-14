@@ -14,6 +14,8 @@ interface Props {
   workerCoords: LatLng | null;
   /** Fixed destination (the hardware shop / customer). */
   destination?: LatLng | null;
+  /** Road route polyline (from useRoadRoute). Falls back to a straight line. */
+  routeCoords?: LatLng[];
   workerLabel?: string;
   destinationLabel?: string;
   destinationColor?: string;
@@ -33,6 +35,7 @@ interface Props {
 export default function LiveTrackingMap({
   workerCoords,
   destination,
+  routeCoords = [],
   workerLabel = "Worker",
   destinationLabel = "Destination",
   destinationColor = Colors.accent,
@@ -43,19 +46,24 @@ export default function LiveTrackingMap({
   const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
-    if (!workerCoords || !mapRef.current) return;
-    if (destination) {
-      mapRef.current.fitToCoordinates([workerCoords, destination], {
+    if (!mapRef.current) return;
+    // Prefer framing the whole road route; else worker + destination; else self.
+    const pts =
+      routeCoords.length > 1
+        ? routeCoords
+        : [workerCoords, destination].filter(Boolean) as LatLng[];
+    if (pts.length > 1) {
+      mapRef.current.fitToCoordinates(pts, {
         edgePadding: { top: 90, right: 90, bottom: 90, left: 90 },
         animated: true,
       });
-    } else {
+    } else if (workerCoords) {
       mapRef.current.animateToRegion(
         { ...workerCoords, latitudeDelta: 0.02, longitudeDelta: 0.02 },
         500,
       );
     }
-  }, [workerCoords, destination]);
+  }, [workerCoords, destination, routeCoords]);
 
   const center = workerCoords || destination;
 
@@ -95,13 +103,22 @@ export default function LiveTrackingMap({
             </View>
           </Marker>
         )}
-        {workerCoords && destination && (
+        {routeCoords.length > 1 ? (
           <Polyline
-            coordinates={[workerCoords, destination]}
+            coordinates={routeCoords}
             strokeColor={Colors.primary}
-            strokeWidth={3}
-            lineDashPattern={[6, 6]}
+            strokeWidth={4}
           />
+        ) : (
+          workerCoords &&
+          destination && (
+            <Polyline
+              coordinates={[workerCoords, destination]}
+              strokeColor={Colors.primary}
+              strokeWidth={3}
+              lineDashPattern={[6, 6]}
+            />
+          )
         )}
       </MapView>
 

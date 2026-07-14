@@ -843,6 +843,93 @@ exports.updateJobLiveLocation = async (req, res) => {
   }
 };
 
+// Decode a Google "encoded polyline" string into [{ latitude, longitude }].
+function decodePolyline(str) {
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates = [];
+  while (index < str.length) {
+    let b;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+    shift = 0;
+    result = 0;
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+    coordinates.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+  }
+  return coordinates;
+}
+
+// @desc    Proxy Google Directions so the API key stays server-side. Returns
+//          the road route (decoded polyline) + distance/duration.
+// @route   GET /api/jobs/directions?origin=lat,lng&destination=lat,lng
+// @access  Private (any authenticated user)
+exports.getDirections = async (req, res) => {
+  try {
+    const { origin, destination } = req.query;
+    if (!origin || !destination) {
+      return res.status(400).json({
+        success: false,
+        message: "origin and destination are required as 'lat,lng'",
+      });
+    }
+    const key =
+      process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_DIRECTIONS_API_KEY;
+    if (!key) {
+      // Not fatal — the app falls back to a straight line.
+      return res.status(200).json({
+        success: false,
+        message: "Directions not configured (set GOOGLE_MAPS_API_KEY on the server)",
+      });
+    }
+
+    const url =
+      "https://maps.googleapis.com/maps/api/directions/json" +
+      `?origin=${encodeURIComponent(origin)}` +
+      `&destination=${encodeURIComponent(destination)}` +
+      `&mode=driving&key=${key}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== "OK" || !data.routes || data.routes.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: `Directions: ${data.status}${
+          data.error_message ? ` — ${data.error_message}` : ""
+        }`,
+      });
+    }
+
+    const route = data.routes[0];
+    const points = decodePolyline(route.overview_polyline.points);
+    const leg = route.legs && route.legs[0];
+
+    res.status(200).json({
+      success: true,
+      data: {
+        points,
+        distance: leg?.distance?.text,
+        duration: leg?.duration?.text,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Customer responds to a worker's hardware cart proposal
 // @route   PUT /api/jobs/:id/hardware-cart/respond
 // @access  Private (Customer only)
