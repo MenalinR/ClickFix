@@ -210,43 +210,67 @@ export const apiCall = async (
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  try {
-    console.log(`🌐 API Request: ${method} ${url}`);
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  // Retry connection failures a few times — the backend (Render free tier)
+  // spins down when idle and a cold start can take ~30s, longer than a single
+  // fetch's connect timeout. We only retry true connection failures, never
+  // HTTP errors (e.g. wrong password), so real errors surface immediately.
+  const maxAttempts = 3;
+  let lastError: any = null;
 
-    const text = await response.text();
-    let result: any = null;
-    if (text) {
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = null;
-      }
-    }
-
-    if (!response.ok) {
-      const message =
-        (result && result.message) ||
-        `${response.status} ${response.statusText || "Request failed"}`;
-      console.error(`❌ API Error [${response.status}]:`, message);
-      throw new Error(message);
-    }
-
-    console.log(`✅ API Success: ${method} ${url}`);
-    return result ?? { success: true };
-  } catch (error: any) {
-    console.error(`❌ Network Error: ${error.message}`, { url, method });
-    if (error.message === "Network request failed") {
-      throw new Error(
-        `Cannot reach server at ${url.split("/api")[0]}. Check: 1) Backend running? 2) Correct IP? 3) Same WiFi?`,
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(
+        `🌐 API Request: ${method} ${url}` +
+          (attempt > 1 ? ` (retry ${attempt - 1})` : ""),
       );
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: data ? JSON.stringify(data) : undefined,
+      });
+
+      const text = await response.text();
+      let result: any = null;
+      if (text) {
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = null;
+        }
+      }
+
+      if (!response.ok) {
+        const message =
+          (result && result.message) ||
+          `${response.status} ${response.statusText || "Request failed"}`;
+        console.error(`❌ API Error [${response.status}]:`, message);
+        throw new Error(message);
+      }
+
+      console.log(`✅ API Success: ${method} ${url}`);
+      return result ?? { success: true };
+    } catch (error: any) {
+      lastError = error;
+      const isConnectionFailure = error?.message === "Network request failed";
+      if (isConnectionFailure && attempt < maxAttempts) {
+        const waitMs = attempt * 4000; // 4s, then 8s
+        console.warn(
+          `⏳ Server unreachable — retrying in ${waitMs / 1000}s (backend may be waking up)…`,
+        );
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+      console.error(`❌ Network Error: ${error.message}`, { url, method });
+      if (isConnectionFailure) {
+        throw new Error(
+          `Cannot reach server at ${url.split("/api")[0]}. It may be starting up — wait a few seconds and try again.`,
+        );
+      }
+      throw new Error(error.message || "Network Error");
     }
-    throw new Error(error.message || "Network Error");
   }
+
+  throw new Error(lastError?.message || "Network Error");
 };
 
 // API Helper for File Uploads (multipart/form-data)
