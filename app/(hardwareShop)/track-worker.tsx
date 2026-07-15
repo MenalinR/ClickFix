@@ -5,6 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { io, Socket } from "socket.io-client";
 import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { config } from "../../constants/config";
 import { useStore } from "../../constants/Store";
@@ -47,6 +48,26 @@ export default function TrackWorkerScreen() {
 
   useEffect(() => {
     if (!jobId) return;
+    let cancelled = false;
+
+    // Fetch the last saved position immediately so the map isn't blank if the
+    // worker hasn't moved since the shop opened this screen.
+    (async () => {
+      try {
+        const res = await apiCall(api.jobs.liveLocation(jobId), "GET", undefined, token);
+        if (cancelled || !res?.success) return;
+        const w = res.data?.worker;
+        if (w?.coordinates?.length === 2) {
+          setWorkerCoords({
+            longitude: w.coordinates[0],
+            latitude: w.coordinates[1],
+          });
+        }
+      } catch {
+        // silent — socket stream will fill in when worker moves
+      }
+    })();
+
     const socket = io(socketBaseURL(), { transports: ["websocket"] });
     socketRef.current = socket;
     socket.emit("join-job-tracking", jobId);
@@ -58,11 +79,12 @@ export default function TrackWorkerScreen() {
       });
     });
     return () => {
+      cancelled = true;
       socket.emit("leave-job-tracking", jobId);
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [jobId]);
+  }, [jobId, token]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

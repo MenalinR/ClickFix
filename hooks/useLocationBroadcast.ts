@@ -95,6 +95,31 @@ export function useLocationBroadcast({ jobId, phase, active, token }: Options) {
       // Foreground live stream over the socket.
       const socket = io(socketBaseURL(), { transports: ["websocket"] });
       socketRef.current = socket;
+
+      // Emit the current position immediately so the shop/customer sees a pin
+      // as soon as they open the tracking screen, even if the worker is still.
+      try {
+        const initial = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        if (!cancelled) {
+          socket.emit("worker-location-update", {
+            jobId,
+            phase,
+            coords: {
+              latitude: initial.coords.latitude,
+              longitude: initial.coords.longitude,
+              heading: initial.coords.heading,
+              speed: initial.coords.speed,
+            },
+          });
+        }
+      } catch {
+        // ignore — watchPositionAsync will handle updates
+      }
+
+      if (cancelled) return;
+
       watchRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
