@@ -111,12 +111,23 @@ export default function PickupRouteScreen() {
           height={360}
         />
 
+        {!destination && (
+          <View style={styles.warnCard}>
+            <Ionicons name="warning" size={18} color="#B26A00" />
+            <Text style={styles.warnText}>
+              {shopName} hasn&apos;t set their map location yet. Ask them to tap
+              &quot;Use my current location&quot; in their Profile so a route can
+              be drawn here.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.infoCard}>
           <Ionicons name="navigate" size={18} color={Colors.primary} />
           <Text style={styles.infoText}>
             {destination
               ? `Follow the route to ${shopName}. The shop can see your live location while you're on the way.`
-              : `${shopName} hasn't set its map location yet, so the route can't be drawn — but your live location is still shared with the shop.`}
+              : `Your live location is still being shared with ${shopName} even without a route.`}
           </Text>
         </View>
       </View>
@@ -138,6 +149,17 @@ const styles = StyleSheet.create({
   back: { padding: 4 },
   title: { fontSize: 18, fontWeight: "700", color: Colors.text },
   body: { padding: 16, gap: 14 },
+  warnCard: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    backgroundColor: "#FFF3E0",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#FFCC80",
+  },
+  warnText: { flex: 1, fontSize: 13, color: "#8A5A00", lineHeight: 18 },
   infoCard: {
     flexDirection: "row",
     gap: 10,
