@@ -118,7 +118,13 @@ export default function JobTrackingPage() {
     });
 
     socket.on("job-status-update", (payload: any) => {
-      if (payload?.status) setJobStatus(normalizeStatus(payload.status));
+      if (!payload?.status) return;
+      const normalized = normalizeStatus(payload.status);
+      setJobStatus(normalized);
+      // Sync the map banner phase with the job status so it doesn't stay
+      // stuck on "On the way" after the worker arrives.
+      if (normalized === "In progress") setTrackingPhase("In progress");
+      if (normalized === "Completed") setTrackingPhase("");
     });
 
     return () => {
