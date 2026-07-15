@@ -39,6 +39,7 @@ export default function WorkerProfile() {
   const [media, setMedia] = useState([]);
   const [workerData, setWorkerData] = useState<any>(null);
   const [workerExperience, setWorkerExperience] = useState<number>(0);
+  const [workerReviews, setWorkerReviews] = useState<any[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -72,14 +73,14 @@ export default function WorkerProfile() {
               0,
           );
 
+          const workerId = response.data._id || response.data.id;
           setWorkerData({
             ...response.data,
-            id: response.data.id || response.data._id,
+            id: workerId,
             about:
               response.data.bio ||
               response.data.about ||
               "No description available",
-            reviews: response.data.reviews || [],
             experienceDocuments: response.data.experienceDocuments || [],
             educationDocuments: response.data.educationDocuments || [],
             certificates: response.data.certificates || [],
@@ -91,6 +92,14 @@ export default function WorkerProfile() {
           setWorkerExperience(
             Number.isFinite(normalizedExperience) ? normalizedExperience : 0,
           );
+
+          // Fetch real reviews
+          try {
+            const revRes = await apiCall(api.reviews.getByWorker(workerId), "GET");
+            if (revRes?.success) setWorkerReviews(revRes.data || []);
+          } catch {
+            // non-fatal
+          }
         }
       } catch (error) {
         console.error("Failed to load worker details:", error);
@@ -598,12 +607,35 @@ export default function WorkerProfile() {
           )}
 
           <Text style={styles.sectionHeader}>Reviews</Text>
-          {(worker.reviews || []).map((r) => (
-            <View key={r.id} style={styles.reviewCard}>
-              <Text style={styles.reviewUser}>{r.user}</Text>
-              <Text style={styles.reviewText}>{r.text}</Text>
-            </View>
-          ))}
+          {workerReviews.length > 0 ? (
+            workerReviews.slice(0, 5).map((r: any) => (
+              <View key={r._id} style={styles.reviewCard}>
+                <View style={styles.reviewMeta}>
+                  <View style={styles.reviewStarsRow}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Ionicons
+                        key={s}
+                        name={s <= r.rating ? "star" : "star-outline"}
+                        size={13}
+                        color="#FFB800"
+                      />
+                    ))}
+                  </View>
+                  <Text style={styles.reviewDateText}>
+                    {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                      day: "2-digit", month: "short", year: "numeric",
+                    })}
+                  </Text>
+                </View>
+                <Text style={styles.reviewUser}>{r.customerId?.name || "Customer"}</Text>
+                {!!r.comment && (
+                  <Text style={styles.reviewText}>{r.comment}</Text>
+                )}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.bio}>No reviews yet</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -1445,4 +1477,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: "center",
   },
+  reviewMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  reviewStarsRow: { flexDirection: "row", gap: 2 },
+  reviewDateText: { fontSize: 11, color: Colors.textSecondary },
 });

@@ -152,6 +152,8 @@ export default function WorkerProfileScreen() {
     skills: (storeUser as any)?.skills || [],
   });
 
+  const [reviews, setReviews] = useState<any[]>([]);
+
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
   const [skillModalVisible, setSkillModalVisible] = useState(false);
@@ -242,16 +244,18 @@ export default function WorkerProfileScreen() {
 
       if (response.success && response.data) {
         const workerData = response.data;
-        console.log("✅ Worker profile loaded from backend:", {
-          image: workerData.image,
-          skills: workerData.skills,
-          address: workerData.location?.address,
-        });
         const updatedUser = mapWorkerToUser(workerData);
-        console.log("🔄 Setting user state to:", updatedUser);
         setUser(updatedUser);
         setExperienceDocs(workerData.experienceDocuments || []);
         setEducationDocs(workerData.educationDocuments || []);
+
+        // Fetch reviews separately
+        try {
+          const revRes = await apiCall(api.reviews.getByWorker(workerId), "GET", null, token);
+          if (revRes?.success) setReviews(revRes.data || []);
+        } catch {
+          // non-fatal
+        }
       }
     } catch (error: any) {
       console.error("❌ Failed to load worker profile:", error);
@@ -1291,30 +1295,57 @@ export default function WorkerProfileScreen() {
         <Text style={styles.sectionTitle}>Rating & Reviews</Text>
         <View style={styles.ratingCard}>
           <View style={styles.ratingLeft}>
-            <Text style={styles.ratingNumber}>{user.rating}</Text>
+            <Text style={styles.ratingNumber}>
+              {user.rating ? Number(user.rating).toFixed(1) : "0"}
+            </Text>
             <View style={styles.starsContainer}>
-              {[...Array(5)].map((_, i) => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons
                   key={i}
-                  name={i < Math.floor(user.rating) ? "star" : "star-outline"}
+                  name={i <= Math.round(user.rating) ? "star" : "star-outline"}
                   size={16}
                   color="#FFB800"
                 />
               ))}
             </View>
-            <Text style={styles.reviewCount}>({user.reviewCount} reviews)</Text>
-          </View>
-          <View style={styles.ratingRight}>
-            <TouchableOpacity style={styles.viewReviewsButton}>
-              <Text style={styles.viewReviewsText}>View All Reviews</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={Colors.primary}
-              />
-            </TouchableOpacity>
+            <Text style={styles.reviewCount}>({reviews.length} reviews)</Text>
           </View>
         </View>
+
+        {reviews.length > 0 ? (
+          reviews.slice(0, 5).map((r: any) => (
+            <View key={r._id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewStars}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Ionicons
+                      key={s}
+                      name={s <= r.rating ? "star" : "star-outline"}
+                      size={13}
+                      color="#FFB800"
+                    />
+                  ))}
+                </View>
+                <Text style={styles.reviewDate}>
+                  {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                    day: "2-digit", month: "short", year: "numeric",
+                  })}
+                </Text>
+              </View>
+              <Text style={styles.reviewCustomer}>
+                {r.customerId?.name || "Customer"}
+              </Text>
+              {!!r.comment && (
+                <Text style={styles.reviewComment}>{r.comment}</Text>
+              )}
+            </View>
+          ))
+        ) : (
+          <View style={styles.reviewEmpty}>
+            <Ionicons name="star-outline" size={32} color={Colors.border} />
+            <Text style={styles.reviewEmptyText}>No reviews yet</Text>
+          </View>
+        )}
 
         {/* Verification Status Section */}
         <Text style={styles.sectionTitle}>Verification Status</Text>
@@ -2643,4 +2674,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.error,
   },
+  reviewCard: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  reviewStars: { flexDirection: "row", gap: 2 },
+  reviewDate: { fontSize: 11, color: Colors.textSecondary },
+  reviewCustomer: { fontSize: 13, fontWeight: "600", color: Colors.text, marginBottom: 4 },
+  reviewComment: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  reviewEmpty: {
+    alignItems: "center",
+    paddingVertical: 24,
+    backgroundColor: "white",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 16,
+  },
+  reviewEmptyText: { fontSize: 13, color: Colors.textSecondary, marginTop: 8 },
 });
