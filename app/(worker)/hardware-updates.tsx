@@ -271,6 +271,31 @@ export default function HardwareUpdatesScreen() {
           </TouchableOpacity>
         )}
 
+        {status === "coming" && (
+          <TouchableOpacity
+            style={styles.comingBtn}
+            onPress={() => {
+              const jobId =
+                (item.jobId as any)?._id ||
+                (typeof item.jobId === "string" ? item.jobId : "");
+              const coords = item.shopId?.location?.coordinates;
+              router.push({
+                pathname: "/pickup-route",
+                params: {
+                  jobId,
+                  shopName: item.shopId?.shopName || "Hardware shop",
+                  ...(coords && coords.length === 2
+                    ? { shopLng: String(coords[0]), shopLat: String(coords[1]) }
+                    : {}),
+                },
+              });
+            }}
+          >
+            <Ionicons name="map-outline" size={16} color="white" />
+            <Text style={styles.comingBtnText}>View route to shop</Text>
+          </TouchableOpacity>
+        )}
+
         {status === "picked_up" && (
           <TouchableOpacity
             style={styles.navigateBtn}
