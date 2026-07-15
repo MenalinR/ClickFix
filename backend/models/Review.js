@@ -24,10 +24,10 @@ const reviewSchema = new mongoose.Schema(
       max: 5,
     },
     aspectRatings: {
-      professionalism: { type: Number, min: 1, max: 5 },
-      quality: { type: Number, min: 1, max: 5 },
-      punctuality: { type: Number, min: 1, max: 5 },
-      communication: { type: Number, min: 1, max: 5 },
+      professionalism: { type: Number, min: 0, max: 5, default: 0 },
+      quality: { type: Number, min: 0, max: 5, default: 0 },
+      punctuality: { type: Number, min: 0, max: 5, default: 0 },
+      communication: { type: Number, min: 0, max: 5, default: 0 },
     },
     comment: {
       type: String,

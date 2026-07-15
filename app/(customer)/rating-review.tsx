@@ -58,6 +58,9 @@ export default function RatingReviewPage() {
     }
     try {
       setSubmitting(true);
+      const filteredAspects = Object.fromEntries(
+        Object.entries(aspectRatings).filter(([, v]) => v > 0),
+      );
       const res = await apiCall(
         api.reviews.create,
         "POST",
@@ -65,7 +68,7 @@ export default function RatingReviewPage() {
           jobId,
           workerId,
           rating,
-          aspectRatings,
+          aspectRatings: filteredAspects,
           comment: comment.trim() || undefined,
           wouldRecommend: wouldRecommend ?? undefined,
         },

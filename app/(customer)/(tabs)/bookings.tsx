@@ -311,6 +311,7 @@ export default function BookingsScreen() {
                 const canTrack = ["on the way", "in progress"].includes(
                   status.toLowerCase(),
                 );
+                const isCompleted = status.toLowerCase() === "completed";
                 const isTappable = needsReview || canCancel;
                 const RowWrap: any = isTappable ? TouchableOpacity : View;
                 const onRowPress = needsReview
@@ -378,6 +379,29 @@ export default function BookingsScreen() {
                             size={24}
                             color={Colors.primary}
                           />
+                        </TouchableOpacity>
+                      ) : null}
+                      {isCompleted ? (
+                        <TouchableOpacity
+                          style={styles.reviewIconBtn}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/(customer)/rating-review",
+                              params: {
+                                jobId: id,
+                                workerId:
+                                  (job.workerId as any)?._id ||
+                                  (job.workerId as any) ||
+                                  "",
+                                workerName: workerName(job),
+                                workerImage: workerImage(job),
+                                serviceType: job.serviceType || "",
+                              },
+                            } as any)
+                          }
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="star" size={22} color="#FFA000" />
                         </TouchableOpacity>
                       ) : null}
                       {canCancel ? (
@@ -791,6 +815,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   trackIconBtn: {
+    padding: 2,
+  },
+  reviewIconBtn: {
     padding: 2,
   },
   tableRow: {
