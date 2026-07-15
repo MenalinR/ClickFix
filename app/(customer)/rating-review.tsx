@@ -2,65 +2,97 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { useStore } from "../../constants/Store";
+
+const ASPECTS = [
+  { key: "professionalism", label: "Professionalism", icon: "briefcase-outline" },
+  { key: "quality",         label: "Work Quality",    icon: "checkmark-done-outline" },
+  { key: "punctuality",     label: "Punctuality",     icon: "time-outline" },
+] as const;
+
+const RATING_LABELS = ["Poor", "Fair", "Good", "Very Good", "Excellent"];
 
 export default function RatingReviewPage() {
   const router = useRouter();
-  const { workerName, workerImage } = useLocalSearchParams();
-  const [rating, setRating] = useState(0);
-  const [review, setReview] = useState("");
-  const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
-  const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { token } = useStore();
+  const params = useLocalSearchParams();
 
-  const ratingLabels = ["Poor", "Fair", "Good", "Very Good", "Excellent"];
+  const jobId      = params.jobId      as string | undefined;
+  const workerId   = params.workerId   as string | undefined;
+  const workerName = (params.workerName  as string) || "Professional";
+  const workerImage= params.workerImage as string | undefined;
+  const serviceType= (params.serviceType as string) || "";
 
-  const handleSubmitReview = () => {
+  const [rating, setRating]           = useState(0);
+  const [aspectRatings, setAspectRatings] = useState({ professionalism: 0, quality: 0, punctuality: 0 });
+  const [comment, setComment]         = useState("");
+  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
+  const [submitting, setSubmitting]   = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const setAspect = (key: keyof typeof aspectRatings, value: number) =>
+    setAspectRatings((prev) => ({ ...prev, [key]: value }));
+
+  const handleSubmit = async () => {
     if (rating === 0) {
-      alert("Please select a rating");
+      Alert.alert("Rating required", "Please select an overall star rating.");
       return;
     }
-    setShowSuccessModal(true);
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      router.push("./(tabs)");
-    }, 2000);
-  };
-
-  const handleAddPhoto = (type: "before" | "after") => {
-    if (type === "before") {
-      setBeforePhoto("https://via.placeholder.com/300?text=Before");
-    } else {
-      setAfterPhoto("https://via.placeholder.com/300?text=After");
+    if (!jobId || !workerId || !token) {
+      Alert.alert("Error", "Missing job information. Please try again.");
+      return;
     }
-  };
-
-  const handleRemovePhoto = (type: "before" | "after") => {
-    if (type === "before") {
-      setBeforePhoto(null);
-    } else {
-      setAfterPhoto(null);
+    try {
+      setSubmitting(true);
+      const res = await apiCall(
+        api.reviews.create,
+        "POST",
+        {
+          jobId,
+          workerId,
+          rating,
+          aspectRatings,
+          comment: comment.trim() || undefined,
+          wouldRecommend: wouldRecommend ?? undefined,
+        },
+        token,
+      );
+      if (!res?.success) {
+        Alert.alert("Error", res?.message || "Could not submit review.");
+        return;
+      }
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        router.replace("/(customer)/(tabs)/bookings");
+      }, 2000);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not submit review.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.heading}>Rate & Review</Text>
@@ -69,74 +101,54 @@ export default function RatingReviewPage() {
 
         {/* Worker Card */}
         <View style={styles.workerCard}>
-          <Image
-            source={{
-              uri:
-                typeof workerImage === "string"
-                  ? workerImage
-                  : "https://via.placeholder.com/60",
-            }}
-            style={styles.workerImage}
-          />
+          {workerImage ? (
+            <Image source={{ uri: workerImage }} style={styles.workerImage} />
+          ) : (
+            <View style={[styles.workerImage, styles.avatarFallback]}>
+              <Ionicons name="person" size={28} color={Colors.primary} />
+            </View>
+          )}
           <View>
-            <Text style={styles.workerName}>
-              {workerName || "Professional"}
-            </Text>
-            <Text style={styles.jobTitle}>Plumber</Text>
+            <Text style={styles.workerName}>{workerName}</Text>
+            {!!serviceType && <Text style={styles.serviceType}>{serviceType}</Text>}
           </View>
         </View>
 
         {/* Overall Rating */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>How was your experience?</Text>
-          <View style={styles.ratingContainer}>
+          <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity
-                key={star}
-                onPress={() => setRating(star)}
-                style={styles.starButton}
-              >
+              <TouchableOpacity key={star} onPress={() => setRating(star)} style={styles.starBtn}>
                 <Ionicons
                   name={star <= rating ? "star" : "star-outline"}
-                  size={48}
-                  color={star <= rating ? Colors.primary : Colors.border}
+                  size={44}
+                  color={star <= rating ? "#FFA000" : Colors.border}
                 />
               </TouchableOpacity>
             ))}
           </View>
           {rating > 0 && (
-            <Text style={styles.ratingLabel}>
-              {ratingLabels[rating - 1]} ({rating}/5)
-            </Text>
+            <Text style={styles.ratingLabel}>{RATING_LABELS[rating - 1]} ({rating}/5)</Text>
           )}
         </View>
 
-        {/* Quick Rating Aspects */}
+        {/* Aspect Ratings */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Rate Specific Aspects</Text>
-          {[
-            { label: "Professionalism", icon: "briefcase-outline" },
-            { label: "Work Quality", icon: "checkmark-done-outline" },
-            { label: "Punctuality", icon: "time-outline" },
-            { label: "Communication", icon: "chatbubble-outline" },
-          ].map((aspect, idx) => (
-            <View key={idx} style={styles.aspectRow}>
-              <View style={styles.aspectInfo}>
-                <Ionicons
-                  name={aspect.icon as any}
-                  size={20}
-                  color={Colors.primary}
-                  style={styles.aspectIcon}
-                />
-                <Text style={styles.aspectLabel}>{aspect.label}</Text>
+          {ASPECTS.map(({ key, label, icon }) => (
+            <View key={key} style={styles.aspectRow}>
+              <View style={styles.aspectLeft}>
+                <Ionicons name={icon as any} size={18} color={Colors.primary} />
+                <Text style={styles.aspectLabel}>{label}</Text>
               </View>
               <View style={styles.aspectStars}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} style={styles.smallStarButton}>
+                  <TouchableOpacity key={star} onPress={() => setAspect(key, star)}>
                     <Ionicons
-                      name={"star-outline"}
-                      size={18}
-                      color={Colors.border}
+                      name={star <= aspectRatings[key] ? "star" : "star-outline"}
+                      size={20}
+                      color={star <= aspectRatings[key] ? "#FFA000" : Colors.border}
                     />
                   </TouchableOpacity>
                 ))}
@@ -148,174 +160,76 @@ export default function RatingReviewPage() {
         {/* Written Review */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Write a Review</Text>
-          <Text style={styles.subtitle}>
-            Share your experience with other users
-          </Text>
+          <Text style={styles.subtitle}>Share your experience with other users</Text>
           <TextInput
             style={styles.reviewInput}
             placeholder="Tell us about your experience..."
             placeholderTextColor={Colors.textSecondary}
             multiline
             numberOfLines={4}
-            value={review}
-            onChangeText={setReview}
+            value={comment}
+            onChangeText={setComment}
             maxLength={500}
           />
-          <Text style={styles.characterCount}>
-            {review.length}/500 characters
-          </Text>
+          <Text style={styles.charCount}>{comment.length}/500</Text>
         </View>
 
-        {/* Before & After Photos */}
+        {/* Recommend */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Before & After Photos (Optional)
-          </Text>
-          <Text style={styles.subtitle}>
-            Photos help other users understand the work quality
-          </Text>
-
-          <View style={styles.photoRow}>
-            <View style={styles.photoColumn}>
-              <Text style={styles.photoLabel}>Before</Text>
-              {beforePhoto ? (
-                <View style={styles.photoPreview}>
-                  <Image
-                    source={{ uri: beforePhoto }}
-                    style={styles.photoImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => handleRemovePhoto("before")}
-                  >
-                    <Ionicons name="close" size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.photoDashedBox}
-                  onPress={() => handleAddPhoto("before")}
-                >
-                  <Ionicons
-                    name="image-outline"
-                    size={24}
-                    color={Colors.textSecondary}
-                  />
-                  <Text style={styles.photoPlaceholderText}>Add photo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.photoColumn}>
-              <Text style={styles.photoLabel}>After</Text>
-              {afterPhoto ? (
-                <View style={styles.photoPreview}>
-                  <Image
-                    source={{ uri: afterPhoto }}
-                    style={styles.photoImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => handleRemovePhoto("after")}
-                  >
-                    <Ionicons name="close" size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.photoDashedBox}
-                  onPress={() => handleAddPhoto("after")}
-                >
-                  <Ionicons
-                    name="image-outline"
-                    size={24}
-                    color={Colors.textSecondary}
-                  />
-                  <Text style={styles.photoPlaceholderText}>Add photo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Anonymous Review Option */}
-        <View style={styles.checkboxCard}>
-          <View style={styles.checkboxRow}>
-            <View style={styles.uncheckedBox} />
-            <Text style={styles.checkboxLabel}>
-              Post this review anonymously
-            </Text>
-          </View>
-        </View>
-
-        {/* Recommendation */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Would you recommend this professional?
-          </Text>
-          <View style={styles.recommendationButtons}>
-            <TouchableOpacity style={styles.recommendButton}>
+          <Text style={styles.sectionTitle}>Would you recommend this professional?</Text>
+          <View style={styles.recommendRow}>
+            <TouchableOpacity
+              style={[styles.recommendBtn, wouldRecommend === true && styles.recommendBtnActive]}
+              onPress={() => setWouldRecommend(true)}
+            >
               <Ionicons
-                name="thumbs-up-outline"
+                name="thumbs-up"
                 size={20}
-                color={Colors.primary}
+                color={wouldRecommend === true ? "white" : Colors.primary}
               />
-              <Text style={styles.recommendText}>Yes, I would</Text>
+              <Text style={[styles.recommendText, wouldRecommend === true && { color: "white" }]}>
+                Yes
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.recommendButton}>
+            <TouchableOpacity
+              style={[styles.recommendBtn, wouldRecommend === false && styles.recommendBtnNo]}
+              onPress={() => setWouldRecommend(false)}
+            >
               <Ionicons
-                name="thumbs-down-outline"
+                name="thumbs-down"
                 size={20}
-                color={Colors.textSecondary}
+                color={wouldRecommend === false ? "white" : Colors.textSecondary}
               />
-              <Text style={styles.recommendText}>No</Text>
+              <Text style={[styles.recommendText, wouldRecommend === false && { color: "white" }]}>
+                No
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Info */}
-        <View style={styles.infoCard}>
-          <Ionicons
-            name="information-circle-outline"
-            size={16}
-            color={Colors.primary}
-          />
-          <Text style={styles.infoText}>
-            Your feedback helps improve the quality of professionals on our
-            platform.
-          </Text>
         </View>
       </ScrollView>
 
-      {/* Submit Button */}
+      {/* Submit */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.submitButton, rating === 0 && { opacity: 0.6 }]}
-          onPress={handleSubmitReview}
-          disabled={rating === 0}
+          style={[styles.submitBtn, (rating === 0 || submitting) && { opacity: 0.6 }]}
+          onPress={handleSubmit}
+          disabled={rating === 0 || submitting}
         >
-          <Text style={styles.submitButtonText}>Submit Review</Text>
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.submitText}>Submit Review</Text>
+          )}
         </TouchableOpacity>
       </View>
 
       {/* Success Modal */}
-      <Modal visible={showSuccessModal} transparent animationType="fade">
-        <View style={styles.successModalOverlay}>
-          <View style={styles.successModal}>
-            <View style={styles.successIcon}>
-              <Ionicons
-                name="checkmark-circle"
-                size={60}
-                color={Colors.primary}
-              />
-            </View>
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={styles.successOverlay}>
+          <View style={styles.successBox}>
+            <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
             <Text style={styles.successTitle}>Thank You!</Text>
-            <Text style={styles.successMessage}>
-              Your review has been submitted successfully.
-            </Text>
-            <Text style={styles.successSubmessage}>
-              Redirecting to bookings...
-            </Text>
+            <Text style={styles.successMsg}>Your review has been submitted.</Text>
           </View>
         </View>
       </Modal>
@@ -324,301 +238,66 @@ export default function RatingReviewPage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 80,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.text,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 90 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  backButton: { padding: 8 },
+  heading: { fontSize: 22, fontWeight: "700", color: Colors.text },
   workerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    flexDirection: "row", alignItems: "center", gap: 14,
+    backgroundColor: "white", borderRadius: 12, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: Colors.border,
   },
-  workerImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  workerName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  jobTitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
+  workerImage: { width: 56, height: 56, borderRadius: 28 },
+  avatarFallback: { backgroundColor: Colors.lightBackground, alignItems: "center", justifyContent: "center" },
+  workerName: { fontSize: 16, fontWeight: "700", color: Colors.text },
+  serviceType: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   card: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: "white", borderRadius: 12, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: Colors.border,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  starButton: {
-    padding: 4,
-  },
-  ratingLabel: {
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: "bold",
-    color: Colors.primary,
-    marginTop: 8,
-  },
+  sectionTitle: { fontSize: 15, fontWeight: "700", color: Colors.text, marginBottom: 12 },
+  subtitle: { fontSize: 12, color: Colors.textSecondary, marginBottom: 10 },
+  starsRow: { flexDirection: "row", justifyContent: "space-around", marginBottom: 8 },
+  starBtn: { padding: 4 },
+  ratingLabel: { textAlign: "center", fontSize: 13, fontWeight: "600", color: "#FFA000" },
   aspectRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  aspectInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  aspectIcon: {
-    marginRight: 4,
-  },
-  aspectLabel: {
-    fontSize: 13,
-    color: Colors.text,
-    fontWeight: "500",
-  },
-  aspectStars: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  smallStarButton: {
-    padding: 2,
-  },
+  aspectLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  aspectLabel: { fontSize: 13, color: Colors.text },
+  aspectStars: { flexDirection: "row", gap: 4 },
   reviewInput: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: Colors.text,
-    textAlignVertical: "top",
-    marginBottom: 8,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 13,
+    color: Colors.text, textAlignVertical: "top", minHeight: 90, marginBottom: 6,
   },
-  characterCount: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textAlign: "right",
-  },
-  photoRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  photoColumn: {
-    flex: 1,
-  },
-  photoLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  photoDashedBox: {
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: Colors.border,
-    borderRadius: 8,
-    paddingVertical: 24,
-    alignItems: "center",
-    justifyContent: "center",
+  charCount: { fontSize: 11, color: Colors.textSecondary, textAlign: "right" },
+  recommendRow: { flexDirection: "row", gap: 12 },
+  recommendBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border,
     backgroundColor: Colors.lightBackground,
   },
-  photoPlaceholderText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 6,
-  },
-  photoPreview: {
-    position: "relative",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  photoImage: {
-    width: "100%",
-    height: 150,
-    borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  uncheckedBox: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  checkboxLabel: {
-    fontSize: 13,
-    color: Colors.text,
-    fontWeight: "500",
-  },
-  recommendationButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  recommendButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.lightBackground,
-  },
-  recommendText: {
-    fontSize: 13,
-    color: Colors.text,
-    fontWeight: "500",
-  },
-  infoCard: {
-    flexDirection: "row",
-    gap: 8,
-    backgroundColor: "#E3F2FD",
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#90CAF9",
-    marginBottom: 20,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 11,
-    color: "#1565C0",
-    lineHeight: 14,
-  },
+  recommendBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  recommendBtnNo: { backgroundColor: "#C62828", borderColor: "#C62828" },
+  recommendText: { fontSize: 14, fontWeight: "600", color: Colors.text },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "white",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: "white", paddingHorizontal: 16, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
+  submitBtn: {
+    backgroundColor: Colors.primary, paddingVertical: 14,
+    borderRadius: 10, alignItems: "center",
   },
-  submitButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+  submitText: { color: "white", fontSize: 16, fontWeight: "700" },
+  successOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  successBox: {
+    backgroundColor: "white", borderRadius: 20, padding: 32,
+    alignItems: "center", width: "75%",
   },
-  successModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  successModal: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 30,
-    alignItems: "center",
-    width: "80%",
-  },
-  successIcon: {
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: Colors.primary,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  successMessage: {
-    fontSize: 13,
-    color: Colors.text,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  successSubmessage: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
+  successTitle: { fontSize: 20, fontWeight: "700", color: Colors.text, marginTop: 12 },
+  successMsg: { fontSize: 13, color: Colors.textSecondary, marginTop: 6, textAlign: "center" },
 });

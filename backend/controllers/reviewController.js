@@ -35,7 +35,7 @@ exports.createReview = async (req, res) => {
       });
     }
 
-    if (job.status !== "completed") {
+    if (job.status?.toLowerCase() !== "completed") {
       return res.status(400).json({
         success: false,
         message: "Can only review completed jobs",

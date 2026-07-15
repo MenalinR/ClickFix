@@ -254,17 +254,21 @@ export default function JobTrackingPage() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.workerName}>{worker.name}</Text>
-                <View style={styles.availabilityBadge}>
-                  <View style={styles.dot} />
-                  <Text style={styles.availabilityText}>
-                    Currently on the way
-                  </Text>
-                </View>
-                <Text style={styles.eta}>
-                  {durationText
-                    ? `ETA: ${durationText}${distanceText ? ` · ${distanceText}` : ""}`
-                    : "Calculating ETA…"}
-                </Text>
+                {jobStatus !== "Completed" && (
+                  <>
+                    <View style={styles.availabilityBadge}>
+                      <View style={styles.dot} />
+                      <Text style={styles.availabilityText}>
+                        Currently on the way
+                      </Text>
+                    </View>
+                    <Text style={styles.eta}>
+                      {durationText
+                        ? `ETA: ${durationText}${distanceText ? ` · ${distanceText}` : ""}`
+                        : "Calculating ETA…"}
+                    </Text>
+                  </>
+                )}
               </View>
             </View>
             <TouchableOpacity style={styles.navigateButton}>
@@ -275,6 +279,28 @@ export default function JobTrackingPage() {
               />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Review prompt when job is done */}
+        {jobStatus === "Completed" && worker && (
+          <TouchableOpacity
+            style={styles.reviewBtn}
+            onPress={() =>
+              router.push({
+                pathname: "/rating-review",
+                params: {
+                  jobId: id,
+                  workerId: workerId as string,
+                  workerName: worker.name,
+                  workerImage: worker.image,
+                  serviceType: (worker as any).serviceType || "",
+                },
+              } as any)
+            }
+          >
+            <Ionicons name="star" size={20} color="white" />
+            <Text style={styles.reviewBtnText}>Leave a Review for {worker.name}</Text>
+          </TouchableOpacity>
         )}
 
         {/* Job Status Timeline */}
@@ -867,5 +893,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: Colors.text,
+  },
+  reviewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FFA000",
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  reviewBtnText: {
+    color: "white",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
