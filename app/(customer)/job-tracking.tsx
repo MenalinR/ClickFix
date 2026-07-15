@@ -67,7 +67,7 @@ export default function JobTrackingPage() {
   const socketRef = useRef<Socket | null>(null);
 
   // Real road route from the worker to the customer's location.
-  const { routeCoords } = useRoadRoute(workerCoords, destination, token);
+  const { routeCoords, distanceText, durationText } = useRoadRoute(workerCoords, destination, token);
 
   const id = Array.isArray(jobId) ? jobId[0] : jobId;
 
@@ -115,6 +115,10 @@ export default function JobTrackingPage() {
         longitude: payload.coords.longitude,
       });
       if (payload.phase) setTrackingPhase(payload.phase);
+    });
+
+    socket.on("job-status-update", (payload: any) => {
+      if (payload?.status) setJobStatus(normalizeStatus(payload.status));
     });
 
     return () => {
@@ -250,7 +254,11 @@ export default function JobTrackingPage() {
                     Currently on the way
                   </Text>
                 </View>
-                <Text style={styles.eta}>ETA: 8 mins away</Text>
+                <Text style={styles.eta}>
+                  {durationText
+                    ? `ETA: ${durationText}${distanceText ? ` · ${distanceText}` : ""}`
+                    : "Calculating ETA…"}
+                </Text>
               </View>
             </View>
             <TouchableOpacity style={styles.navigateButton}>

@@ -726,6 +726,15 @@ exports.updateJobStatus = async (req, res) => {
 
     await job.save();
 
+    // Notify everyone tracking this job (customer, shop) of the new status.
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`track:${job._id}`).emit("job-status-update", {
+        jobId: job._id,
+        status: job.status,
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: job,
