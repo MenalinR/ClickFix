@@ -755,7 +755,7 @@ function isJobParticipant(job, req) {
 
 // @desc    Get the worker's last known live location for a job + destination
 // @route   GET /api/jobs/:id/live-location
-// @access  Private (job participant)
+// @access  Private (job participant or hardware shop with an order for this job)
 exports.getJobLiveLocation = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id).select(
@@ -764,7 +764,17 @@ exports.getJobLiveLocation = async (req, res) => {
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
-    if (!isJobParticipant(job, req)) {
+
+    let authorized = isJobParticipant(job, req);
+    if (!authorized && req.userType === "hardwareShop") {
+      const HardwareRequest = require("../models/Hardware");
+      const order = await HardwareRequest.findOne({
+        jobId: job._id,
+        shopId: req.user._id,
+      }).lean();
+      authorized = !!order;
+    }
+    if (!authorized) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
