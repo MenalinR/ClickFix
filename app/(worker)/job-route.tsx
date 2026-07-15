@@ -72,13 +72,31 @@ export default function JobRouteScreen() {
     (async () => {
       const fg = await Location.requestForegroundPermissionsAsync();
       if (!fg.granted || cancelled) return;
+      // Fresh fix first — watchPositionAsync's first callback is often stale cache.
+      try {
+        const fresh = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        if (!cancelled) {
+          setMyCoords({
+            latitude: fresh.coords.latitude,
+            longitude: fresh.coords.longitude,
+          });
+        }
+      } catch {
+        // ignore — watchPositionAsync will deliver updates
+      }
+      if (cancelled) return;
       watchRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 4000, distanceInterval: 10 },
-        (loc) =>
-          setMyCoords({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          }),
+        (loc) => {
+          if (!cancelled) {
+            setMyCoords({
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            });
+          }
+        },
       );
     })();
     return () => {
