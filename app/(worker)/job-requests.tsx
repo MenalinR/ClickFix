@@ -71,18 +71,27 @@ export default function JobRequestsPage() {
   const acceptedJobs = jobList.filter(
     (j) => statusOf(j) === "accepted" && isMine(j),
   );
+  const onTheWayJobs = jobList.filter(
+    (j) => statusOf(j) === "on the way" && isMine(j),
+  );
+  const inProgressJobs = jobList.filter(
+    (j) => statusOf(j) === "in progress" && isMine(j),
+  );
   const cancelledJobs = jobList.filter(
     (j) => statusOf(j) === "cancelled" && isMine(j),
   );
+
+  const activeJobs = [...onTheWayJobs, ...inProgressJobs];
 
   const displayedJobs =
     filter === "new"
       ? pendingJobs
       : filter === "accepted"
-        ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs]
+        ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs, ...activeJobs]
         : filter === "cancelled"
           ? cancelledJobs
           : [
+              ...activeJobs,
               ...negotiatingJobs,
               ...pendingJobs,
               ...awaitingCustomerJobs,
@@ -315,6 +324,8 @@ export default function JobRequestsPage() {
             const isAwaiting = status === "worker accepted";
             const isNegotiating = status === "negotiating";
             const isCancelled = status === "cancelled";
+            const isOnTheWay = status === "on the way";
+            const isInProgress = status === "in progress";
             const j = job as any;
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
@@ -328,7 +339,13 @@ export default function JobRequestsPage() {
             const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
             let badgeColor = "#FFA500";
             let badgeLabel = "🔔 New";
-            if (isAccepted) {
+            if (isInProgress) {
+              badgeColor = "#4CAF50";
+              badgeLabel = "🔧 In Progress";
+            } else if (isOnTheWay) {
+              badgeColor = "#0288D1";
+              badgeLabel = "🚗 On the Way";
+            } else if (isAccepted) {
               badgeColor = "#4CAF50";
               badgeLabel = "✓ Accepted";
             } else if (isAwaiting) {
@@ -565,6 +582,72 @@ export default function JobRequestsPage() {
                         color="white"
                       />
                       <Text style={styles.startButtonText}>Start Job</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {isOnTheWay && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.startButton]}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/job-route",
+                          params: { jobId: id, customerName },
+                        })
+                      }
+                    >
+                      <Ionicons name="navigate-outline" size={20} color="white" />
+                      <Text style={styles.startButtonText}>Navigate</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {isInProgress && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.chatButton]}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/chat",
+                          params: {
+                            jobId: id,
+                            customerId:
+                              (j.customerId?._id || j.customerId)?.toString?.() ||
+                              j.customerId,
+                            customerName,
+                          },
+                        } as any)
+                      }
+                    >
+                      <Ionicons name="chatbubble-outline" size={20} color="white" />
+                      <Text style={styles.chatButtonText}>Chat</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, { backgroundColor: "#4CAF50" }]}
+                      onPress={() =>
+                        Alert.alert(
+                          "Complete job?",
+                          "Mark this job as completed?",
+                          [
+                            { text: "Not yet", style: "cancel" },
+                            {
+                              text: "Complete",
+                              onPress: async () => {
+                                try {
+                                  await updateJobStatus(id, "Completed");
+                                  Alert.alert("Done", "Job marked as completed.");
+                                } catch (e: any) {
+                                  Alert.alert("Error", e?.message || "Failed.");
+                                }
+                              },
+                            },
+                          ],
+                        )
+                      }
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                      <Text style={styles.startButtonText}>Complete</Text>
                     </TouchableOpacity>
                   </View>
                 )}
