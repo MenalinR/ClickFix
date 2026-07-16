@@ -2,9 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Dimensions,
+  FlatList,
   Image,
   Modal,
   ScrollView,
@@ -14,6 +16,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/Button";
 import { Colors } from "../../constants/Colors";
@@ -153,6 +157,8 @@ export default function WorkerProfileScreen() {
   });
 
   const [reviews, setReviews] = useState<any[]>([]);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const reviewFlatRef = useRef<FlatList>(null);
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
@@ -1323,33 +1329,62 @@ export default function WorkerProfileScreen() {
         })()}
 
         {reviews.length > 0 ? (
-          reviews.slice(0, 5).map((r: any) => (
-            <View key={r._id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Ionicons
-                      key={s}
-                      name={s <= r.rating ? "star" : "star-outline"}
-                      size={13}
-                      color="#FFB800"
-                    />
-                  ))}
+          <View>
+            <FlatList
+              ref={reviewFlatRef}
+              data={reviews}
+              keyExtractor={(r) => r._id}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(
+                  e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 48),
+                );
+                setActiveReviewIndex(idx);
+              }}
+              renderItem={({ item: r }) => (
+                <View style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Ionicons
+                          key={s}
+                          name={s <= r.rating ? "star" : "star-outline"}
+                          size={13}
+                          color="#FFB800"
+                        />
+                      ))}
+                    </View>
+                    <Text style={styles.reviewDate}>
+                      {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                        day: "2-digit", month: "short", year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                  <Text style={styles.reviewCustomer}>
+                    {r.customerId?.name || "Customer"}
+                  </Text>
+                  {!!r.comment && (
+                    <Text style={styles.reviewComment}>{r.comment}</Text>
+                  )}
                 </View>
-                <Text style={styles.reviewDate}>
-                  {new Date(r.createdAt).toLocaleDateString("en-GB", {
-                    day: "2-digit", month: "short", year: "numeric",
-                  })}
-                </Text>
-              </View>
-              <Text style={styles.reviewCustomer}>
-                {r.customerId?.name || "Customer"}
-              </Text>
-              {!!r.comment && (
-                <Text style={styles.reviewComment}>{r.comment}</Text>
               )}
-            </View>
-          ))
+            />
+            {reviews.length > 1 && (
+              <View style={styles.dotsRow}>
+                {reviews.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dot,
+                      i === activeReviewIndex && styles.dotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
         ) : (
           <View style={styles.reviewEmpty}>
             <Ionicons name="star-outline" size={32} color={Colors.border} />
@@ -2685,10 +2720,10 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
   reviewCard: {
+    width: SCREEN_WIDTH - 48,
     backgroundColor: "white",
     borderRadius: 10,
     padding: 14,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -2712,4 +2747,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   reviewEmptyText: { fontSize: 13, color: Colors.textSecondary, marginTop: 8 },
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.border,
+  },
+  dotActive: {
+    backgroundColor: Colors.primary,
+    width: 18,
+  },
 });

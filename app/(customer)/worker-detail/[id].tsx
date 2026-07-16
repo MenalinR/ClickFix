@@ -4,9 +4,11 @@ import DateTimePicker, {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Dimensions,
+  FlatList,
   Image,
   Linking,
   Modal,
@@ -18,6 +20,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
 import { Button } from "../../../components/Button";
 import { Colors } from "../../../constants/Colors";
 import { useStore } from "../../../constants/Store";
@@ -40,6 +44,8 @@ export default function WorkerProfile() {
   const [workerData, setWorkerData] = useState<any>(null);
   const [workerExperience, setWorkerExperience] = useState<number>(0);
   const [workerReviews, setWorkerReviews] = useState<any[]>([]);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const reviewFlatRef = useRef<FlatList>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -612,31 +618,57 @@ export default function WorkerProfile() {
 
           <Text style={styles.sectionHeader}>Reviews</Text>
           {workerReviews.length > 0 ? (
-            workerReviews.slice(0, 5).map((r: any) => (
-              <View key={r._id} style={styles.reviewCard}>
-                <View style={styles.reviewMeta}>
-                  <View style={styles.reviewStarsRow}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Ionicons
-                        key={s}
-                        name={s <= r.rating ? "star" : "star-outline"}
-                        size={13}
-                        color="#FFB800"
-                      />
-                    ))}
+            <View>
+              <FlatList
+                ref={reviewFlatRef}
+                data={workerReviews}
+                keyExtractor={(r) => r._id}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(
+                    e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 32),
+                  );
+                  setActiveReviewIndex(idx);
+                }}
+                renderItem={({ item: r }) => (
+                  <View style={styles.reviewCard}>
+                    <View style={styles.reviewMeta}>
+                      <View style={styles.reviewStarsRow}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Ionicons
+                            key={s}
+                            name={s <= r.rating ? "star" : "star-outline"}
+                            size={13}
+                            color="#FFB800"
+                          />
+                        ))}
+                      </View>
+                      <Text style={styles.reviewDateText}>
+                        {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                          day: "2-digit", month: "short", year: "numeric",
+                        })}
+                      </Text>
+                    </View>
+                    <Text style={styles.reviewUser}>{r.customerId?.name || "Customer"}</Text>
+                    {!!r.comment && (
+                      <Text style={styles.reviewText}>{r.comment}</Text>
+                    )}
                   </View>
-                  <Text style={styles.reviewDateText}>
-                    {new Date(r.createdAt).toLocaleDateString("en-GB", {
-                      day: "2-digit", month: "short", year: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <Text style={styles.reviewUser}>{r.customerId?.name || "Customer"}</Text>
-                {!!r.comment && (
-                  <Text style={styles.reviewText}>{r.comment}</Text>
                 )}
-              </View>
-            ))
+              />
+              {workerReviews.length > 1 && (
+                <View style={styles.dotsRow}>
+                  {workerReviews.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[styles.dot, i === activeReviewIndex && styles.dotActive]}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
           ) : (
             <Text style={styles.bio}>No reviews yet</Text>
           )}
@@ -1072,10 +1104,12 @@ const styles = StyleSheet.create({
   },
   bio: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
   reviewCard: {
+    width: SCREEN_WIDTH - 32,
     backgroundColor: Colors.white,
     padding: 12,
     borderRadius: 8,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   reviewUser: { fontFamily: "Inter_600SemiBold", marginBottom: 4 },
   reviewText: { color: Colors.textSecondary },
@@ -1489,4 +1523,22 @@ const styles = StyleSheet.create({
   },
   reviewStarsRow: { flexDirection: "row", gap: 2 },
   reviewDateText: { fontSize: 11, color: Colors.textSecondary },
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.border,
+  },
+  dotActive: {
+    backgroundColor: Colors.primary,
+    width: 18,
+  },
 });
