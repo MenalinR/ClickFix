@@ -1,4 +1,5 @@
 const Worker = require("../models/Worker");
+const Review = require("../models/Review");
 const Admin = require("../models/Admin");
 const path = require("path");
 const { createNotification } = require("./notificationController");
@@ -63,10 +64,29 @@ exports.getWorkers = async (req, res) => {
       workers = await Worker.find(query).select("-password");
     }
 
+    // Merge live ratings from Review collection (one batch aggregation)
+    const workerIds = workers.map((w) => w._id);
+    const ratingStats = await Review.aggregate([
+      { $match: { workerId: { $in: workerIds } } },
+      { $group: { _id: "$workerId", avgRating: { $avg: "$rating" }, count: { $sum: 1 } } },
+    ]);
+    const ratingMap = {};
+    ratingStats.forEach((s) => { ratingMap[s._id.toString()] = s; });
+
+    const data = workers.map((w) => {
+      const stats = ratingMap[w._id.toString()];
+      const obj = w.toObject();
+      if (stats) {
+        obj.rating = Math.round(stats.avgRating * 10) / 10;
+        obj.reviewCount = stats.count;
+      }
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      count: workers.length,
-      data: workers,
+      count: data.length,
+      data,
     });
   } catch (error) {
     res.status(500).json({
@@ -90,9 +110,20 @@ exports.getWorker = async (req, res) => {
       });
     }
 
+    // Compute live rating from reviews
+    const [stats] = await Review.aggregate([
+      { $match: { workerId: worker._id } },
+      { $group: { _id: "$workerId", avgRating: { $avg: "$rating" }, count: { $sum: 1 } } },
+    ]);
+    const data = worker.toObject();
+    if (stats) {
+      data.rating = Math.round(stats.avgRating * 10) / 10;
+      data.reviewCount = stats.count;
+    }
+
     res.status(200).json({
       success: true,
-      data: worker,
+      data,
     });
   } catch (error) {
     res.status(500).json({
