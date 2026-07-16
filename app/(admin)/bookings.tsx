@@ -269,18 +269,26 @@ export default function AdminBookings() {
                       </Text>
                     </View>
                   )}
-                  {!!booking.location?.address && (
-                    <View style={styles.detailRow}>
-                      <Ionicons
-                        name="location-outline"
-                        size={16}
-                        color={Colors.textSecondary}
-                      />
-                      <Text style={styles.detailText} numberOfLines={2}>
-                        {booking.location.address}
-                      </Text>
-                    </View>
-                  )}
+                  {(() => {
+                    const jobAddr = booking.location?.address;
+                    const customerAddr = booking.customerId?.addresses?.[0]?.address;
+                    const resolvedAddr =
+                      jobAddr && jobAddr !== "Address to be confirmed"
+                        ? jobAddr
+                        : customerAddr || null;
+                    return resolvedAddr ? (
+                      <View style={styles.detailRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={16}
+                          color={Colors.textSecondary}
+                        />
+                        <Text style={styles.detailText} numberOfLines={2}>
+                          {resolvedAddr}
+                        </Text>
+                      </View>
+                    ) : null;
+                  })()}
                   <View style={styles.detailRow}>
                     <Ionicons
                       name="cash-outline"
