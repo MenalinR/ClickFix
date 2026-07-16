@@ -236,8 +236,8 @@ export default function WorkerProfile() {
         images: imageUrls,
         location: {
           type: "Point",
-          coordinates: [79.8612, 6.9271],
-          address: "Address to be confirmed",
+          coordinates: (user as any)?.addresses?.[0]?.location?.coordinates || [79.8612, 6.9271],
+          address: (user as any)?.addresses?.[0]?.address || "",
         },
       });
       setModalVisible(false);
