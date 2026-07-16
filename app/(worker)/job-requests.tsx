@@ -44,7 +44,7 @@ export default function JobRequestsPage() {
     }
   }, [token, unreadCancelled, setUnreadCancelled, setLastSeenCancelled]);
   const [filter, setFilter] = useState<
-    "all" | "new" | "accepted" | "cancelled"
+    "all" | "new" | "accepted" | "cancelled" | "rejected"
   >("all");
   const [loading, setLoading] = useState(true);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
@@ -60,7 +60,10 @@ export default function JobRequestsPage() {
   const jobList = Array.isArray(jobs) ? jobs : [];
   const statusOf = (j: any) => (j.status || "").toLowerCase();
   const isMine = (j: any) =>
-    j.workerId?._id === workerId || j.workerId === workerId;
+    j.workerId?._id === workerId ||
+    j.workerId === workerId ||
+    j.requestedWorkerId?._id === workerId ||
+    j.requestedWorkerId === workerId;
   const pendingJobs = jobList.filter((j) => statusOf(j) === "pending");
   const negotiatingJobs = jobList.filter(
     (j) => statusOf(j) === "negotiating" && isMine(j),
@@ -80,6 +83,9 @@ export default function JobRequestsPage() {
   const cancelledJobs = jobList.filter(
     (j) => statusOf(j) === "cancelled" && isMine(j),
   );
+  const rejectedJobs = jobList.filter(
+    (j) => statusOf(j) === "rejected" && isMine(j),
+  );
 
   const activeJobs = [...onTheWayJobs, ...inProgressJobs];
 
@@ -90,14 +96,17 @@ export default function JobRequestsPage() {
         ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs, ...activeJobs]
         : filter === "cancelled"
           ? cancelledJobs
-          : [
-              ...activeJobs,
-              ...negotiatingJobs,
-              ...pendingJobs,
-              ...awaitingCustomerJobs,
-              ...acceptedJobs,
-              ...cancelledJobs,
-            ];
+          : filter === "rejected"
+            ? rejectedJobs
+            : [
+                ...activeJobs,
+                ...negotiatingJobs,
+                ...pendingJobs,
+                ...awaitingCustomerJobs,
+                ...acceptedJobs,
+                ...cancelledJobs,
+                ...rejectedJobs,
+              ];
 
   const jobId = (j: any) => j._id || j.id;
 
@@ -222,7 +231,7 @@ export default function JobRequestsPage() {
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -297,7 +306,23 @@ export default function JobRequestsPage() {
               </View>
             ) : null}
           </TouchableOpacity>
-        </View>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              filter === "rejected" && styles.filterTabActive,
+            ]}
+            onPress={() => setFilter("rejected")}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === "rejected" && styles.filterTextActive,
+              ]}
+            >
+              Rejected ({rejectedJobs.length})
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {loading ? (
           <View style={styles.emptyContainer}>
