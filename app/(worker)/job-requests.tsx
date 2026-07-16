@@ -44,7 +44,7 @@ export default function JobRequestsPage() {
     }
   }, [token, unreadCancelled, setUnreadCancelled, setLastSeenCancelled]);
   const [filter, setFilter] = useState<
-    "all" | "new" | "accepted" | "cancelled" | "rejected"
+    "all" | "new" | "accepted" | "inprogress" | "completed" | "cancelled" | "rejected"
   >("all");
   const [loading, setLoading] = useState(true);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
@@ -86,6 +86,9 @@ export default function JobRequestsPage() {
   const rejectedJobs = jobList.filter(
     (j) => statusOf(j) === "rejected" && isMine(j),
   );
+  const completedJobs = jobList.filter(
+    (j) => statusOf(j) === "completed" && isMine(j),
+  );
 
   const activeJobs = [...onTheWayJobs, ...inProgressJobs];
 
@@ -93,20 +96,25 @@ export default function JobRequestsPage() {
     filter === "new"
       ? pendingJobs
       : filter === "accepted"
-        ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs, ...activeJobs]
-        : filter === "cancelled"
-          ? cancelledJobs
-          : filter === "rejected"
-            ? rejectedJobs
-            : [
-                ...activeJobs,
-                ...negotiatingJobs,
-                ...pendingJobs,
-                ...awaitingCustomerJobs,
-                ...acceptedJobs,
-                ...cancelledJobs,
-                ...rejectedJobs,
-              ];
+        ? [...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs, ...onTheWayJobs]
+        : filter === "inprogress"
+          ? inProgressJobs
+          : filter === "completed"
+            ? completedJobs
+            : filter === "cancelled"
+              ? cancelledJobs
+              : filter === "rejected"
+                ? rejectedJobs
+                : [
+                    ...activeJobs,
+                    ...negotiatingJobs,
+                    ...pendingJobs,
+                    ...awaitingCustomerJobs,
+                    ...acceptedJobs,
+                    ...completedJobs,
+                    ...cancelledJobs,
+                    ...rejectedJobs,
+                  ];
 
   const jobId = (j: any) => j._id || j.id;
 
@@ -277,7 +285,39 @@ export default function JobRequestsPage() {
                 filter === "accepted" && styles.filterTextActive,
               ]}
             >
-              Accepted ({acceptedJobs.length})
+              Accepted ({[...negotiatingJobs, ...awaitingCustomerJobs, ...acceptedJobs, ...onTheWayJobs].length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              filter === "inprogress" && styles.filterTabActive,
+            ]}
+            onPress={() => setFilter("inprogress")}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === "inprogress" && styles.filterTextActive,
+              ]}
+            >
+              In Progress ({inProgressJobs.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterTab,
+              filter === "completed" && styles.filterTabActive,
+            ]}
+            onPress={() => setFilter("completed")}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === "completed" && styles.filterTextActive,
+              ]}
+            >
+              Completed ({completedJobs.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -351,6 +391,7 @@ export default function JobRequestsPage() {
             const isCancelled = status === "cancelled";
             const isOnTheWay = status === "on the way";
             const isInProgress = status === "in progress";
+            const isCompleted = status === "completed";
             const j = job as any;
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
@@ -364,7 +405,10 @@ export default function JobRequestsPage() {
             const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
             let badgeColor = "#FFA500";
             let badgeLabel = "🔔 New";
-            if (isInProgress) {
+            if (isCompleted) {
+              badgeColor = "#388E3C";
+              badgeLabel = "✓ Completed";
+            } else if (isInProgress) {
               badgeColor = "#4CAF50";
               badgeLabel = "🔧 In Progress";
             } else if (isOnTheWay) {
