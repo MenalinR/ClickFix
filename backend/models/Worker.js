@@ -208,11 +208,19 @@ workerSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Update rating
-workerSchema.methods.updateRating = function (newRating) {
-  this.rating =
-    (this.rating * this.reviewCount + newRating) / (this.reviewCount + 1);
-  this.reviewCount += 1;
+// Recalculate rating from all reviews and persist
+workerSchema.methods.updateRating = async function () {
+  const Review = mongoose.model("Review");
+  const reviews = await Review.find({ workerId: this._id }).lean();
+  if (reviews.length === 0) {
+    this.rating = 0;
+    this.reviewCount = 0;
+  } else {
+    this.rating =
+      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    this.reviewCount = reviews.length;
+  }
+  await this.save();
 };
 
 module.exports = mongoose.model("Worker", workerSchema);
