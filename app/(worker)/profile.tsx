@@ -1292,25 +1292,35 @@ export default function WorkerProfileScreen() {
         </View>
 
         {/* Rating & Reviews Section */}
-        <Text style={styles.sectionTitle}>Rating & Reviews</Text>
-        <View style={styles.ratingCard}>
-          <View style={styles.ratingLeft}>
-            <Text style={styles.ratingNumber}>
-              {user.rating ? Number(user.rating).toFixed(1) : "0"}
-            </Text>
-            <View style={styles.starsContainer}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Ionicons
-                  key={i}
-                  name={i <= Math.round(user.rating) ? "star" : "star-outline"}
-                  size={16}
-                  color="#FFB800"
-                />
-              ))}
-            </View>
-            <Text style={styles.reviewCount}>({reviews.length} reviews)</Text>
-          </View>
-        </View>
+        {(() => {
+          const avgRating =
+            reviews.length > 0
+              ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
+              : 0;
+          return (
+            <>
+              <Text style={styles.sectionTitle}>Rating & Reviews</Text>
+              <View style={styles.ratingCard}>
+                <View style={styles.ratingLeft}>
+                  <Text style={styles.ratingNumber}>
+                    {avgRating > 0 ? avgRating.toFixed(1) : "0"}
+                  </Text>
+                  <View style={styles.starsContainer}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Ionicons
+                        key={i}
+                        name={i <= Math.round(avgRating) ? "star" : "star-outline"}
+                        size={16}
+                        color="#FFB800"
+                      />
+                    ))}
+                  </View>
+                  <Text style={styles.reviewCount}>({reviews.length} {reviews.length === 1 ? "review" : "reviews"})</Text>
+                </View>
+              </View>
+            </>
+          );
+        })()}
 
         {reviews.length > 0 ? (
           reviews.slice(0, 5).map((r: any) => (

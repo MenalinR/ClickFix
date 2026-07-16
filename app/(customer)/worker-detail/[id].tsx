@@ -442,7 +442,11 @@ export default function WorkerProfile() {
           <View style={styles.stats}>
             <View style={styles.statItem}>
               <Ionicons name="star" size={20} color={Colors.accent} />
-              <Text style={styles.statValue}>{worker.rating}</Text>
+              <Text style={styles.statValue}>
+                {workerReviews.length > 0
+                  ? (workerReviews.reduce((s, r) => s + r.rating, 0) / workerReviews.length).toFixed(1)
+                  : worker.rating || "0"}
+              </Text>
               <Text style={styles.statLabel}>Rating</Text>
             </View>
             <View style={styles.statItem}>
