@@ -50,7 +50,6 @@ export default function LoginScreen() {
         await loginCustomer(email, password);
         router.replace("/(customer)" as any);
       }
-      Alert.alert("Success", "Logged in successfully!");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid credentials");
       console.error("Login error:", error);
