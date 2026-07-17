@@ -1,40 +1,65 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, apiCall } from "@/constants/api";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, usePathname } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Colors } from "../../constants/Colors";
+
+const COMPLAINTS_SEEN_KEY = "admin_complaints_seen_at";
 
 export default function AdminLayout() {
   const { token } = useStore();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
   const pathname = usePathname();
   const [lastDocumentVisit, setLastDocumentVisit] = useState(0);
+  const [lastComplaintsVisit, setLastComplaintsVisit] = useState(0);
+  const complaintsSeenAt = useRef(0);
 
+  // Load persisted seen-at timestamp on mount, then start polling
   useEffect(() => {
+    AsyncStorage.getItem(COMPLAINTS_SEEN_KEY).then((val) => {
+      complaintsSeenAt.current = val ? parseInt(val, 10) : 0;
+      fetchPendingComplaints();
+    });
+
     fetchUnreadCount();
-    // Poll for new notifications every 3 seconds (demo mode)
     const interval = setInterval(fetchUnreadCount, 3000);
-    return () => clearInterval(interval);
+    const complaintsInterval = setInterval(fetchPendingComplaints, 30000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(complaintsInterval);
+    };
   }, []);
 
   // Clear and refresh notification count when documents tab is accessed
   useEffect(() => {
     if (pathname?.includes("documents")) {
       const now = Date.now();
-      // Prevent multiple rapid clears
       if (now - lastDocumentVisit > 2000) {
         setLastDocumentVisit(now);
-        // Clear badge immediately for instant feedback
         setUnreadCount(0);
-        // Refresh multiple times to ensure notifications are marked as read
         const timer1 = setTimeout(fetchUnreadCount, 1500);
         const timer2 = setTimeout(fetchUnreadCount, 3000);
         return () => {
           clearTimeout(timer1);
           clearTimeout(timer2);
         };
+      }
+    }
+  }, [pathname]);
+
+  // Clear complaints badge when complaints tab is visited and persist the timestamp
+  useEffect(() => {
+    if (pathname?.includes("complaints")) {
+      const now = Date.now();
+      if (now - lastComplaintsVisit > 2000) {
+        setLastComplaintsVisit(now);
+        complaintsSeenAt.current = now;
+        AsyncStorage.setItem(COMPLAINTS_SEEN_KEY, String(now));
+        setPendingComplaintsCount(0);
       }
     }
   }, [pathname]);
@@ -51,6 +76,20 @@ export default function AdminLayout() {
       setUnreadCount(response.count || 0);
     } catch (error) {
       console.error("Error fetching notification count:", error);
+    }
+  };
+
+  const fetchPendingComplaints = async () => {
+    if (!token) return;
+    try {
+      const response = await apiCall(api.complaints.getAll, "GET", undefined, token);
+      const cutoff = complaintsSeenAt.current;
+      const count = (response?.data || []).filter(
+        (c: any) => c.status === "pending" && new Date(c.createdAt).getTime() > cutoff,
+      ).length;
+      setPendingComplaintsCount(count);
+    } catch {
+      // non-fatal
     }
   };
 
@@ -131,7 +170,16 @@ export default function AdminLayout() {
         options={{
           title: "Complaints",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flag-outline" size={size} color={color} />
+            <View>
+              <Ionicons name="flag-outline" size={size} color={color} />
+              {pendingComplaintsCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {pendingComplaintsCount > 9 ? "9+" : pendingComplaintsCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />
