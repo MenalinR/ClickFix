@@ -55,6 +55,7 @@ exports.sendTokenResponse = (user, statusCode, res, userType) => {
         verified: user.verified,
         isActive: user.isActive,
         lastLogin: user.lastLogin,
+        location: user.location,
       }),
     },
   });

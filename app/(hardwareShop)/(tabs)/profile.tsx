@@ -14,6 +14,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -128,40 +129,56 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSetLocation = async () => {
+  const locationEnabled = (shop?.location?.coordinates?.length === 2);
+
+  const handleToggleLocation = async (enabled: boolean) => {
     if (!token) return;
-    try {
-      setSavingLocation(true);
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert(
-          "Permission needed",
-          "Allow location access to set your shop's map location.",
+    if (enabled) {
+      try {
+        setSavingLocation(true);
+        const perm = await Location.requestForegroundPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("Permission needed", "Allow location access to set your shop's map location.");
+          return;
+        }
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const res = await apiCall(
+          api.hardwareShop.setLocation,
+          "PUT",
+          { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+          token,
         );
-        return;
+        if (!res?.success) throw new Error(res?.message || "Could not save location");
+        setUser({ ...(user as any), location: res.data?.location });
+      } catch (e: any) {
+        Alert.alert("Failed", e?.message || "Could not set location");
+      } finally {
+        setSavingLocation(false);
       }
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const res = await apiCall(
-        api.hardwareShop.setLocation,
-        "PUT",
-        {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        },
-        token,
-      );
-      if (!res?.success) throw new Error(res?.message || "Could not save location");
-      setUser({ ...(user as any), location: res.data?.location });
+    } else {
       Alert.alert(
-        "Location saved",
-        "Workers heading to your shop can now be routed to you.",
+        "Disable map location?",
+        "Workers will no longer be routed to your shop.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Disable",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setSavingLocation(true);
+                const res = await apiCall(api.hardwareShop.clearLocation, "DELETE", undefined, token);
+                if (!res?.success) throw new Error(res?.message || "Could not clear location");
+                setUser({ ...(user as any), location: undefined });
+              } catch (e: any) {
+                Alert.alert("Failed", e?.message || "Could not clear location");
+              } finally {
+                setSavingLocation(false);
+              }
+            },
+          },
+        ],
       );
-    } catch (e: any) {
-      Alert.alert("Failed", e?.message || "Could not set location");
-    } finally {
-      setSavingLocation(false);
     }
   };
 
@@ -244,24 +261,24 @@ export default function ProfileScreen() {
             />
           </View>
 
-          <Pressable
-            style={styles.locationBtn}
-            onPress={handleSetLocation}
-            disabled={savingLocation}
-          >
+          <View style={styles.locationToggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.locationToggleLabel}>Map location</Text>
+              <Text style={styles.locationToggleSub}>
+                {locationEnabled ? "Workers can navigate to your shop" : "Enable so workers can find your shop"}
+              </Text>
+            </View>
             {savingLocation ? (
-              <ActivityIndicator color="white" size="small" />
+              <ActivityIndicator color={Colors.primary} size="small" />
             ) : (
-              <>
-                <Ionicons name="locate" size={16} color="white" />
-                <Text style={styles.locationBtnText}>
-                  {shop?.location?.coordinates?.length === 2
-                    ? "Update shop location"
-                    : "Use my current location"}
-                </Text>
-              </>
+              <Switch
+                value={locationEnabled}
+                onValueChange={handleToggleLocation}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor="white"
+              />
             )}
-          </Pressable>
+          </View>
         </View>
 
         {/* Actions */}
@@ -466,17 +483,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: "hidden",
   },
-  locationBtn: {
+  locationToggleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     marginTop: 12,
+    gap: 12,
   },
-  locationBtnText: { color: "white", fontWeight: "600", fontSize: 14 },
+  locationToggleLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
+  locationToggleSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",

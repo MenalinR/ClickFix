@@ -176,6 +176,7 @@ export const api = {
     updateItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
     deleteItem: (id: string) => `${API_URL}/hardwareShop/items/${id}`,
     setLocation: `${API_URL}/hardwareShop/location`,
+    clearLocation: `${API_URL}/hardwareShop/location`,
     getStats: `${API_URL}/hardwareShop/stats`,
     getOrders: `${API_URL}/hardwareShop/orders`,
     markOrdersViewed: `${API_URL}/hardwareShop/orders/mark-viewed`,

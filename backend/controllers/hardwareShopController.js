@@ -31,6 +31,22 @@ exports.updateShopLocation = async (req, res) => {
   }
 };
 
+// @desc    Clear the shop's map location
+// @route   DELETE /api/hardwareShop/location
+// @access  Private (hardwareShop)
+exports.clearShopLocation = async (req, res) => {
+  try {
+    const shop = await HardwareShop.findByIdAndUpdate(
+      req.user._id,
+      { $unset: { location: "" } },
+      { new: true },
+    ).select("-password");
+    res.status(200).json({ success: true, data: shop });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    List active hardware shops (public to authenticated workers)
 // @route   GET /api/hardwareShop/list
 // @access  Private (Worker)
