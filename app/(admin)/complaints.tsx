@@ -64,7 +64,7 @@ export default function ComplaintsScreen() {
       setSaving(true);
       const res = await apiCall(
         api.complaints.update(selected._id),
-        "PATCH",
+        "PUT",
         { status: newStatus, adminNotes },
         token,
       );
@@ -111,11 +111,11 @@ export default function ComplaintsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
         {(["all", ...STATUS_OPTIONS] as const).map((s) => {
           const isActive = filterStatus === s;
-          const meta = s !== "all" ? STATUS_META[s] : null;
           return (
             <TouchableOpacity
               key={s}
@@ -141,7 +141,7 @@ export default function ComplaintsScreen() {
           <Text style={styles.emptyText}>No complaints found</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list}>
           {filtered.map((complaint) => {
             const status = complaint.status as ComplaintStatus;
             const meta = STATUS_META[status] || STATUS_META.pending;
@@ -308,14 +308,22 @@ const styles = StyleSheet.create({
   },
   heading: { fontSize: 26, fontWeight: "bold", color: Colors.text },
   refreshBtn: { padding: 6 },
-  filterRow: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  filterScroll: { flexGrow: 0 },
+  filterRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   filterTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: "white",
+    alignSelf: "flex-start",
   },
   filterTabText: { fontSize: 12, fontWeight: "600", color: Colors.text },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },

@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.post("/", protect, authorize("customer"), createComplaint);
 router.get("/", protect, authorize("customer", "admin"), getComplaints);
-router.patch("/:id", protect, authorize("admin"), updateComplaint);
+router.put("/:id", protect, authorize("admin"), updateComplaint);
 
 module.exports = router;
