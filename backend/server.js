@@ -139,6 +139,7 @@ app.use("/api/reviews", require("./routes/reviews"));
 app.use("/api/hardware", require("./routes/hardware"));
 app.use("/api/hardwareShop", require("./routes/hardwareShop"));
 app.use("/api/notifications", require("./routes/notifications"));
+app.use("/api/complaints", require("./routes/complaints"));
 
 const errorHandler = require("./middleware/error");
 

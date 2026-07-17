@@ -192,6 +192,13 @@ export const api = {
       `${API_URL}/hardwareShop/orders/${id}/complete`,
   },
 
+  // Complaints
+  complaints: {
+    create: `${API_URL}/complaints`,
+    getAll: `${API_URL}/complaints`,
+    update: (id: string) => `${API_URL}/complaints/${id}`,
+  },
+
   // Health
   health: `${API_URL}/health`,
 };

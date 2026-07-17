@@ -382,27 +382,49 @@ export default function BookingsScreen() {
                         </TouchableOpacity>
                       ) : null}
                       {isCompleted ? (
-                        <TouchableOpacity
-                          style={styles.reviewIconBtn}
-                          onPress={() =>
-                            router.push({
-                              pathname: "/(customer)/rating-review",
-                              params: {
-                                jobId: id,
-                                workerId:
-                                  (job.workerId as any)?._id ||
-                                  (job.workerId as any) ||
-                                  "",
-                                workerName: workerName(job),
-                                workerImage: workerImage(job),
-                                serviceType: job.serviceType || "",
-                              },
-                            } as any)
-                          }
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="star" size={22} color="#FFA000" />
-                        </TouchableOpacity>
+                        <>
+                          <TouchableOpacity
+                            style={styles.reviewIconBtn}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/(customer)/rating-review",
+                                params: {
+                                  jobId: id,
+                                  workerId:
+                                    (job.workerId as any)?._id ||
+                                    (job.workerId as any) ||
+                                    "",
+                                  workerName: workerName(job),
+                                  workerImage: workerImage(job),
+                                  serviceType: job.serviceType || "",
+                                },
+                              } as any)
+                            }
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="star" size={22} color="#FFA000" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.complaintIconBtn}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/(customer)/complaint",
+                                params: {
+                                  workerId:
+                                    (job.workerId as any)?._id ||
+                                    (job.workerId as any) ||
+                                    "",
+                                  workerName: workerName(job),
+                                  jobId: id,
+                                  serviceType: job.serviceType || "",
+                                },
+                              } as any)
+                            }
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="flag" size={20} color="#C62828" />
+                          </TouchableOpacity>
+                        </>
                       ) : null}
                       {canCancel ? (
                         <TouchableOpacity
@@ -818,6 +840,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   reviewIconBtn: {
+    padding: 2,
+  },
+  complaintIconBtn: {
     padding: 2,
   },
   tableRow: {

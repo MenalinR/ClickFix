@@ -136,6 +136,13 @@ export default function AdminDashboard() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
+            onPress={() => router.push("/(admin)/complaints")}
+          >
+            <Ionicons name="flag-outline" size={32} color="#C62828" />
+            <Text style={styles.actionText}>Complaints</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => router.push("/(admin)/settings")}
           >
             <Ionicons name="settings-outline" size={32} color="#FF6B6B" />

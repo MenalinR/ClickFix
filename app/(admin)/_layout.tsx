@@ -127,6 +127,15 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="complaints"
+        options={{
+          title: "Complaints",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
