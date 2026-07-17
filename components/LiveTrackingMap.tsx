@@ -44,19 +44,29 @@ export default function LiveTrackingMap({
   height = 260,
 }: Props) {
   const mapRef = useRef<MapView | null>(null);
+  const hasFit = useRef(false);
 
+  // Re-allow a fit whenever the destination or route changes.
   useEffect(() => {
-    if (!mapRef.current) return;
-    // Prefer framing the whole road route; else worker + destination; else self.
+    hasFit.current = false;
+  }, [destination, routeCoords.length]);
+
+  // Fit once when we first have enough points; don't re-fit on every GPS ping.
+  useEffect(() => {
+    if (!mapRef.current || hasFit.current) return;
     const pts =
       routeCoords.length > 1
         ? routeCoords
-        : [workerCoords, destination].filter(Boolean) as LatLng[];
+        : ([workerCoords, destination].filter(Boolean) as LatLng[]);
     if (pts.length > 1) {
-      mapRef.current.fitToCoordinates(pts, {
-        edgePadding: { top: 90, right: 90, bottom: 90, left: 90 },
-        animated: true,
-      });
+      hasFit.current = true;
+      // Delay lets the MapView finish its initial render on Android.
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(pts, {
+          edgePadding: { top: 90, right: 90, bottom: 90, left: 90 },
+          animated: false,
+        });
+      }, 600);
     } else if (workerCoords) {
       mapRef.current.animateToRegion(
         { ...workerCoords, latitudeDelta: 0.02, longitudeDelta: 0.02 },

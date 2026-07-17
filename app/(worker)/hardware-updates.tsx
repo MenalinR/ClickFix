@@ -153,14 +153,21 @@ export default function HardwareUpdatesScreen() {
           (item.jobId as any)?._id ||
           (typeof item.jobId === "string" ? item.jobId : "");
         const coords = item.shopId?.location?.coordinates; // [lng, lat]
+        const shopName = item.shopId?.shopName || "Hardware shop";
+        if (!coords || coords.length !== 2) {
+          Alert.alert(
+            "Shop location not set",
+            `${shopName} hasn't set their map location yet. Contact the shop directly for directions.`,
+          );
+          return;
+        }
         router.push({
           pathname: "/pickup-route",
           params: {
             jobId,
-            shopName: item.shopId?.shopName || "Hardware shop",
-            ...(coords && coords.length === 2
-              ? { shopLng: String(coords[0]), shopLat: String(coords[1]) }
-              : {}),
+            shopName,
+            shopLng: String(coords[0]),
+            shopLat: String(coords[1]),
           },
         });
       } catch (e: any) {
@@ -279,14 +286,21 @@ export default function HardwareUpdatesScreen() {
                 (item.jobId as any)?._id ||
                 (typeof item.jobId === "string" ? item.jobId : "");
               const coords = item.shopId?.location?.coordinates;
+              const shopName = item.shopId?.shopName || "Hardware shop";
+              if (!coords || coords.length !== 2) {
+                Alert.alert(
+                  "Shop location not set",
+                  `${shopName} hasn't set their map location yet. Contact the shop directly for directions.`,
+                );
+                return;
+              }
               router.push({
                 pathname: "/pickup-route",
                 params: {
                   jobId,
-                  shopName: item.shopId?.shopName || "Hardware shop",
-                  ...(coords && coords.length === 2
-                    ? { shopLng: String(coords[0]), shopLat: String(coords[1]) }
-                    : {}),
+                  shopName,
+                  shopLng: String(coords[0]),
+                  shopLat: String(coords[1]),
                 },
               });
             }}
