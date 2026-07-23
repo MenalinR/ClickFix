@@ -62,6 +62,7 @@ export default function HardwareCheckoutPage() {
   );
 
   const [submitting, setSubmitting] = useState(false);
+  const [payMethod, setPayMethod] = useState<"bill" | "payhere">("bill");
 
   const handlePlaceOrder = async () => {
     if (!shopId || cartLines.length === 0) return;
@@ -81,6 +82,7 @@ export default function HardwareCheckoutPage() {
         token,
       );
       const total = res?.data?.request?.totalCost || cartTotal;
+      const orderId = res?.data?.request?._id as string | undefined;
       const itemCount = cartLines.length;
 
       if (customerId) {
@@ -105,12 +107,24 @@ export default function HardwareCheckoutPage() {
         }
       }
 
-      Alert.alert("Order placed", `Total ${total} LKR added to the bill.`, [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(worker)"),
-        },
-      ]);
+      if (payMethod === "payhere" && orderId) {
+        const itemsSummary = cartLines
+          .map((l) => `${l.name} x${l.quantity}`)
+          .join(", ");
+        router.replace({
+          pathname: "/(worker)/payhere-checkout",
+          params: {
+            orderId,
+            amount: String(total),
+            shopName,
+            itemsSummary,
+          },
+        });
+      } else {
+        Alert.alert("Order placed", `Total ${total} LKR added to the bill.`, [
+          { text: "OK", onPress: () => router.replace("/(worker)") },
+        ]);
+      }
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to create order");
     } finally {
@@ -197,10 +211,50 @@ export default function HardwareCheckoutPage() {
           </View>
         </View>
 
-        <Text style={styles.note}>
-          The total will be added to the customer's bill once the order is
-          placed.
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+          Payment Method
         </Text>
+        <TouchableOpacity
+          style={[styles.payOption, payMethod === "bill" && styles.payOptionSelected]}
+          onPress={() => setPayMethod("bill")}
+          activeOpacity={0.8}
+        >
+          <View style={styles.payOptionIcon}>
+            <Ionicons
+              name="receipt-outline"
+              size={20}
+              color={payMethod === "bill" ? Colors.primary : Colors.textSecondary}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.payOptionTitle}>Add to Customer Bill</Text>
+            <Text style={styles.payOptionSub}>Cost is added to the job invoice</Text>
+          </View>
+          <View style={[styles.radio, payMethod === "bill" && styles.radioSelected]}>
+            {payMethod === "bill" && <View style={styles.radioDot} />}
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.payOption, payMethod === "payhere" && styles.payOptionSelected]}
+          onPress={() => setPayMethod("payhere")}
+          activeOpacity={0.8}
+        >
+          <View style={styles.payOptionIcon}>
+            <Ionicons
+              name="card-outline"
+              size={20}
+              color={payMethod === "payhere" ? Colors.primary : Colors.textSecondary}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.payOptionTitle}>Pay via PayHere</Text>
+            <Text style={styles.payOptionSub}>Pay the shop online now</Text>
+          </View>
+          <View style={[styles.radio, payMethod === "payhere" && styles.radioSelected]}>
+            {payMethod === "payhere" && <View style={styles.radioDot} />}
+          </View>
+        </TouchableOpacity>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -358,4 +412,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   placeBtnText: { color: "white", fontSize: 15, fontWeight: "700" },
+  payOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  payOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: "#F0F4F8",
+  },
+  payOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: Colors.lightBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payOptionTitle: { fontSize: 14, fontWeight: "700", color: Colors.text },
+  payOptionSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioSelected: { borderColor: Colors.primary },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
 });
