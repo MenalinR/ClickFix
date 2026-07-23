@@ -15,8 +15,8 @@ exports.generatePayhereHash = async (req, res) => {
         .json({ success: false, message: "orderId and amount are required" });
     }
 
-    const merchantId = process.env.PAYHERE_MERCHANT_ID;
-    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
+    const merchantId = (process.env.PAYHERE_MERCHANT_ID || "").trim();
+    const merchantSecret = (process.env.PAYHERE_MERCHANT_SECRET || "").trim();
     if (!merchantId || !merchantSecret) {
       return res
         .status(500)
