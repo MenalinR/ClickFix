@@ -140,6 +140,7 @@ app.use("/api/hardware", require("./routes/hardware"));
 app.use("/api/hardwareShop", require("./routes/hardwareShop"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/complaints", require("./routes/complaints"));
+app.use("/api/payments", require("./routes/payments"));
 
 const errorHandler = require("./middleware/error");
 

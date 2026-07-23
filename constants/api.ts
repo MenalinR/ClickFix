@@ -199,6 +199,12 @@ export const api = {
     update: (id: string) => `${API_URL}/complaints/${id}`,
   },
 
+  // Payments
+  payments: {
+    payhereHash: `${API_URL}/payments/payhere/hash`,
+    payhereNotify: `${API_URL}/payments/payhere/notify`,
+  },
+
   // Health
   health: `${API_URL}/health`,
 };

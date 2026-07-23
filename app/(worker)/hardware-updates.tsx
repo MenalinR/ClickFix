@@ -262,20 +262,42 @@ export default function HardwareUpdatesScreen() {
         </View>
 
         {status === "ready" && (
-          <TouchableOpacity
-            style={styles.comingBtn}
-            disabled={busyId === item._id}
-            onPress={() => confirmComing(item)}
-          >
-            {busyId === item._id ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Ionicons name="walk-outline" size={16} color="white" />
-                <Text style={styles.comingBtnText}>I&apos;m on my way</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.payBtn}
+              onPress={() => {
+                const itemsSummary = item.items
+                  .map((it) => `${it.name} x${it.quantity}`)
+                  .join(", ");
+                router.push({
+                  pathname: "/(worker)/payhere-checkout",
+                  params: {
+                    orderId: item._id,
+                    amount: String(item.totalCost),
+                    shopName: item.shopId?.shopName || "Hardware Shop",
+                    itemsSummary,
+                  },
+                });
+              }}
+            >
+              <Ionicons name="card-outline" size={16} color="white" />
+              <Text style={styles.comingBtnText}>Pay via PayHere</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.comingBtn}
+              disabled={busyId === item._id}
+              onPress={() => confirmComing(item)}
+            >
+              {busyId === item._id ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Ionicons name="walk-outline" size={16} color="white" />
+                  <Text style={styles.comingBtnText}>I&apos;m on my way</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </>
         )}
 
         {status === "coming" && (
@@ -479,6 +501,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 11,
+    marginTop: 12,
+  },
+  payBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#FF7E00",
     borderRadius: 8,
     paddingVertical: 11,
     marginTop: 12,

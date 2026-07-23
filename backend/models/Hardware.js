@@ -90,6 +90,12 @@ const hardwareRequestSchema = new mongoose.Schema(
     },
     customerNote: String,
     workerNote: String,
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "failed"],
+      default: "unpaid",
+    },
+    paymentId: String,
   },
   {
     timestamps: true,
