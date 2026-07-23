@@ -40,6 +40,24 @@ exports.generatePayhereHash = async (req, res) => {
   }
 };
 
+// GET /api/payments/payhere/debug  — sandbox debugging only
+exports.payhereDebug = (req, res) => {
+  const merchantId = process.env.PAYHERE_MERCHANT_ID || "";
+  const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET || "";
+  const secretTrimmed = merchantSecret.trim();
+  const secretHash = md5(secretTrimmed);
+  const testHash = md5(merchantId + "TEST-001" + "100.00" + "LKR" + secretHash);
+  return res.json({
+    merchantId,
+    secretLength: merchantSecret.length,
+    secretTrimmedLength: secretTrimmed.length,
+    secretFirst4: secretTrimmed.slice(0, 4),
+    secretLast4: secretTrimmed.slice(-4),
+    secretMd5: secretHash,
+    testHash,
+  });
+};
+
 // POST /api/payments/payhere/notify  (called by PayHere server, no auth)
 exports.payhereNotify = async (req, res) => {
   try {

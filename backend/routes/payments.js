@@ -4,8 +4,10 @@ const { protect } = require("../middleware/auth");
 const {
   generatePayhereHash,
   payhereNotify,
+  payhereDebug,
 } = require("../controllers/paymentController");
 
+router.get("/payhere/debug", payhereDebug);
 router.post("/payhere/hash", protect, generatePayhereHash);
 router.post("/payhere/notify", payhereNotify); // No auth — called by PayHere servers
 
