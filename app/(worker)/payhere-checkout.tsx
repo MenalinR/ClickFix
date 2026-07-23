@@ -16,8 +16,8 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 
 const SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
-const RETURN_URL = "https://clickfix.app/payment/return";
-const CANCEL_URL = "https://clickfix.app/payment/cancel";
+const RETURN_URL = "http://localhost/payment/return";
+const CANCEL_URL = "http://localhost/payment/cancel";
 
 export default function PayhereCheckoutScreen() {
   const router = useRouter();
