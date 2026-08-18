@@ -357,88 +357,90 @@ export default function BookingsScreen() {
                           {getStatusLabel(status)}
                         </Text>
                       </View>
-                      {canTrack ? (
-                        <TouchableOpacity
-                          style={styles.trackIconBtn}
-                          onPress={() =>
-                            router.push({
-                              pathname: "/(customer)/job-tracking",
-                              params: {
-                                jobId: id,
-                                workerId:
-                                  (job.workerId as any)?._id ||
-                                  (job.workerId as any) ||
-                                  "",
-                              },
-                            })
-                          }
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons
-                            name="navigate-circle"
-                            size={24}
-                            color={Colors.primary}
-                          />
-                        </TouchableOpacity>
-                      ) : null}
-                      {isCompleted ? (
-                        <>
+                      <View style={styles.actionIconsRow}>
+                        {canTrack ? (
                           <TouchableOpacity
-                            style={styles.reviewIconBtn}
+                            style={styles.trackIconBtn}
                             onPress={() =>
                               router.push({
-                                pathname: "/(customer)/rating-review",
+                                pathname: "/(customer)/job-tracking",
                                 params: {
                                   jobId: id,
                                   workerId:
                                     (job.workerId as any)?._id ||
                                     (job.workerId as any) ||
                                     "",
-                                  workerName: workerName(job),
-                                  workerImage: workerImage(job),
-                                  serviceType: job.serviceType || "",
                                 },
-                              } as any)
+                              })
                             }
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
-                            <Ionicons name="star" size={22} color="#FFA000" />
+                            <Ionicons
+                              name="navigate-circle"
+                              size={22}
+                              color={Colors.primary}
+                            />
                           </TouchableOpacity>
+                        ) : null}
+                        {isCompleted ? (
+                          <>
+                            <TouchableOpacity
+                              style={styles.reviewIconBtn}
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/(customer)/rating-review",
+                                  params: {
+                                    jobId: id,
+                                    workerId:
+                                      (job.workerId as any)?._id ||
+                                      (job.workerId as any) ||
+                                      "",
+                                    workerName: workerName(job),
+                                    workerImage: workerImage(job),
+                                    serviceType: job.serviceType || "",
+                                  },
+                                } as any)
+                              }
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="star" size={20} color="#FFA000" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.complaintIconBtn}
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/(customer)/complaint",
+                                  params: {
+                                    workerId:
+                                      (job.workerId as any)?._id ||
+                                      (job.workerId as any) ||
+                                      "",
+                                    workerName: workerName(job),
+                                    jobId: id,
+                                    serviceType: job.serviceType || "",
+                                  },
+                                } as any)
+                              }
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="flag" size={18} color="#C62828" />
+                            </TouchableOpacity>
+                          </>
+                        ) : null}
+                        {canCancel ? (
                           <TouchableOpacity
-                            style={styles.complaintIconBtn}
-                            onPress={() =>
-                              router.push({
-                                pathname: "/(customer)/complaint",
-                                params: {
-                                  workerId:
-                                    (job.workerId as any)?._id ||
-                                    (job.workerId as any) ||
-                                    "",
-                                  workerName: workerName(job),
-                                  jobId: id,
-                                  serviceType: job.serviceType || "",
-                                },
-                              } as any)
-                            }
+                            style={styles.cancelIconBtn}
+                            onPress={() => handleCancel(id)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
-                            <Ionicons name="flag" size={20} color="#C62828" />
+                            <Ionicons
+                              name="close-circle"
+                              size={20}
+                              color="#C62828"
+                            />
                           </TouchableOpacity>
-                        </>
-                      ) : null}
-                      {canCancel ? (
-                        <TouchableOpacity
-                          style={styles.cancelIconBtn}
-                          onPress={() => handleCancel(id)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons
-                            name="close-circle"
-                            size={22}
-                            color="#C62828"
-                          />
-                        </TouchableOpacity>
-                      ) : null}
+                        ) : null}
+                      </View>
                     </View>
                   </RowWrap>
                 );
@@ -825,12 +827,16 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   colIssue: { width: 160, justifyContent: "center" },
-  colStatus: { width: 100, justifyContent: "center", alignItems: "center" },
+  colStatus: { width: 140, justifyContent: "center", alignItems: "flex-start" },
   statusActionsCell: {
-    width: 100,
+    width: 140,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  actionIconsRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 6,
   },
   cancelIconBtn: {
