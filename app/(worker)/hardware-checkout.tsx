@@ -62,7 +62,7 @@ export default function HardwareCheckoutPage() {
   );
 
   const [submitting, setSubmitting] = useState(false);
-  const [payMethod, setPayMethod] = useState<"bill" | "payhere">("bill");
+  const [payMethod, setPayMethod] = useState<"cash" | "payhere">("cash");
 
   const handlePlaceOrder = async () => {
     if (!shopId || cartLines.length === 0) return;
@@ -121,7 +121,7 @@ export default function HardwareCheckoutPage() {
           },
         });
       } else {
-        Alert.alert("Order placed", `Total ${total} LKR added to the bill.`, [
+        Alert.alert("Order placed", `Pay ${total} LKR in cash to the shop.`, [
           { text: "OK", onPress: () => router.replace("/(worker)") },
         ]);
       }
@@ -215,23 +215,23 @@ export default function HardwareCheckoutPage() {
           Payment Method
         </Text>
         <TouchableOpacity
-          style={[styles.payOption, payMethod === "bill" && styles.payOptionSelected]}
-          onPress={() => setPayMethod("bill")}
+          style={[styles.payOption, payMethod === "cash" && styles.payOptionSelected]}
+          onPress={() => setPayMethod("cash")}
           activeOpacity={0.8}
         >
           <View style={styles.payOptionIcon}>
             <Ionicons
-              name="receipt-outline"
+              name="cash-outline"
               size={20}
-              color={payMethod === "bill" ? Colors.primary : Colors.textSecondary}
+              color={payMethod === "cash" ? Colors.primary : Colors.textSecondary}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.payOptionTitle}>Add to Customer Bill</Text>
-            <Text style={styles.payOptionSub}>Cost is added to the job invoice</Text>
+            <Text style={styles.payOptionTitle}>Cash Payment</Text>
+            <Text style={styles.payOptionSub}>Pay the shop in cash on pickup</Text>
           </View>
-          <View style={[styles.radio, payMethod === "bill" && styles.radioSelected]}>
-            {payMethod === "bill" && <View style={styles.radioDot} />}
+          <View style={[styles.radio, payMethod === "cash" && styles.radioSelected]}>
+            {payMethod === "cash" && <View style={styles.radioDot} />}
           </View>
         </TouchableOpacity>
 
