@@ -19,7 +19,6 @@ const SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
 const RETURN_URL = "https://clickfix-backend.onrender.com/api/payments/payment/return";
 const CANCEL_URL = "https://clickfix-backend.onrender.com/api/payments/payment/cancel";
 const NOTIFY_URL = "https://clickfix-backend.onrender.com/api/payments/payhere/notify";
-// baseUrl must match a domain registered in your PayHere sandbox integration settings
 const BASE_URL = "http://localhost";
 
 function esc(v: string) {
@@ -36,24 +35,42 @@ function buildPayhereHtml(fields: Record<string, string>): string {
 </body></html>`;
 }
 
+interface CartLine {
+  hardwareItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 export default function PayhereCheckoutScreen() {
   const router = useRouter();
   const { token, user } = useStore();
   const params = useLocalSearchParams<{
-    orderId?: string;
+    jobId?: string;
+    customerId?: string;
+    shopId?: string;
+    cart?: string;
     amount?: string;
     shopName?: string;
     itemsSummary?: string;
   }>();
 
-  const orderId = typeof params.orderId === "string" ? params.orderId : "";
+  const jobId = typeof params.jobId === "string" ? params.jobId : "";
+  const customerId = typeof params.customerId === "string" ? params.customerId : "";
+  const shopId = typeof params.shopId === "string" ? params.shopId : "";
   const amount = typeof params.amount === "string" ? params.amount : "0";
-  const shopName =
-    typeof params.shopName === "string" ? params.shopName : "Hardware Shop";
-  const itemsSummary =
-    typeof params.itemsSummary === "string"
-      ? params.itemsSummary
-      : "Hardware items";
+  const shopName = typeof params.shopName === "string" ? params.shopName : "Hardware Shop";
+  const itemsSummary = typeof params.itemsSummary === "string" ? params.itemsSummary : "Hardware items";
+
+  const cartLines: CartLine[] = (() => {
+    try {
+      const raw = typeof params.cart === "string" ? params.cart : "[]";
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
@@ -61,13 +78,13 @@ export default function PayhereCheckoutScreen() {
   const didNavigate = useRef(false);
 
   useEffect(() => {
-    if (!orderId || !amount || !token) return;
+    if (!jobId || !amount || !token) return;
     (async () => {
       try {
         const res = await apiCall(
           api.payments.payhereHash,
           "POST",
-          { orderId: `HW-${orderId}`, amount, currency: "LKR" },
+          { orderId: `JOB-${jobId}`, amount, currency: "LKR" },
           token,
         );
         if (!res.success || !res.data?.hash) {
@@ -87,7 +104,7 @@ export default function PayhereCheckoutScreen() {
           return_url: RETURN_URL,
           cancel_url: CANCEL_URL,
           notify_url: NOTIFY_URL,
-          order_id: `HW-${orderId}`,
+          order_id: `JOB-${jobId}`,
           items: itemsSummary,
           currency,
           amount: amountFormatted,
@@ -107,7 +124,53 @@ export default function PayhereCheckoutScreen() {
         setLoading(false);
       }
     })();
-  }, [orderId, amount, token]);
+  }, [jobId, amount, token]);
+
+  const handlePaymentSuccess = async () => {
+    try {
+      const res = await apiCall(
+        api.hardware.createOrderFromJob,
+        "POST",
+        {
+          jobId,
+          shopId,
+          items: cartLines.map((l) => ({
+            hardwareItemId: l.hardwareItemId,
+            quantity: l.quantity,
+          })),
+        },
+        token,
+      );
+      const total = res?.data?.request?.totalCost || amount;
+      const itemCount = cartLines.length;
+
+      if (customerId) {
+        try {
+          await apiCall(
+            api.chat.sendMessage,
+            "POST",
+            {
+              chatId: jobId,
+              receiverId: customerId,
+              receiverModel: "Customer",
+              jobId,
+              messageType: "text",
+              content: `Hardware ordered — ${itemCount} item${itemCount > 1 ? "s" : ""}, ${total} LKR paid via PayHere.`,
+            },
+            token,
+          );
+        } catch {
+          // non-fatal
+        }
+      }
+    } catch {
+      // Order creation failure after payment — non-fatal for UX, log on backend
+    }
+
+    Alert.alert("Payment Successful", "Your hardware order has been paid!", [
+      { text: "OK", onPress: () => router.replace("/(worker)/hardware-updates") },
+    ]);
+  };
 
   const handleNavigationChange = (navState: { url: string }) => {
     if (didNavigate.current) return;
@@ -115,9 +178,7 @@ export default function PayhereCheckoutScreen() {
 
     if (url.includes("/payment/return")) {
       didNavigate.current = true;
-      Alert.alert("Payment Successful", "Your hardware order has been paid!", [
-        { text: "OK", onPress: () => router.replace("/(worker)/hardware-updates") },
-      ]);
+      handlePaymentSuccess();
     } else if (url.includes("/payment/cancel")) {
       didNavigate.current = true;
       Alert.alert("Payment Cancelled", "Payment was cancelled.", [

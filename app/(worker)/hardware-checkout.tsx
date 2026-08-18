@@ -66,6 +66,26 @@ export default function HardwareCheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!shopId || cartLines.length === 0) return;
+
+    // For PayHere: navigate first, create order only after payment succeeds
+    if (payMethod === "payhere") {
+      const itemsSummary = cartLines.map((l) => `${l.name} x${l.quantity}`).join(", ");
+      router.replace({
+        pathname: "/(worker)/payhere-checkout",
+        params: {
+          jobId,
+          customerId,
+          shopId,
+          cart: JSON.stringify(cartLines),
+          amount: String(cartTotal),
+          shopName,
+          itemsSummary,
+        },
+      });
+      return;
+    }
+
+    // Cash: create order immediately
     setSubmitting(true);
     try {
       const res = await apiCall(
@@ -82,7 +102,6 @@ export default function HardwareCheckoutPage() {
         token,
       );
       const total = res?.data?.request?.totalCost || cartTotal;
-      const orderId = res?.data?.request?._id as string | undefined;
       const itemCount = cartLines.length;
 
       if (customerId) {
@@ -96,9 +115,7 @@ export default function HardwareCheckoutPage() {
               receiverModel: "Customer",
               jobId,
               messageType: "text",
-              content: `Hardware ordered — ${itemCount} item${
-                itemCount > 1 ? "s" : ""
-              }, ${total} LKR added to your bill.`,
+              content: `Hardware ordered — ${itemCount} item${itemCount > 1 ? "s" : ""}, ${total} LKR (cash payment).`,
             },
             token,
           );
@@ -107,24 +124,9 @@ export default function HardwareCheckoutPage() {
         }
       }
 
-      if (payMethod === "payhere" && orderId) {
-        const itemsSummary = cartLines
-          .map((l) => `${l.name} x${l.quantity}`)
-          .join(", ");
-        router.replace({
-          pathname: "/(worker)/payhere-checkout",
-          params: {
-            orderId,
-            amount: String(total),
-            shopName,
-            itemsSummary,
-          },
-        });
-      } else {
-        Alert.alert("Order placed", `Pay ${total} LKR in cash to the shop.`, [
-          { text: "OK", onPress: () => router.replace("/(worker)") },
-        ]);
-      }
+      Alert.alert("Order placed", `Pay ${total} LKR in cash to the shop.`, [
+        { text: "OK", onPress: () => router.replace("/(worker)") },
+      ]);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to create order");
     } finally {
