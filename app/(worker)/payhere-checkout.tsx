@@ -18,6 +18,23 @@ import { useStore } from "../../constants/Store";
 const SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout";
 const RETURN_URL = "https://clickfix-backend.onrender.com/api/payments/payment/return";
 const CANCEL_URL = "https://clickfix-backend.onrender.com/api/payments/payment/cancel";
+const NOTIFY_URL = "https://clickfix-backend.onrender.com/api/payments/payhere/notify";
+// baseUrl must match a domain registered in your PayHere sandbox integration settings
+const BASE_URL = "http://localhost";
+
+function esc(v: string) {
+  return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function buildPayhereHtml(fields: Record<string, string>): string {
+  const inputs = Object.entries(fields)
+    .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
+    .join("\n");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<form id="f" method="POST" action="${SANDBOX_URL}">${inputs}</form>
+<script>document.getElementById('f').submit();</script>
+</body></html>`;
+}
 
 export default function PayhereCheckoutScreen() {
   const router = useRouter();
@@ -65,20 +82,24 @@ export default function PayhereCheckoutScreen() {
         const email = user?.email || "worker@clickfix.app";
         const phone = user?.phone || "0771234567";
 
-        const html = buildPayhereHtml({
-          merchantId,
-          orderId: `HW-${orderId}`,
-          amount: amountFormatted,
+        setHtmlContent(buildPayhereHtml({
+          merchant_id: merchantId,
+          return_url: RETURN_URL,
+          cancel_url: CANCEL_URL,
+          notify_url: NOTIFY_URL,
+          order_id: `HW-${orderId}`,
+          items: itemsSummary,
           currency,
-          hash,
-          firstName,
-          lastName,
+          amount: amountFormatted,
+          first_name: firstName,
+          last_name: lastName,
           email,
           phone,
-          items: itemsSummary,
-          shopName,
-        });
-        setHtmlContent(html);
+          address: "Sri Lanka",
+          city: "Colombo",
+          country: "Sri Lanka",
+          hash,
+        }));
       } catch (e: any) {
         Alert.alert("Error", e?.message || "Failed to initialize payment");
         router.back();
@@ -92,12 +113,12 @@ export default function PayhereCheckoutScreen() {
     if (didNavigate.current) return;
     const url = navState.url || "";
 
-    if (url.includes(RETURN_URL) || url.includes("/payment/return")) {
+    if (url.includes("/payment/return")) {
       didNavigate.current = true;
       Alert.alert("Payment Successful", "Your hardware order has been paid!", [
         { text: "OK", onPress: () => router.replace("/(worker)/hardware-updates") },
       ]);
-    } else if (url.includes(CANCEL_URL) || url.includes("/payment/cancel")) {
+    } else if (url.includes("/payment/cancel")) {
       didNavigate.current = true;
       Alert.alert("Payment Cancelled", "Payment was cancelled.", [
         { text: "OK", onPress: () => router.back() },
@@ -140,7 +161,7 @@ export default function PayhereCheckoutScreen() {
 
       {htmlContent && (
         <WebView
-          source={{ html: htmlContent, baseUrl: SANDBOX_URL }}
+          source={{ html: htmlContent, baseUrl: BASE_URL }}
           style={[styles.webView, webViewLoading && { opacity: 0 }]}
           onLoadEnd={() => setWebViewLoading(false)}
           onNavigationStateChange={handleNavigationChange}
@@ -152,76 +173,6 @@ export default function PayhereCheckoutScreen() {
       )}
     </SafeAreaView>
   );
-}
-
-function buildPayhereHtml(p: {
-  merchantId: string;
-  orderId: string;
-  amount: string;
-  currency: string;
-  hash: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  items: string;
-  shopName: string;
-}) {
-  const notifyUrl = `${api.payments.payhereNotify}`;
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin: 0; padding: 20px; font-family: sans-serif; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); text-align: center; }
-    .logo { color: #0F4C75; font-size: 22px; font-weight: bold; margin-bottom: 4px; }
-    .shop { color: #666; font-size: 14px; margin-bottom: 16px; }
-    .amount { font-size: 32px; font-weight: bold; color: #0F4C75; margin-bottom: 8px; }
-    .currency { font-size: 16px; color: #888; margin-bottom: 20px; }
-    .items { background: #f8f9fa; border-radius: 8px; padding: 12px; font-size: 13px; color: #444; margin-bottom: 20px; text-align: left; }
-    .btn { background: #0F4C75; color: white; border: none; border-radius: 10px; padding: 16px 32px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
-    .secure { color: #888; font-size: 11px; margin-top: 12px; }
-  </style>
-</head>
-<body>
-<div class="card">
-  <div class="logo">ClickFix</div>
-  <div class="shop">Payment for ${escapeHtml(p.shopName)}</div>
-  <div class="amount">${p.amount}</div>
-  <div class="currency">${p.currency}</div>
-  <div class="items">${escapeHtml(p.items)}</div>
-  <form method="post" action="${SANDBOX_URL}" id="payhere-form">
-    <input type="hidden" name="merchant_id" value="${p.merchantId}" />
-    <input type="hidden" name="return_url" value="${RETURN_URL}" />
-    <input type="hidden" name="cancel_url" value="${CANCEL_URL}" />
-    <input type="hidden" name="notify_url" value="${notifyUrl}" />
-    <input type="hidden" name="order_id" value="${p.orderId}" />
-    <input type="hidden" name="items" value="${escapeHtml(p.items)}" />
-    <input type="hidden" name="currency" value="${p.currency}" />
-    <input type="hidden" name="amount" value="${p.amount}" />
-    <input type="hidden" name="first_name" value="${escapeHtml(p.firstName)}" />
-    <input type="hidden" name="last_name" value="${escapeHtml(p.lastName)}" />
-    <input type="hidden" name="email" value="${p.email}" />
-    <input type="hidden" name="phone" value="${p.phone}" />
-    <input type="hidden" name="address" value="Sri Lanka" />
-    <input type="hidden" name="city" value="Colombo" />
-    <input type="hidden" name="country" value="Sri Lanka" />
-    <input type="hidden" name="hash" value="${p.hash}" />
-    <button type="submit" class="btn">Proceed to Pay</button>
-  </form>
-  <div class="secure">Secured by PayHere · SSL Encrypted</div>
-</div>
-</body>
-</html>`;
-}
-
-function escapeHtml(str: string) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 const styles = StyleSheet.create({
