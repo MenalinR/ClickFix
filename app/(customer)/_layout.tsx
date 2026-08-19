@@ -45,6 +45,13 @@ export default function CustomerLayout() {
         }}
       />
       <Stack.Screen
+        name="job-payhere-checkout"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
+      <Stack.Screen
         name="rating-review"
         options={{
           headerShown: false,
