@@ -16,7 +16,7 @@ import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 
-type PaymentMethod = "card" | "wallet" | "cash";
+type PaymentMethod = "card" | "cash";
 
 export default function PaymentPage() {
   const router = useRouter();
@@ -78,12 +78,6 @@ export default function PaymentPage() {
       name: "Credit/Debit Card",
       icon: "card-outline",
       description: "Visa, Mastercard",
-    },
-    {
-      id: "wallet",
-      name: "ClickFix Wallet",
-      icon: "wallet-outline",
-      description: "2,500 LKR available",
     },
     {
       id: "cash",
@@ -214,60 +208,6 @@ export default function PaymentPage() {
           </TouchableOpacity>
         ))}
 
-        {selectedMethod === "card" && (
-          <View style={styles.cardDetailsContainer}>
-            <Text style={styles.sectionTitle}>Card Details</Text>
-            <View style={styles.card}>
-              <View style={styles.cardInputGroup}>
-                <Text style={styles.label}>Card Number</Text>
-                <Text style={styles.inputValue}>**** **** **** 4242</Text>
-              </View>
-              <View style={styles.cardInputRow}>
-                <View style={[styles.cardInputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Expiry</Text>
-                  <Text style={styles.inputValue}>12/25</Text>
-                </View>
-                <View
-                  style={[styles.cardInputGroup, { flex: 1, marginLeft: 12 }]}
-                >
-                  <Text style={styles.label}>CVV</Text>
-                  <Text style={styles.inputValue}>***</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {selectedMethod === "wallet" && (
-          <View style={styles.walletContainer}>
-            <Text style={styles.sectionTitle}>Wallet Balance</Text>
-            <View style={styles.card}>
-              <View style={styles.balanceCard}>
-                <Ionicons
-                  name="wallet-outline"
-                  size={40}
-                  color={Colors.primary}
-                />
-                <Text style={styles.balanceAmount}>2,500 LKR</Text>
-                <Text style={styles.balanceLabel}>Available Balance</Text>
-              </View>
-              {totalAmount > 2500 && (
-                <Text style={styles.warningText}>
-                  ⚠️ Insufficient balance. You need {totalAmount - 2500} LKR more.
-                </Text>
-              )}
-              <TouchableOpacity style={styles.addMoneyButton}>
-                <Ionicons
-                  name="add-circle-outline"
-                  size={18}
-                  color={Colors.primary}
-                />
-                <Text style={styles.addMoneyText}>Add Money</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         <View style={styles.termsCard}>
           <View style={styles.checkboxContainer}>
             <View style={styles.checkbox}>
@@ -293,14 +233,9 @@ export default function PaymentPage() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[
-            styles.payButton,
-            ((selectedMethod === "wallet" && totalAmount > 2500) || submitting) && {
-              opacity: 0.6,
-            },
-          ]}
+          style={[styles.payButton, submitting && { opacity: 0.6 }]}
           onPress={handlePayment}
-          disabled={(selectedMethod === "wallet" && totalAmount > 2500) || submitting}
+          disabled={submitting}
         >
           {submitting ? (
             <ActivityIndicator color="white" />
@@ -485,72 +420,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     alignSelf: "center",
     marginTop: 5,
-  },
-  cardDetailsContainer: {
-    marginBottom: 16,
-  },
-  cardInputGroup: {
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    fontWeight: "600",
-  },
-  inputValue: {
-    fontSize: 14,
-    color: Colors.text,
-    fontWeight: "600",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.lightBackground,
-    borderRadius: 8,
-  },
-  cardInputRow: {
-    flexDirection: "row",
-  },
-  walletContainer: {
-    marginBottom: 16,
-  },
-  balanceCard: {
-    alignItems: "center",
-    paddingVertical: 20,
-    backgroundColor: Colors.lightBackground,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  balanceAmount: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: Colors.primary,
-    marginTop: 8,
-  },
-  balanceLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  warningText: {
-    fontSize: 12,
-    color: "#FF6B6B",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  addMoneyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    gap: 6,
-  },
-  addMoneyText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: "600",
   },
   termsCard: {
     backgroundColor: "white",
