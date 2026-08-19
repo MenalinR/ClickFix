@@ -49,13 +49,38 @@ export default function JobRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const [hardwareRequests, setHardwareRequests] = useState<any[]>([]);
 
   useEffect(() => {
     if (token) {
       setLoading(true);
       fetchJobs().finally(() => setLoading(false));
+      apiCall(api.hardware.getRequests, "GET", undefined, token)
+        .then((res) => {
+          if (res.success) setHardwareRequests(res.data || []);
+        })
+        .catch(() => {
+          // non-fatal
+        });
     }
   }, [token]);
+
+  // Most recent hardware request per job (backend returns newest first).
+  const hardwareByJob: Record<string, any> = {};
+  for (const r of hardwareRequests) {
+    const jid = r.jobId?._id || r.jobId;
+    if (jid && !hardwareByJob[jid]) hardwareByJob[jid] = r;
+  }
+  const pendingHardwareStatuses = [
+    "pending",
+    "approved",
+    "packing",
+    "ready",
+    "coming",
+  ];
+  const hasPendingHardware = (id: string) =>
+    pendingHardwareStatuses.includes(hardwareByJob[id]?.status);
 
   const jobList = Array.isArray(jobs) ? jobs : [];
   const statusOf = (j: any) => (j.status || "").toLowerCase();
@@ -210,6 +235,26 @@ export default function JobRequestsPage() {
       pathname: "/job-details",
       params: { jobId: id },
     });
+  };
+
+  const handleStartJob = async (id: string, customerName: string) => {
+    if (hasPendingHardware(id)) {
+      router.push({ pathname: "/hardware-updates" });
+      return;
+    }
+    if (startingId) return;
+    try {
+      setStartingId(id);
+      await updateJobStatus(id, "On the way");
+      router.push({
+        pathname: "/job-route",
+        params: { jobId: id, customerName },
+      });
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to start job.");
+    } finally {
+      setStartingId(null);
+    }
   };
 
   const formatDate = (d: string | Date) => {
@@ -660,20 +705,26 @@ export default function JobRequestsPage() {
                       <Text style={styles.chatButtonText}>Chat</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.button, styles.startButton]}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/job-details",
-                          params: { jobId: id },
-                        })
-                      }
+                      style={[
+                        styles.button,
+                        styles.startButton,
+                        startingId === id && { opacity: 0.5 },
+                      ]}
+                      disabled={startingId !== null}
+                      onPress={() => handleStartJob(id, customerName)}
                     >
                       <Ionicons
-                        name="play-circle-outline"
+                        name={
+                          hasPendingHardware(id)
+                            ? "cube-outline"
+                            : "play-circle-outline"
+                        }
                         size={20}
                         color="white"
                       />
-                      <Text style={styles.startButtonText}>Start Job</Text>
+                      <Text style={styles.startButtonText}>
+                        {hasPendingHardware(id) ? "Hardware Pickup" : "Start Job"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}

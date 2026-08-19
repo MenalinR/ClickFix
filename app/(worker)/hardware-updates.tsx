@@ -81,7 +81,7 @@ const STATUS_HINT: Record<OrderStatus, string> = {
 
 export default function HardwareUpdatesScreen() {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, updateJobStatus } = useStore();
   const [orders, setOrders] = useState<HardwareRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -177,6 +177,26 @@ export default function HardwareUpdatesScreen() {
       }
     },
     [token, fetchOrders, router],
+  );
+
+  const startJobAndNavigate = useCallback(
+    async (item: HardwareRequest) => {
+      const jobId =
+        (item.jobId as any)?._id ||
+        (typeof item.jobId === "string" ? item.jobId : "");
+      if (!jobId) return;
+      try {
+        setBusyId(item._id);
+        await updateJobStatus(jobId, "On the way");
+      } catch (e: any) {
+        Alert.alert("Error", e?.message || "Couldn't start the job");
+        return;
+      } finally {
+        setBusyId(null);
+      }
+      router.push({ pathname: "/job-route", params: { jobId } });
+    },
+    [router, updateJobStatus],
   );
 
   const renderItem = ({ item }: { item: HardwareRequest }) => {
@@ -335,15 +355,17 @@ export default function HardwareUpdatesScreen() {
         {status === "picked_up" && (
           <TouchableOpacity
             style={styles.navigateBtn}
-            onPress={() => {
-              const jobId =
-                (item.jobId as any)?._id ||
-                (typeof item.jobId === "string" ? item.jobId : "");
-              router.push({ pathname: "/job-route", params: { jobId } });
-            }}
+            disabled={busyId === item._id}
+            onPress={() => startJobAndNavigate(item)}
           >
-            <Ionicons name="navigate-outline" size={16} color="white" />
-            <Text style={styles.comingBtnText}>Navigate to customer</Text>
+            {busyId === item._id ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="navigate-outline" size={16} color="white" />
+                <Text style={styles.comingBtnText}>On my way to customer</Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
       </View>
