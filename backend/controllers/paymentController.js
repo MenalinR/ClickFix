@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { HardwareRequest } = require("../models/Hardware");
 const Job = require("../models/Job");
+const { createNotification } = require("./notificationController");
 
 const md5 = (str) =>
   crypto.createHash("md5").update(str).digest("hex").toUpperCase();
@@ -91,12 +92,43 @@ exports.payhereNotify = async (req, res) => {
     if (String(order_id).startsWith("JOBPAY-")) {
       const jobId = order_id.replace(/^JOBPAY-/, "");
       if (String(status_code) === "2") {
-        await Job.findByIdAndUpdate(jobId, {
-          "payment.status": "completed",
-          "payment.method": "online",
-          "payment.paidAt": new Date(),
-          "payment.transactionId": payment_id,
-        });
+        const job = await Job.findByIdAndUpdate(
+          jobId,
+          {
+            "payment.status": "completed",
+            "payment.method": "online",
+            "payment.paidAt": new Date(),
+            "payment.transactionId": payment_id,
+          },
+          { new: true },
+        );
+
+        if (job?.workerId) {
+          try {
+            await createNotification({
+              recipient: job.workerId,
+              recipientModel: "Worker",
+              type: "PAYMENT_RECEIVED",
+              title: "Payment received",
+              message: `You've been paid ${job.pricing.totalAmount} LKR for the ${job.serviceType} job.`,
+              data: { jobId: job._id, amount: job.pricing.totalAmount },
+              actionUrl: "/earnings",
+            });
+          } catch (e) {
+            // non-fatal
+          }
+
+          const io = req.app.get("io");
+          if (io) {
+            io.to(`track:${job._id}`).emit("payment-received", {
+              jobId: job._id.toString(),
+              workerId: job.workerId.toString(),
+              amount: job.pricing.totalAmount,
+              method: job.payment.method,
+              paidAt: job.payment.paidAt,
+            });
+          }
+        }
       }
     } else if (String(status_code) === "2") {
       const requestId = order_id.replace(/^HW-/, "");

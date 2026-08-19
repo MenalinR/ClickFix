@@ -178,11 +178,6 @@ export default function WorkerLayout() {
             <Ionicons name="wallet-outline" size={size} color={color} />
           ),
         }}
-        listeners={{
-          tabPress: (e: any) => {
-            e.preventDefault();
-          },
-        }}
       />
       <Tabs.Screen
         name="schedule"

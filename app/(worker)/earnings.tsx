@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,84 +13,84 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 
+const formatDate = (d: string | Date) =>
+  new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
 export default function EarningsPage() {
   const router = useRouter();
-  const { jobs } = useStore();
-  const workerId = "1"; // TODO: Replace with real logged-in worker's id
+  const { jobs, fetchJobs, token, user } = useStore();
+  const workerId = (user as any)?._id || (user as any)?.id;
   const [period, setPeriod] = useState<"today" | "week" | "month">("month");
+  const [loading, setLoading] = useState(true);
 
-  const completedJobs = jobs.filter(
-    (j) => j.status === "Completed" && j.workerId === workerId,
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      fetchJobs().finally(() => setLoading(false));
+    }
+  }, [token]);
+
+  const jobList = Array.isArray(jobs) ? (jobs as any[]) : [];
+  const isMine = (j: any) =>
+    j.workerId?._id === workerId || j.workerId === workerId;
+
+  const completedJobs = jobList.filter(
+    (j) => j.status === "Completed" && isMine(j),
+  );
+  const paidJobs = completedJobs.filter((j) => j.payment?.status === "completed");
+  const pendingJobs = completedJobs.filter((j) => j.payment?.status !== "completed");
+  const pendingAmount = pendingJobs.reduce(
+    (acc, j) => acc + (j.pricing?.totalAmount || 0),
+    0,
   );
 
-  // Calculate earnings by period
+  // Calculate earnings by period, based on when payment was actually received
   const getEarningsByPeriod = () => {
     const now = new Date();
 
     if (period === "today") {
-      return completedJobs.filter((j) => {
-        const jobDate = new Date(j.requestedDate || j.date);
-        return jobDate.toDateString() === now.toDateString();
-      });
+      return paidJobs.filter(
+        (j) => new Date(j.payment.paidAt).toDateString() === now.toDateString(),
+      );
     } else if (period === "week") {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return completedJobs.filter((j) => {
-        const jobDate = new Date(j.requestedDate || j.date);
-        return jobDate >= weekAgo && jobDate <= now;
+      return paidJobs.filter((j) => {
+        const paidAt = new Date(j.payment.paidAt);
+        return paidAt >= weekAgo && paidAt <= now;
       });
     } else {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return completedJobs.filter((j) => {
-        const jobDate = new Date(j.requestedDate || j.date);
-        return jobDate >= monthAgo && jobDate <= now;
+      return paidJobs.filter((j) => {
+        const paidAt = new Date(j.payment.paidAt);
+        return paidAt >= monthAgo && paidAt <= now;
       });
     }
   };
 
   const filteredJobs = getEarningsByPeriod();
-  const totalEarnings = filteredJobs.reduce((acc, j) => acc + j.price, 0);
+  const totalEarnings = filteredJobs.reduce(
+    (acc, j) => acc + (j.pricing?.totalAmount || 0),
+    0,
+  );
   const totalJobs = filteredJobs.length;
   const averagePerJob =
     totalJobs > 0 ? Math.round(totalEarnings / totalJobs) : 0;
 
-  // Mock payment history
-  const paymentHistory = [
-    {
-      id: "1",
-      date: "Feb 8, 2026",
-      amount: 2500,
-      status: "Completed",
-      type: "Plumbing",
-    },
-    {
-      id: "2",
-      date: "Feb 7, 2026",
-      amount: 1800,
-      status: "Completed",
-      type: "Electrical",
-    },
-    {
-      id: "3",
-      date: "Feb 6, 2026",
-      amount: 3200,
-      status: "Pending",
-      type: "Carpentry",
-    },
-    {
-      id: "4",
-      date: "Feb 5, 2026",
-      amount: 2000,
-      status: "Completed",
-      type: "Plumbing",
-    },
-    {
-      id: "5",
-      date: "Feb 4, 2026",
-      amount: 1500,
-      status: "Completed",
-      type: "Electrical",
-    },
-  ];
+  const paymentHistory = [...paidJobs]
+    .sort(
+      (a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime(),
+    )
+    .map((j) => ({
+      id: j._id,
+      date: formatDate(j.payment.paidAt),
+      amount: j.pricing?.totalAmount || 0,
+      status: "Completed" as const,
+      type: j.serviceType || "Service",
+    }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,6 +106,12 @@ export default function EarningsPage() {
           <View style={{ width: 24 }} />
         </View>
 
+        {loading ? (
+          <View style={{ paddingVertical: 40, alignItems: "center" }}>
+            <ActivityIndicator color={Colors.primary} />
+          </View>
+        ) : (
+          <>
         {/* Period Selector */}
         <View style={styles.periodSelector}>
           {(["today", "week", "month"] as const).map((p) => (
@@ -200,6 +207,10 @@ export default function EarningsPage() {
             </TouchableOpacity>
           </View>
 
+          {paymentHistory.length === 0 && (
+            <Text style={styles.emptyText}>No payments received yet.</Text>
+          )}
+
           {paymentHistory.slice(0, 5).map((payment) => (
             <View key={payment.id} style={styles.paymentItem}>
               <View style={styles.paymentLeft}>
@@ -264,7 +275,9 @@ export default function EarningsPage() {
         <View style={styles.pendingCard}>
           <View>
             <Text style={styles.pendingLabel}>Pending Payments</Text>
-            <Text style={styles.pendingAmount}>3,200 LKR</Text>
+            <Text style={styles.pendingAmount}>
+              {pendingAmount.toLocaleString()} LKR
+            </Text>
           </View>
           <TouchableOpacity style={styles.withdrawButton}>
             <Text style={styles.withdrawButtonText}>Withdraw</Text>
@@ -286,6 +299,8 @@ export default function EarningsPage() {
             </Text>
           </View>
         </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -451,6 +466,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
     fontWeight: "600",
+  },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: 16,
   },
   paymentItem: {
     flexDirection: "row",

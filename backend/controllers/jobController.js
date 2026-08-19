@@ -785,6 +785,33 @@ exports.payJobBooking = async (req, res) => {
     if (transactionId) job.payment.transactionId = transactionId;
     await job.save();
 
+    if (job.workerId) {
+      try {
+        await createNotification({
+          recipient: job.workerId,
+          recipientModel: "Worker",
+          type: "PAYMENT_RECEIVED",
+          title: "Payment received",
+          message: `You've been paid ${job.payment.method === "cash" ? "in cash" : `${job.pricing.totalAmount} LKR`} for the ${job.serviceType} job.`,
+          data: { jobId: job._id, amount: job.pricing.totalAmount },
+          actionUrl: "/earnings",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`track:${job._id}`).emit("payment-received", {
+          jobId: job._id.toString(),
+          workerId: job.workerId.toString(),
+          amount: job.pricing.totalAmount,
+          method: job.payment.method,
+          paidAt: job.payment.paidAt,
+        });
+      }
+    }
+
     res.status(200).json({ success: true, data: job });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
