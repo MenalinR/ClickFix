@@ -117,6 +117,7 @@ export const api = {
     workerCounter: (id: string) => `${API_URL}/jobs/${id}/worker-counter`,
     finalizePrice: (id: string) => `${API_URL}/jobs/${id}/finalize-price`,
     updateStatus: (id: string) => `${API_URL}/jobs/${id}/status`,
+    pay: (id: string) => `${API_URL}/jobs/${id}/payment`,
     cancel: (id: string) => `${API_URL}/jobs/${id}/cancel`,
     workerBusy: (workerId: string) =>
       `${API_URL}/jobs/worker/${workerId}/busy`,

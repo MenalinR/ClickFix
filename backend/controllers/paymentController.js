@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { HardwareRequest } = require("../models/Hardware");
+const Job = require("../models/Job");
 
 const md5 = (str) =>
   crypto.createHash("md5").update(str).digest("hex").toUpperCase();
@@ -87,7 +88,17 @@ exports.payhereNotify = async (req, res) => {
     }
 
     // status_code 2 = success
-    if (String(status_code) === "2") {
+    if (String(order_id).startsWith("JOBPAY-")) {
+      const jobId = order_id.replace(/^JOBPAY-/, "");
+      if (String(status_code) === "2") {
+        await Job.findByIdAndUpdate(jobId, {
+          "payment.status": "completed",
+          "payment.method": "online",
+          "payment.paidAt": new Date(),
+          "payment.transactionId": payment_id,
+        });
+      }
+    } else if (String(status_code) === "2") {
       const requestId = order_id.replace(/^HW-/, "");
       await HardwareRequest.findByIdAndUpdate(requestId, {
         paymentStatus: "paid",

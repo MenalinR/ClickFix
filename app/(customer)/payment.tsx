@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -35,6 +36,7 @@ export default function PaymentPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!jobId || !token) return;
@@ -91,12 +93,28 @@ export default function PaymentPage() {
     },
   ];
 
-  const handlePayment = () => {
-    setShowSuccessModal(true);
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      router.push("./(tabs)");
-    }, 2000);
+  const handlePayment = async () => {
+    if (selectedMethod === "card") {
+      router.push({
+        pathname: "/job-payhere-checkout",
+        params: { jobId, amount: String(totalAmount), workerName },
+      } as any);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await apiCall(api.jobs.pay(jobId), "PUT", { method: selectedMethod }, token);
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        router.replace("/(customer)/(tabs)/bookings");
+      }, 2000);
+    } catch (e: any) {
+      Alert.alert("Payment failed", e?.message || "Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -272,12 +290,18 @@ export default function PaymentPage() {
         <TouchableOpacity
           style={[
             styles.payButton,
-            selectedMethod === "wallet" && totalAmount > 2500 && { opacity: 0.6 },
+            ((selectedMethod === "wallet" && totalAmount > 2500) || submitting) && {
+              opacity: 0.6,
+            },
           ]}
           onPress={handlePayment}
-          disabled={selectedMethod === "wallet" && totalAmount > 2500}
+          disabled={(selectedMethod === "wallet" && totalAmount > 2500) || submitting}
         >
-          <Text style={styles.payButtonText}>Pay {totalAmount} LKR</Text>
+          {submitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.payButtonText}>Pay {totalAmount} LKR</Text>
+          )}
         </TouchableOpacity>
       </View>
 

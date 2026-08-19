@@ -717,7 +717,7 @@ exports.updateJobStatus = async (req, res) => {
     });
 
     // If completed, update worker's earnings
-    if (req.body.status === "completed" && req.userType === "worker") {
+    if (req.body.status === "Completed" && req.userType === "worker") {
       const worker = await Worker.findById(job.workerId);
       worker.earnings.totalEarned += job.pricing.totalAmount;
       worker.earnings.completedJobs += 1;
@@ -744,6 +744,50 @@ exports.updateJobStatus = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// @desc    Pay for a completed job
+// @route   PUT /api/jobs/:id/payment
+// @access  Private (Customer only)
+exports.payJobBooking = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (job.customerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (job.status !== "Completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Job must be completed before it can be paid for",
+      });
+    }
+
+    if (job.payment.status === "completed") {
+      return res.status(400).json({ success: false, message: "Job is already paid" });
+    }
+
+    const { method, transactionId } = req.body;
+    const allowedMethods = ["cash", "card", "wallet", "online"];
+    if (!allowedMethods.includes(method)) {
+      return res.status(400).json({ success: false, message: "Invalid payment method" });
+    }
+
+    job.payment.method = method;
+    job.payment.status = "completed";
+    job.payment.paidAt = new Date();
+    if (transactionId) job.payment.transactionId = transactionId;
+    await job.save();
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

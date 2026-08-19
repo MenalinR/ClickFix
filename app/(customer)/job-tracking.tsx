@@ -63,6 +63,8 @@ export default function JobTrackingPage() {
   const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
   const [destination, setDestination] = useState<LatLng | null>(null);
   const [trackingPhase, setTrackingPhase] = useState<string>("");
+  const [paymentStatus, setPaymentStatus] = useState<string>("pending");
+  const [totalAmount, setTotalAmount] = useState<number>(0);
   const mapRef = useRef<MapView | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -134,6 +136,22 @@ export default function JobTrackingPage() {
       socketRef.current = null;
     };
   }, [id, token]);
+
+  // Once the job is done, fetch the final cost + payment status so we know
+  // whether to prompt the customer to pay.
+  useEffect(() => {
+    if (!id || !token || jobStatus !== "Completed") return;
+    (async () => {
+      try {
+        const res = await apiCall(api.jobs.getById(id), "GET", undefined, token);
+        const jobData = res?.data;
+        if (jobData?.payment?.status) setPaymentStatus(jobData.payment.status);
+        if (jobData?.pricing?.totalAmount) setTotalAmount(jobData.pricing.totalAmount);
+      } catch {
+        // silent
+      }
+    })();
+  }, [id, token, jobStatus]);
 
   // Keep the map framed on the worker, plus the destination when we know it.
   useEffect(() => {
@@ -279,6 +297,29 @@ export default function JobTrackingPage() {
               />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Payment prompt when job is done and not yet paid */}
+        {jobStatus === "Completed" && worker && paymentStatus !== "completed" && (
+          <TouchableOpacity
+            style={styles.payBtn}
+            onPress={() =>
+              router.push({
+                pathname: "/payment",
+                params: {
+                  jobId: id,
+                  workerName: worker.name,
+                  amount: String(totalAmount),
+                },
+              } as any)
+            }
+          >
+            <Ionicons name="card" size={20} color="white" />
+            <Text style={styles.payBtnText}>
+              Pay {worker.name}
+              {totalAmount ? ` · ${totalAmount} LKR` : ""}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Review prompt when job is done */}
@@ -905,6 +946,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   reviewBtnText: {
+    color: "white",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  payBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  payBtnText: {
     color: "white",
     fontSize: 15,
     fontWeight: "700",
