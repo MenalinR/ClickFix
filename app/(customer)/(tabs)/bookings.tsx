@@ -382,6 +382,24 @@ export default function BookingsScreen() {
                             />
                           </TouchableOpacity>
                         ) : null}
+                        {isCompleted && job.payment?.status !== "completed" ? (
+                          <TouchableOpacity
+                            style={styles.payIconBtn}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/(customer)/payment",
+                                params: {
+                                  jobId: id,
+                                  workerName: workerName(job),
+                                  amount: String(amount(job)),
+                                },
+                              } as any)
+                            }
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="card" size={20} color={Colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
                         {isCompleted ? (
                           <>
                             <TouchableOpacity
@@ -846,6 +864,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   reviewIconBtn: {
+    padding: 2,
+  },
+  payIconBtn: {
     padding: 2,
   },
   complaintIconBtn: {

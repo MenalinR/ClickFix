@@ -42,6 +42,7 @@ export interface Job {
   date?: string;
   location?: { type: string; coordinates: [number, number] };
   pricing?: { totalAmount: number; hourlyRate: number };
+  payment?: { method: string; status: string; paidAt?: string; transactionId?: string };
   images?: string[];
 }
 
