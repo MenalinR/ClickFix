@@ -109,6 +109,12 @@ const jobSchema = new mongoose.Schema(
       paidAt: Date,
       transactionId: String,
     },
+    reschedule: {
+      proposedDate: Date,
+      proposedBy: { type: String, enum: ["worker", "customer"] },
+      status: { type: String, enum: ["pending", "accepted", "declined"] },
+      reason: String,
+    },
     timeline: [
       {
         status: String,

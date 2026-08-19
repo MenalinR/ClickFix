@@ -91,6 +91,15 @@ interface StoreState {
     price?: number,
   ) => Promise<void>;
   workerCounterPrice: (jobId: string, price: number) => Promise<void>;
+  proposeReschedule: (
+    jobId: string,
+    proposedDate: Date,
+    reason?: string,
+  ) => Promise<void>;
+  respondToReschedule: (
+    jobId: string,
+    action: "accept" | "decline",
+  ) => Promise<void>;
   finalizeJobPrice: (jobId: string, price: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: string) => Promise<void>;
   cancelJob: (jobId: string, reason?: string) => Promise<void>;
@@ -484,6 +493,72 @@ export const useStore = create<StoreState>()(
         api.jobs.workerCounter(jobId),
         "PUT",
         { price },
+        token,
+      );
+
+      const updatedJobs = jobs.map((j) =>
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data }
+          : j,
+      );
+      set({ jobs: updatedJobs });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  proposeReschedule: async (
+    jobId: string,
+    proposedDate: Date,
+    reason?: string,
+  ) => {
+    set({ loading: true, error: null });
+    const { token, jobs } = get();
+
+    if (!token) {
+      throw new Error("Not logged in");
+    }
+
+    try {
+      const body: any = { proposedDate: proposedDate.toISOString() };
+      if (reason) body.reason = reason;
+      const response = await apiCall(
+        api.jobs.proposeReschedule(jobId),
+        "POST",
+        body,
+        token,
+      );
+
+      const updatedJobs = jobs.map((j) =>
+        (j as any)._id === jobId || (j as any).id === jobId
+          ? { ...j, ...response.data }
+          : j,
+      );
+      set({ jobs: updatedJobs });
+    } catch (error: any) {
+      set({ error: error.message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  respondToReschedule: async (jobId: string, action: "accept" | "decline") => {
+    set({ loading: true, error: null });
+    const { token, jobs } = get();
+
+    if (!token) {
+      throw new Error("Not logged in");
+    }
+
+    try {
+      const response = await apiCall(
+        api.jobs.respondReschedule(jobId),
+        "PUT",
+        { action },
         token,
       );
 

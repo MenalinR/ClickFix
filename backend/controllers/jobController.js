@@ -534,6 +534,147 @@ exports.workerCounter = async (req, res) => {
   }
 };
 
+// @desc    Worker proposes a new date/time for an already-accepted job
+// @route   POST /api/jobs/:id/reschedule/propose
+// @access  Private (Worker only)
+exports.proposeReschedule = async (req, res) => {
+  try {
+    const { proposedDate, reason } = req.body || {};
+    const date = new Date(proposedDate);
+    if (!proposedDate || isNaN(date.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid proposed date is required",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (!job.workerId || job.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (!["Accepted", "On the way"].includes(job.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "This job can't be rescheduled right now",
+      });
+    }
+
+    job.reschedule = {
+      proposedDate: date,
+      proposedBy: "worker",
+      status: "pending",
+      reason: reason || undefined,
+    };
+    job.timeline.push({
+      status: "Reschedule Proposed",
+      timestamp: new Date(),
+      note: `Worker proposed a new time: ${date.toLocaleString("en-GB")}`,
+    });
+
+    await job.save();
+
+    try {
+      await createNotification({
+        recipient: job.customerId,
+        recipientModel: "Customer",
+        type: "JOB_RESCHEDULE_PROPOSED",
+        title: "Worker requested a new time",
+        message: `Worker proposed rescheduling your ${job.serviceType} job to ${date.toLocaleString("en-GB")}.`,
+        data: { jobId: job._id, workerId: req.user._id },
+        actionUrl: "/(customer)/(tabs)/bookings",
+      });
+    } catch (e) {
+      // non-fatal
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Customer accepts or declines a worker's reschedule proposal
+// @route   PUT /api/jobs/:id/reschedule/respond
+// @access  Private (Customer only)
+exports.respondReschedule = async (req, res) => {
+  try {
+    const { action } = req.body || {};
+    if (!["accept", "decline"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Must be accept or decline.",
+      });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (job.customerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (!job.reschedule || job.reschedule.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "There is no pending reschedule request for this job",
+      });
+    }
+
+    if (action === "accept") {
+      const newDate = job.reschedule.proposedDate;
+      job.scheduledDate = newDate;
+      job.timeline.push({
+        status: "Reschedule Accepted",
+        timestamp: new Date(),
+        note: `Customer accepted the new time: ${newDate.toLocaleString("en-GB")}`,
+      });
+      job.reschedule = undefined;
+    } else {
+      job.timeline.push({
+        status: "Reschedule Declined",
+        timestamp: new Date(),
+        note: "Customer declined the proposed new time",
+      });
+      job.reschedule.status = "declined";
+    }
+
+    await job.save();
+
+    if (job.workerId) {
+      try {
+        await createNotification({
+          recipient: job.workerId,
+          recipientModel: "Worker",
+          type: "JOB_RESCHEDULE_RESPONDED",
+          title:
+            action === "accept"
+              ? "Customer accepted the new time"
+              : "Customer declined the new time",
+          message:
+            action === "accept"
+              ? `Customer accepted the new time for your ${job.serviceType} job.`
+              : `Customer declined your proposed new time for the ${job.serviceType} job.`,
+          data: { jobId: job._id, customerId: job.customerId },
+          actionUrl: "/job-requests",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Finalize agreed price (called from chat negotiation when both sides agree)
 // @route   PUT /api/jobs/:id/finalize-price
 // @access  Private

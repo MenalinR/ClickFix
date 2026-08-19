@@ -9,6 +9,8 @@ const {
   cancelJob,
   customerRespond,
   workerCounter,
+  proposeReschedule,
+  respondReschedule,
   finalizePrice,
   getWorkerBusySlots,
   uploadJobImage,
@@ -43,6 +45,18 @@ router.get("/:id", protect, getJob);
 router.put("/:id/assign", protect, authorize("worker"), assignWorker);
 router.put("/:id/customer-response", protect, authorize("customer"), customerRespond);
 router.put("/:id/worker-counter", protect, authorize("worker"), workerCounter);
+router.post(
+  "/:id/reschedule/propose",
+  protect,
+  authorize("worker"),
+  proposeReschedule,
+);
+router.put(
+  "/:id/reschedule/respond",
+  protect,
+  authorize("customer"),
+  respondReschedule,
+);
 router.put("/:id/finalize-price", protect, finalizePrice);
 router.put(
   "/:id/hardware-cart/respond",

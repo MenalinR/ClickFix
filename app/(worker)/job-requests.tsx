@@ -1,3 +1,6 @@
+import DateTimePicker, {
+    DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -6,6 +9,8 @@ import {
     Alert,
     Dimensions,
     Image,
+    Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -22,7 +27,16 @@ const { width } = Dimensions.get("window");
 
 export default function JobRequestsPage() {
   const router = useRouter();
-  const { jobs, fetchJobs, acceptJob, updateJobStatus, cancelJob, token, user } = useStore();
+  const {
+    jobs,
+    fetchJobs,
+    acceptJob,
+    updateJobStatus,
+    cancelJob,
+    proposeReschedule,
+    token,
+    user,
+  } = useStore();
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
   const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
@@ -51,6 +65,11 @@ export default function JobRequestsPage() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [hardwareRequests, setHardwareRequests] = useState<any[]>([]);
+  const [rescheduleJobId, setRescheduleJobId] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState(new Date());
+  const [showRescheduleDate, setShowRescheduleDate] = useState(false);
+  const [showRescheduleTime, setShowRescheduleTime] = useState(false);
+  const [submittingReschedule, setSubmittingReschedule] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -257,6 +276,107 @@ export default function JobRequestsPage() {
     }
   };
 
+  const openRescheduleModal = (id: string) => {
+    setRescheduleJobId(id);
+    setRescheduleDate(new Date());
+  };
+
+  const closeRescheduleModal = () => {
+    setRescheduleJobId(null);
+  };
+
+  const openRescheduleDatePicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: rescheduleDate,
+        mode: "date",
+        minimumDate: new Date(),
+        onChange: (event, selected) => {
+          if (event.type === "set" && selected) {
+            setRescheduleDate((prev) => {
+              const next = new Date(prev);
+              next.setFullYear(
+                selected.getFullYear(),
+                selected.getMonth(),
+                selected.getDate(),
+              );
+              return next;
+            });
+          }
+        },
+      });
+    } else {
+      setShowRescheduleDate(true);
+    }
+  };
+
+  const openRescheduleTimePicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: rescheduleDate,
+        mode: "time",
+        onChange: (event, selected) => {
+          if (event.type === "set" && selected) {
+            setRescheduleDate((prev) => {
+              const next = new Date(prev);
+              next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+              return next;
+            });
+          }
+        },
+      });
+    } else {
+      setShowRescheduleTime(true);
+    }
+  };
+
+  const handleRescheduleDateChange = (_event: any, selected?: Date) => {
+    setShowRescheduleDate(Platform.OS === "ios");
+    if (selected) {
+      setRescheduleDate((prev) => {
+        const next = new Date(prev);
+        next.setFullYear(
+          selected.getFullYear(),
+          selected.getMonth(),
+          selected.getDate(),
+        );
+        return next;
+      });
+    }
+  };
+
+  const handleRescheduleTimeChange = (_event: any, selected?: Date) => {
+    setShowRescheduleTime(Platform.OS === "ios");
+    if (selected) {
+      setRescheduleDate((prev) => {
+        const next = new Date(prev);
+        next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+        return next;
+      });
+    }
+  };
+
+  const submitReschedule = async () => {
+    if (!rescheduleJobId || submittingReschedule) return;
+    if (rescheduleDate.getTime() < Date.now()) {
+      Alert.alert("Invalid time", "Please pick a time in the future.");
+      return;
+    }
+    try {
+      setSubmittingReschedule(true);
+      await proposeReschedule(rescheduleJobId, rescheduleDate);
+      closeRescheduleModal();
+      Alert.alert(
+        "Request sent",
+        "The customer has been asked to approve the new time.",
+      );
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to request reschedule.");
+    } finally {
+      setSubmittingReschedule(false);
+    }
+  };
+
   const formatDate = (d: string | Date) => {
     if (!d) return "—";
     const date = typeof d === "string" ? new Date(d) : d;
@@ -452,6 +572,9 @@ export default function JobRequestsPage() {
               (isAccepted || isOnTheWay) &&
               j.scheduledDate &&
               new Date(j.scheduledDate).getTime() < Date.now();
+            const isReschedulePending =
+              j.reschedule?.status === "pending" &&
+              j.reschedule?.proposedBy === "worker";
             let badgeColor = "#FFA500";
             let badgeLabel = "🔔 New";
             if (isCompleted) {
@@ -670,63 +793,98 @@ export default function JobRequestsPage() {
                 )}
 
                 {isAccepted && (
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.rejectButton]}
-                      onPress={() => handleCancelJob(id)}
-                    >
-                      <Ionicons
-                        name="close-circle-outline"
-                        size={20}
-                        color="#FF6B6B"
-                      />
-                      <Text style={styles.rejectButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.chatButton]}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/chat",
-                          params: {
-                            jobId: id,
-                            customerId:
-                              (j.customerId?._id || j.customerId)?.toString?.() ||
-                              j.customerId,
-                            customerName,
-                          },
-                        } as any)
-                      }
-                    >
-                      <Ionicons
-                        name="chatbubble-outline"
-                        size={20}
-                        color="white"
-                      />
-                      <Text style={styles.chatButtonText}>Chat</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.startButton,
-                        startingId === id && { opacity: 0.5 },
-                      ]}
-                      disabled={startingId !== null}
-                      onPress={() => handleStartJob(id, customerName)}
-                    >
-                      <Ionicons
-                        name={
-                          hasPendingHardware(id)
-                            ? "cube-outline"
-                            : "play-circle-outline"
+                  <>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={[styles.button, styles.rejectButton]}
+                        onPress={() => handleCancelJob(id)}
+                      >
+                        <Ionicons
+                          name="close-circle-outline"
+                          size={20}
+                          color="#FF6B6B"
+                        />
+                        <Text style={styles.rejectButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.chatButton]}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/chat",
+                            params: {
+                              jobId: id,
+                              customerId:
+                                (j.customerId?._id || j.customerId)?.toString?.() ||
+                                j.customerId,
+                              customerName,
+                            },
+                          } as any)
                         }
-                        size={20}
-                        color="white"
-                      />
-                      <Text style={styles.startButtonText}>
-                        {hasPendingHardware(id) ? "Hardware Pickup" : "Start Job"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                      >
+                        <Ionicons
+                          name="chatbubble-outline"
+                          size={20}
+                          color="white"
+                        />
+                        <Text style={styles.chatButtonText}>Chat</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.button,
+                          styles.startButton,
+                          (startingId === id || isOverdue) && { opacity: 0.5 },
+                        ]}
+                        disabled={startingId !== null || isOverdue}
+                        onPress={() => handleStartJob(id, customerName)}
+                      >
+                        <Ionicons
+                          name={
+                            hasPendingHardware(id)
+                              ? "cube-outline"
+                              : "play-circle-outline"
+                          }
+                          size={20}
+                          color="white"
+                        />
+                        <Text style={styles.startButtonText}>
+                          {hasPendingHardware(id) ? "Hardware Pickup" : "Start Job"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {isOverdue && (
+                      <TouchableOpacity
+                        style={[
+                          styles.rescheduleButton,
+                          isReschedulePending && styles.rescheduleButtonDisabled,
+                        ]}
+                        disabled={isReschedulePending}
+                        onPress={() => openRescheduleModal(id)}
+                      >
+                        <Ionicons
+                          name={
+                            isReschedulePending
+                              ? "time-outline"
+                              : "calendar-outline"
+                          }
+                          size={18}
+                          color={isReschedulePending ? "#8D6E63" : "#C62828"}
+                        />
+                        <Text
+                          style={[
+                            styles.rescheduleButtonText,
+                            isReschedulePending && {
+                              color: "#8D6E63",
+                            },
+                          ]}
+                        >
+                          {isReschedulePending
+                            ? "Reschedule requested — waiting for customer"
+                            : "Ask customer to reschedule"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
 
                 {isOnTheWay && (
@@ -799,6 +957,96 @@ export default function JobRequestsPage() {
           })
         )}
       </ScrollView>
+
+      <Modal
+        visible={rescheduleJobId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeRescheduleModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Ask customer to reschedule</Text>
+            <Text style={styles.modalSubtitle}>
+              Pick the new date and time you&apos;d like to propose. The
+              customer will need to approve it.
+            </Text>
+
+            <View style={styles.modalPickerRow}>
+              <TouchableOpacity
+                style={styles.modalPickerBtn}
+                onPress={openRescheduleDatePicker}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <Text style={styles.modalPickerText}>
+                  {rescheduleDate.toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalPickerBtn}
+                onPress={openRescheduleTimePicker}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <Text style={styles.modalPickerText}>
+                  {rescheduleDate.toLocaleTimeString("en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === "ios" && showRescheduleDate && (
+              <DateTimePicker
+                value={rescheduleDate}
+                mode="date"
+                minimumDate={new Date()}
+                onChange={handleRescheduleDateChange}
+              />
+            )}
+            {Platform.OS === "ios" && showRescheduleTime && (
+              <DateTimePicker
+                value={rescheduleDate}
+                mode="time"
+                onChange={handleRescheduleTimeChange}
+              />
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={closeRescheduleModal}
+                disabled={submittingReschedule}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={submitReschedule}
+                disabled={submittingReschedule}
+              >
+                {submittingReschedule ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Send request</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1070,5 +1318,104 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 8,
+  },
+  rescheduleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#EF9A9A",
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  rescheduleButtonDisabled: {
+    backgroundColor: "#EFEBE9",
+    borderColor: "#D7CCC8",
+  },
+  rescheduleButtonText: {
+    color: "#C62828",
+    fontWeight: "600",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  modalPickerRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 8,
+  },
+  modalPickerBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+  },
+  modalPickerText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  modalCancelButton: {
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalCancelText: {
+    color: Colors.textSecondary,
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  modalConfirmButton: {
+    backgroundColor: Colors.primary,
+  },
+  modalConfirmText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

@@ -29,10 +29,15 @@ type BookingFilter =
 
 export default function BookingsScreen() {
   const router = useRouter();
-  const { jobs, fetchJobs, token, customerRespondToJob, cancelJob } = useStore();
+  const { jobs, fetchJobs, token, customerRespondToJob, cancelJob, respondToReschedule } =
+    useStore();
   const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("All");
   const [loading, setLoading] = useState(true);
   const [reviewJob, setReviewJob] = useState<any | null>(null);
+  const [rescheduleReviewJob, setRescheduleReviewJob] = useState<any | null>(
+    null,
+  );
+  const [respondingReschedule, setRespondingReschedule] = useState(false);
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
   const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
@@ -111,6 +116,26 @@ export default function BookingsScreen() {
         },
       ],
     );
+  };
+
+  const handleRescheduleResponse = async (action: "accept" | "decline") => {
+    if (!rescheduleReviewJob || respondingReschedule) return;
+    const jobId = rescheduleReviewJob._id || rescheduleReviewJob.id;
+    try {
+      setRespondingReschedule(true);
+      await respondToReschedule(jobId, action);
+      setRescheduleReviewJob(null);
+      Alert.alert(
+        action === "accept" ? "Time updated" : "Request declined",
+        action === "accept"
+          ? "The new time has been confirmed with the worker."
+          : "The worker has been notified.",
+      );
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to respond.");
+    } finally {
+      setRespondingReschedule(false);
+    }
   };
 
   const handleNegotiate = async (jobId: string) => {
@@ -299,6 +324,9 @@ export default function BookingsScreen() {
                 const status = (job.status || "Pending") as string;
                 const colors = getStatusColor(status);
                 const needsReview = status === "Worker Accepted";
+                const needsRescheduleReview =
+                  (job as any).reschedule?.status === "pending" &&
+                  (job as any).reschedule?.proposedBy === "worker";
                 const cancellableStatuses = [
                   "pending",
                   "negotiating",
@@ -312,13 +340,16 @@ export default function BookingsScreen() {
                   status.toLowerCase(),
                 );
                 const isCompleted = status.toLowerCase() === "completed";
-                const isTappable = needsReview || canCancel;
+                const isTappable =
+                  needsReview || needsRescheduleReview || canCancel;
                 const RowWrap: any = isTappable ? TouchableOpacity : View;
-                const onRowPress = needsReview
-                  ? () => setReviewJob(job)
-                  : canCancel
-                    ? () => handleCancel(id)
-                    : undefined;
+                const onRowPress = needsRescheduleReview
+                  ? () => setRescheduleReviewJob(job)
+                  : needsReview
+                    ? () => setReviewJob(job)
+                    : canCancel
+                      ? () => handleCancel(id)
+                      : undefined;
                 return (
                   <RowWrap
                     key={id}
@@ -357,6 +388,18 @@ export default function BookingsScreen() {
                           {getStatusLabel(status)}
                         </Text>
                       </View>
+                      {needsRescheduleReview && (
+                        <View style={styles.rescheduleBadge}>
+                          <Ionicons
+                            name="calendar-outline"
+                            size={12}
+                            color="#8D6E63"
+                          />
+                          <Text style={styles.rescheduleBadgeText}>
+                            New time requested
+                          </Text>
+                        </View>
+                      )}
                       <View style={styles.actionIconsRow}>
                         {canTrack ? (
                           <TouchableOpacity
@@ -519,6 +562,83 @@ export default function BookingsScreen() {
                   onNegotiate={handleNegotiate}
                   onDeny={handleDeny}
                 />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!rescheduleReviewJob}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRescheduleReviewJob(null)}
+      >
+        <View style={styles.reviewOverlay}>
+          <View style={styles.reviewSheet}>
+            <View style={styles.reviewSheetHeader}>
+              <Text style={styles.reviewSheetTitle}>Reschedule request</Text>
+              <TouchableOpacity onPress={() => setRescheduleReviewJob(null)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            {rescheduleReviewJob && (
+              <>
+                <Text style={styles.reviewSheetWorker}>
+                  {workerName(rescheduleReviewJob)} ·{" "}
+                  {rescheduleReviewJob.serviceType}
+                </Text>
+                <Text style={styles.reviewSheetDesc}>
+                  Your worker asked to move this job to a new time.
+                </Text>
+                <View style={styles.reviewSheetPriceBox}>
+                  <Text style={styles.reviewSheetPriceLabel}>
+                    Proposed new time
+                  </Text>
+                  <Text style={styles.reviewSheetDateValue}>
+                    {formatDate(
+                      (rescheduleReviewJob as any).reschedule?.proposedDate,
+                    )}
+                  </Text>
+                </View>
+                <View style={styles.rescheduleActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.rescheduleActionBtn, styles.declineBtn]}
+                    disabled={respondingReschedule}
+                    onPress={() => handleRescheduleResponse("decline")}
+                  >
+                    {respondingReschedule ? (
+                      <ActivityIndicator size="small" color="#C62828" />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="close-circle-outline"
+                          size={18}
+                          color="#C62828"
+                        />
+                        <Text style={styles.declineBtnText}>Decline</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.rescheduleActionBtn, styles.acceptBtn]}
+                    disabled={respondingReschedule}
+                    onPress={() => handleRescheduleResponse("accept")}
+                  >
+                    {respondingReschedule ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={18}
+                          color="white"
+                        />
+                        <Text style={styles.acceptBtnText}>Accept</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -896,5 +1016,56 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     flexShrink: 0,
+  },
+  rescheduleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#EFEBE9",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  rescheduleBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#8D6E63",
+  },
+  reviewSheetDateValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
+  rescheduleActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  rescheduleActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  declineBtn: {
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#EF9A9A",
+  },
+  declineBtnText: {
+    color: "#C62828",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  acceptBtn: {
+    backgroundColor: Colors.primary,
+  },
+  acceptBtnText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

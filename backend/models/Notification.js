@@ -23,6 +23,8 @@ const notificationSchema = new mongoose.Schema(
         "JOB_REQUESTED",
         "JOB_COMPLETED",
         "JOB_CANCELLED",
+        "JOB_RESCHEDULE_PROPOSED",
+        "JOB_RESCHEDULE_RESPONDED",
         "PAYMENT_RECEIVED",
         "REVIEW_RECEIVED",
         "HARDWARE_REQUEST",
