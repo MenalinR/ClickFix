@@ -832,9 +832,15 @@ export default function JobRequestsPage() {
                         style={[
                           styles.button,
                           styles.startButton,
-                          (startingId === id || isOverdue) && { opacity: 0.5 },
+                          (startingId === id ||
+                            (isOverdue && !hasPendingHardware(id))) && {
+                            opacity: 0.5,
+                          },
                         ]}
-                        disabled={startingId !== null || isOverdue}
+                        disabled={
+                          startingId !== null ||
+                          (isOverdue && !hasPendingHardware(id))
+                        }
                         onPress={() => handleStartJob(id, customerName)}
                       >
                         <Ionicons
