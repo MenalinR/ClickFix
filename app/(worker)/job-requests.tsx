@@ -278,7 +278,9 @@ export default function JobRequestsPage() {
 
   const openRescheduleModal = (id: string) => {
     setRescheduleJobId(id);
-    setRescheduleDate(new Date());
+    // Default to a day from now (not "right now") so the picker doesn't
+    // open already sitting on a timestamp that expires within seconds.
+    setRescheduleDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
   };
 
   const closeRescheduleModal = () => {
@@ -358,7 +360,7 @@ export default function JobRequestsPage() {
 
   const submitReschedule = async () => {
     if (!rescheduleJobId || submittingReschedule) return;
-    if (rescheduleDate.getTime() < Date.now()) {
+    if (rescheduleDate.getTime() < Date.now() + 60 * 1000) {
       Alert.alert("Invalid time", "Please pick a time in the future.");
       return;
     }
