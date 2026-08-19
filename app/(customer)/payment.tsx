@@ -142,7 +142,7 @@ export default function PaymentPage() {
               <Text style={styles.costLabel}>Service charge</Text>
               <Text style={styles.costValue}>{serviceCost} LKR</Text>
             </View>
-            {approvedHardware.length > 0 && (
+            {approvedHardware.length > 0 ? (
               <View style={styles.hardwareGroup}>
                 <Text style={styles.hardwareGroupLabel}>
                   Hardware items ({approvedHardware.length})
@@ -162,7 +162,12 @@ export default function PaymentPage() {
                   <Text style={styles.costValue}>{hardwareCost} LKR</Text>
                 </View>
               </View>
-            )}
+            ) : hardwareCost > 0 ? (
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>Hardware order</Text>
+                <Text style={styles.costValue}>{hardwareCost} LKR</Text>
+              </View>
+            ) : null}
             <View style={styles.divider} />
             <View style={styles.costRow}>
               <Text style={styles.totalLabel}>Total Amount</Text>
