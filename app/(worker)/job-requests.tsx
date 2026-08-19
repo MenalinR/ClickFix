@@ -403,11 +403,18 @@ export default function JobRequestsPage() {
               j.pricing?.totalAmount ?? j.pricing?.serviceCharge ?? 0;
             const proposedPrice = j.pricing?.proposedPrice ?? acceptedPrice;
             const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
+            const isOverdue =
+              (isAccepted || isOnTheWay) &&
+              j.scheduledDate &&
+              new Date(j.scheduledDate).getTime() < Date.now();
             let badgeColor = "#FFA500";
             let badgeLabel = "🔔 New";
             if (isCompleted) {
               badgeColor = "#388E3C";
               badgeLabel = "✓ Completed";
+            } else if (isOverdue) {
+              badgeColor = "#C62828";
+              badgeLabel = "⚠ Overdue";
             } else if (isInProgress) {
               badgeColor = "#4CAF50";
               badgeLabel = "🔧 In Progress";
@@ -430,7 +437,10 @@ export default function JobRequestsPage() {
             return (
               <TouchableOpacity
                 key={id}
-                style={styles.jobCard}
+                style={[
+                  styles.jobCard,
+                  isOverdue && styles.jobCardOverdue,
+                ]}
                 onPress={() => handleViewDetails(id)}
               >
                 <View style={styles.jobCardHeader}>
@@ -466,6 +476,19 @@ export default function JobRequestsPage() {
                       {requestedDate}
                     </Text>
                   </View>
+                  {isOverdue && (
+                    <View style={styles.detailItem}>
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={16}
+                        color="#C62828"
+                      />
+                      <Text style={styles.overdueText}>
+                        This job's scheduled time has passed and it hasn't
+                        been started yet.
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {job.images && job.images.length > 0 && (
@@ -804,6 +827,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  jobCardOverdue: {
+    borderLeftColor: "#C62828",
+    backgroundColor: "#FFF5F5",
+  },
   jobCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -856,6 +883,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: "600",
+  },
+  overdueText: {
+    fontSize: 12,
+    color: "#C62828",
+    fontWeight: "600",
+    marginLeft: 8,
+    flex: 1,
   },
   imagesContainer: {
     flexDirection: "row",
