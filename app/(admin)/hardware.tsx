@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Alert,
@@ -30,6 +31,7 @@ type HardwareShop = {
 };
 
 export default function AdminHardwareShops() {
+  const router = useRouter();
   const { token } = useStore();
   const [shops, setShops] = useState<HardwareShop[]>([]);
   const [search, setSearch] = useState("");
@@ -99,7 +101,14 @@ export default function AdminHardwareShops() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(admin)")}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+        </TouchableOpacity>
         <Text style={styles.heading}>Hardware Shops</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.searchBox}>
@@ -275,6 +284,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: Colors.text,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
   },
   searchBox: {
     flexDirection: "row",

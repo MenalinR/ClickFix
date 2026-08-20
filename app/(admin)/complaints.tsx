@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,6 +28,7 @@ const STATUS_META: Record<ComplaintStatus, { label: string; color: string; bg: s
 };
 
 export default function ComplaintsScreen() {
+  const router = useRouter();
   const { token } = useStore();
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +102,12 @@ export default function ComplaintsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(admin)")}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+        </TouchableOpacity>
         <Text style={styles.heading}>Complaints</Text>
         <TouchableOpacity onPress={fetchComplaints} style={styles.refreshBtn}>
           <Ionicons name="refresh" size={20} color={Colors.primary} />
@@ -307,6 +314,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   heading: { fontSize: 26, fontWeight: "bold", color: Colors.text },
+  backButton: { padding: 8, borderRadius: 8, width: 40 },
   refreshBtn: { padding: 6 },
   filterScroll: { flexGrow: 0 },
   filterRow: {

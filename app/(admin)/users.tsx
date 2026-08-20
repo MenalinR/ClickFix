@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { api, apiCall, resolveMediaUrl } from '../../constants/api';
@@ -18,6 +19,7 @@ type UserRow = {
 };
 
 export default function AdminUsers() {
+    const router = useRouter();
     const { workers, fetchWorkers, token } = useStore();
     const [customers, setCustomers] = useState<any[]>([]);
     const [search, setSearch] = useState('');
@@ -114,7 +116,14 @@ export default function AdminUsers() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
+                <TouchableOpacity
+                    onPress={() => router.replace('/(admin)')}
+                    style={styles.backButton}
+                >
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                </TouchableOpacity>
                 <Text style={styles.heading}>User Management</Text>
+                <View style={{ width: 40 }} />
             </View>
 
             {/* Search */}
@@ -457,6 +466,11 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: 'bold',
         color: Colors.text,
+    },
+    backButton: {
+        padding: 8,
+        borderRadius: 8,
+        width: 40,
     },
     addButton: {
         width: 44,

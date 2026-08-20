@@ -390,7 +390,16 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(customer)/(tabs)")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
         <View style={styles.profileHeader}>
           <View style={styles.imageContainer}>
@@ -470,7 +479,18 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", marginBottom: 24 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
+  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold" },
   profileHeader: { alignItems: "center", marginBottom: 32 },
   imageContainer: { position: "relative", marginBottom: 16 },
   profileImage: { width: 100, height: 100, borderRadius: 50 },

@@ -1,10 +1,12 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { api, apiCall, apiUpload } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type DocumentStatus = "Pending" | "Verified" | "Rejected";
 
@@ -44,6 +47,7 @@ function getFilenameFromUri(uri: string): string {
 }
 
 export default function DocumentsScreen() {
+  const router = useRouter();
   const { user, token } = useStore();
   const [loading, setLoading] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<any>(null);
@@ -201,24 +205,36 @@ export default function DocumentsScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color="#0066CC" />
-      </ThemedView>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ThemedView style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color="#0066CC" />
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   const idProof = verificationStatus?.idProof;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ThemedView style={styles.innerContainer}>
-        {/* Header */}
-        <View style={styles.header}>
-          <ThemedText style={styles.title}>Documents</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Upload your ID proof for verification.
-          </ThemedText>
-        </View>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ThemedView style={styles.innerContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <TouchableOpacity
+                onPress={() => router.replace("/(worker)")}
+                style={styles.backButton}
+              >
+                <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+              <ThemedText style={styles.title}>Documents</ThemedText>
+              <View style={{ width: 40 }} />
+            </View>
+            <ThemedText style={styles.subtitle}>
+              Upload your ID proof for verification.
+            </ThemedText>
+          </View>
 
         {/* Overall Verification Status */}
         <View style={styles.statusCard}>
@@ -488,12 +504,17 @@ export default function DocumentsScreen() {
         </View>
       </ThemedView>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     paddingBottom: 40,
@@ -504,10 +525,20 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 24,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,

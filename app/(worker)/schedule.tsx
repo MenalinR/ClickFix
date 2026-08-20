@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Modal,
@@ -79,6 +79,7 @@ const countdownColor = (kind: CountdownKind): string => {
 };
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const { jobs, fetchJobs, token, user } = useStore();
   const workerId = (user as any)?._id || (user as any)?.id;
   const today = new Date();
@@ -167,7 +168,16 @@ export default function ScheduleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Schedule</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(worker)")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.heading}>Schedule</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
         <View style={styles.calendar}>
           <View style={styles.monthHeader}>
@@ -470,11 +480,21 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 60 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   heading: {
     fontSize: 24,
     fontWeight: "bold",
     color: Colors.text,
-    marginBottom: 12,
   },
   calendar: {
     backgroundColor: Colors.white,

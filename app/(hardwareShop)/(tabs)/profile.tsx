@@ -17,6 +17,7 @@ import {
   Switch,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -194,7 +195,16 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => router.replace("/(hardwareShop)/(tabs)")}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Profile</Text>
+            <View style={{ width: 40 }} />
+          </View>
         </View>
 
         {/* Shop Avatar Section */}
@@ -394,6 +404,16 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
   },
   title: {
     fontSize: 24,

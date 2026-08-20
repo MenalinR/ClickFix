@@ -77,7 +77,16 @@ export default function CustomerChatsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Chats</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(customer)/(tabs)")}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.heading}>Chats</Text>
+        <View style={{ width: 40 }} />
+      </View>
       {loading && chats.length === 0 ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -108,13 +117,23 @@ export default function CustomerChatsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   heading: {
     fontSize: 22,
     fontWeight: "700",
     color: Colors.primary,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 4,
   },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyWrap: {

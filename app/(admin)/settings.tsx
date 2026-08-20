@@ -190,7 +190,16 @@ export default function AdminSettings() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.heading}>Settings</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(admin)")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.heading}>Settings</Text>
+          <View style={{ width: 40 }} />
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
@@ -537,6 +546,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
     marginTop: 10,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
   },
   heading: {
     fontSize: 28,

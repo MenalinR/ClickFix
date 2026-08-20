@@ -3,7 +3,7 @@ import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ interface HardwareItem {
 }
 
 export default function InventoryScreen() {
+  const router = useRouter();
   const { token } = useStore();
   const [items, setItems] = useState<HardwareItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -279,7 +281,15 @@ export default function InventoryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Inventory</Text>
+        <View style={styles.titleRow}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(hardwareShop)/(tabs)")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Inventory</Text>
+        </View>
         <Pressable
           style={({ pressed }) => [
             styles.addButton,
@@ -504,6 +514,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
   },
   title: {
     fontSize: 24,

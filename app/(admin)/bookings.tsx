@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -35,6 +35,7 @@ const matchesFilter = (status: string, key: FilterKey) => {
 };
 
 export default function AdminBookings() {
+  const router = useRouter();
   const { jobs = [], fetchJobs, token } = useStore();
   const [filterStatus, setFilterStatus] = useState<FilterKey>("all");
   const [loading, setLoading] = useState(true);
@@ -107,7 +108,16 @@ export default function AdminBookings() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Bookings Management</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(admin)")}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.heading}>Bookings Management</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
       {/* Status Filter */}
       <ScrollView
@@ -315,12 +325,22 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingHorizontal: 20,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   heading: {
     fontSize: 28,
     fontWeight: "bold",
     color: Colors.text,
-    marginBottom: 20,
-    marginTop: 10,
   },
   filterContainer: {
     flexGrow: 0,

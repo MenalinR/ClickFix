@@ -353,7 +353,16 @@ export default function HardwareUpdatesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.headerWrap}>
-        <Text style={styles.heading}>Hardware</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(worker)")}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.heading}>Hardware</Text>
+          <View style={{ width: 40 }} />
+        </View>
         <Text style={styles.subheading}>Order updates from shops</Text>
       </View>
 
@@ -394,8 +403,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   heading: { fontSize: 24, fontWeight: "700", color: Colors.text },
-  subheading: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  subheading: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    paddingLeft: 4,
+  },
   center: {
     flex: 1,
     alignItems: "center",

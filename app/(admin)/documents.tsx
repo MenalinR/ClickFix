@@ -1,9 +1,11 @@
 import { Button } from "@/components/Button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { api, apiCall, resolveMediaUrl } from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
@@ -20,6 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface PendingDocument {
   workerId: string;
@@ -58,6 +61,7 @@ interface VerifiedDocument {
 }
 
 export default function DocumentVerificationScreen() {
+  const router = useRouter();
   const { token } = useStore();
   const [loading, setLoading] = useState(false);
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>(
@@ -489,18 +493,30 @@ export default function DocumentVerificationScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <ActivityIndicator size="large" color="#0066CC" />
-      </ThemedView>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ThemedView style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color="#0066CC" />
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText style={styles.title}>Document Verification</ThemedText>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => router.replace("/(admin)")}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+            <ThemedText style={styles.title}>Document Verification</ThemedText>
+            <View style={{ width: 40 }} />
+          </View>
           <ThemedText style={styles.subtitle}>
             Review and approve/reject worker ID proofs
           </ThemedText>
@@ -630,12 +646,17 @@ export default function DocumentVerificationScreen() {
         </View>
       </Modal>
     </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     padding: 16,
@@ -644,10 +665,20 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    width: 40,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
