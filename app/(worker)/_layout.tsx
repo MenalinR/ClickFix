@@ -285,12 +285,6 @@ export default function WorkerLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="payhere-checkout"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

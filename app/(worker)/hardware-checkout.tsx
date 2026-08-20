@@ -62,30 +62,10 @@ export default function HardwareCheckoutPage() {
   );
 
   const [submitting, setSubmitting] = useState(false);
-  const [payMethod, setPayMethod] = useState<"cash" | "payhere">("cash");
 
   const handlePlaceOrder = async () => {
     if (!shopId || cartLines.length === 0) return;
 
-    // For PayHere: navigate first, create order only after payment succeeds
-    if (payMethod === "payhere") {
-      const itemsSummary = cartLines.map((l) => `${l.name} x${l.quantity}`).join(", ");
-      router.replace({
-        pathname: "/(worker)/payhere-checkout",
-        params: {
-          jobId,
-          customerId,
-          shopId,
-          cart: JSON.stringify(cartLines),
-          amount: String(cartTotal),
-          shopName,
-          itemsSummary,
-        },
-      });
-      return;
-    }
-
-    // Cash: create order immediately
     setSubmitting(true);
     try {
       const res = await apiCall(
@@ -115,7 +95,7 @@ export default function HardwareCheckoutPage() {
               receiverModel: "Customer",
               jobId,
               messageType: "text",
-              content: `Hardware ordered — ${itemCount} item${itemCount > 1 ? "s" : ""}, ${total} LKR (cash payment).`,
+              content: `Hardware ordered — ${itemCount} item${itemCount > 1 ? "s" : ""}, ${total} LKR (added to your bill).`,
             },
             token,
           );
@@ -124,9 +104,11 @@ export default function HardwareCheckoutPage() {
         }
       }
 
-      Alert.alert("Order placed", `Pay ${total} LKR in cash to the shop.`, [
-        { text: "OK", onPress: () => router.replace("/(worker)") },
-      ]);
+      Alert.alert(
+        "Order placed",
+        `${total} LKR has been added to the customer's job bill.`,
+        [{ text: "OK", onPress: () => router.replace("/(worker)") }],
+      );
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Failed to create order");
     } finally {
@@ -213,50 +195,17 @@ export default function HardwareCheckoutPage() {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
-          Payment Method
-        </Text>
-        <TouchableOpacity
-          style={[styles.payOption, payMethod === "cash" && styles.payOptionSelected]}
-          onPress={() => setPayMethod("cash")}
-          activeOpacity={0.8}
-        >
-          <View style={styles.payOptionIcon}>
-            <Ionicons
-              name="cash-outline"
-              size={20}
-              color={payMethod === "cash" ? Colors.primary : Colors.textSecondary}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.payOptionTitle}>Cash Payment</Text>
-            <Text style={styles.payOptionSub}>Pay the shop in cash on pickup</Text>
-          </View>
-          <View style={[styles.radio, payMethod === "cash" && styles.radioSelected]}>
-            {payMethod === "cash" && <View style={styles.radioDot} />}
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.payOption, payMethod === "payhere" && styles.payOptionSelected]}
-          onPress={() => setPayMethod("payhere")}
-          activeOpacity={0.8}
-        >
-          <View style={styles.payOptionIcon}>
-            <Ionicons
-              name="card-outline"
-              size={20}
-              color={payMethod === "payhere" ? Colors.primary : Colors.textSecondary}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.payOptionTitle}>Pay via PayHere</Text>
-            <Text style={styles.payOptionSub}>Pay the shop online now</Text>
-          </View>
-          <View style={[styles.radio, payMethod === "payhere" && styles.radioSelected]}>
-            {payMethod === "payhere" && <View style={styles.radioDot} />}
-          </View>
-        </TouchableOpacity>
+        <View style={styles.noticeBox}>
+          <Ionicons
+            name="information-circle-outline"
+            size={18}
+            color={Colors.textSecondary}
+          />
+          <Text style={styles.noticeText}>
+            This amount is added to the customer's final bill and charged
+            when they pay for the job. You don't need to pay the shop.
+          </Text>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -414,45 +363,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   placeBtnText: { color: "white", fontSize: 15, fontWeight: "700" },
-  payOption: {
+  noticeBox: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  payOptionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: "#F0F4F8",
-  },
-  payOptionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    gap: 8,
     backgroundColor: Colors.lightBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  payOptionTitle: { fontSize: 14, fontWeight: "700", color: Colors.text },
-  payOptionSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  radio: {
-    width: 20,
-    height: 20,
     borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 12,
+    marginTop: 20,
+    alignItems: "flex-start",
   },
-  radioSelected: { borderColor: Colors.primary },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
   },
 });
