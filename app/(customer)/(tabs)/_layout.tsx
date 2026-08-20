@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { api, apiCall } from "../../../constants/api";
 import { Colors } from "../../../constants/Colors";
@@ -8,6 +8,7 @@ import { useStore } from "../../../constants/Store";
 import { useChatList } from "../../../hooks/useChatList";
 
 const BOOKING_NOTIFICATION_TYPES = ["JOB_CANCELLED"];
+const RESCHEDULE_NOTIFICATION_TYPES = ["JOB_RESCHEDULE_PROPOSED"];
 
 function ChatsIcon({ color, size }: { color: string; size: number }) {
   const { totalUnread } = useChatList();
@@ -51,22 +52,48 @@ export default function CustomerTabsLayout() {
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const lastSeenCancelled = useStore((s) => s.lastSeenCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
-  const unreadBookings = Math.max(0, unreadCancelled - lastSeenCancelled);
+  const [unreadReschedule, setUnreadReschedule] = useState(0);
+  const unreadBookings =
+    Math.max(0, unreadCancelled - lastSeenCancelled) + unreadReschedule;
 
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await apiCall(
-        `${api.notifications.getUnreadCount}?types=${BOOKING_NOTIFICATION_TYPES.join(",")}`,
-        "GET",
-        undefined,
-        token,
-      );
-      setUnreadCancelled(res?.count || 0);
+      const [cancelledRes, rescheduleRes] = await Promise.all([
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=${BOOKING_NOTIFICATION_TYPES.join(",")}`,
+          "GET",
+          undefined,
+          token,
+        ),
+        apiCall(
+          `${api.notifications.getUnreadCount}?types=${RESCHEDULE_NOTIFICATION_TYPES.join(",")}`,
+          "GET",
+          undefined,
+          token,
+        ),
+      ]);
+      setUnreadCancelled(cancelledRes?.count || 0);
+      setUnreadReschedule(rescheduleRes?.count || 0);
     } catch (error) {
       console.error("Error fetching booking notification count:", error);
     }
   }, [token, setUnreadCancelled]);
+
+  const markRescheduleAsRead = useCallback(async () => {
+    if (!token || unreadReschedule === 0) return;
+    setUnreadReschedule(0);
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=${RESCHEDULE_NOTIFICATION_TYPES.join(",")}`,
+        "PUT",
+        undefined,
+        token,
+      );
+    } catch (error) {
+      console.error("Error marking reschedule notifications read:", error);
+    }
+  }, [token, unreadReschedule]);
 
   useEffect(() => {
     if (!token) return;
@@ -108,6 +135,7 @@ export default function CustomerTabsLayout() {
         }}
         listeners={{
           tabPress: () => {
+            markRescheduleAsRead();
             setTimeout(fetchUnreadCount, 500);
           },
         }}
