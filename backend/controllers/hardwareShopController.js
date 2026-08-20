@@ -1,5 +1,6 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const HardwareShop = require("../models/HardwareShop");
+const { geocodeAddress } = require("../utils/geocode");
 
 // @desc    Set the shop's map location from the shop device's GPS
 // @route   PUT /api/hardwareShop/location
@@ -356,6 +357,19 @@ exports.updateShopProfile = async (req, res) => {
             .json({ success: false, message: "Shop name cannot be empty" });
         }
         updates[key] = value;
+      }
+    }
+
+    if (updates.address || updates.city) {
+      const existingShop = await HardwareShop.findById(req.user._id);
+      if (existingShop && !existingShop.location?.coordinates) {
+        const coordinates = await geocodeAddress({
+          address: updates.address ?? existingShop.address,
+          city: updates.city ?? existingShop.city,
+        });
+        if (coordinates) {
+          updates.location = { type: "Point", coordinates };
+        }
       }
     }
 

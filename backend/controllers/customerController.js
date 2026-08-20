@@ -1,4 +1,5 @@
 const Customer = require("../models/Customer");
+const { geocodeAddress } = require("../utils/geocode");
 
 // @desc    List all customers (admin)
 // @route   GET /api/customers
@@ -111,11 +112,22 @@ exports.addAddress = async (req, res) => {
       });
     }
 
+    let location = req.body.location;
+    if (!location) {
+      const coordinates = await geocodeAddress({
+        address: addressText,
+        city: req.body.city,
+      });
+      if (coordinates) {
+        location = { type: "Point", coordinates };
+      }
+    }
+
     const address = {
       label: req.body.label,
       address: addressText,
       city: req.body.city,
-      location: req.body.location,
+      location,
     };
 
     customer.addresses.push(address);

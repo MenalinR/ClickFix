@@ -228,6 +228,12 @@ export default function WorkerProfile() {
         }
       }
 
+      const addressCoords = (user as any)?.addresses?.[0]?.location?.coordinates;
+      const hasRealCoords =
+        Array.isArray(addressCoords) &&
+        addressCoords.length === 2 &&
+        (addressCoords[0] !== 0 || addressCoords[1] !== 0);
+
       const job = await createJob({
         serviceType: worker.category || "Other",
         description: description.trim(),
@@ -236,7 +242,7 @@ export default function WorkerProfile() {
         images: imageUrls,
         location: {
           type: "Point",
-          coordinates: (user as any)?.addresses?.[0]?.location?.coordinates || [79.8612, 6.9271],
+          coordinates: hasRealCoords ? addressCoords : [79.8612, 6.9271],
           address: (user as any)?.addresses?.[0]?.address || "",
         },
       });

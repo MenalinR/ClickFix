@@ -3,6 +3,14 @@ const Worker = require("../models/Worker");
 const Customer = require("../models/Customer");
 const Message = require("../models/Message");
 const { createNotification } = require("./notificationController");
+const { geocodeAddress } = require("../utils/geocode");
+
+const hasRealCoordinates = (coordinates) =>
+  Array.isArray(coordinates) &&
+  coordinates.length === 2 &&
+  Number.isFinite(coordinates[0]) &&
+  Number.isFinite(coordinates[1]) &&
+  (coordinates[0] !== 0 || coordinates[1] !== 0);
 
 // @desc    Create new job
 // @route   POST /api/jobs
@@ -38,12 +46,54 @@ exports.createJob = async (req, res) => {
     };
     const defaultScheduledDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    let resolvedLocation = hasRealCoordinates(location?.coordinates)
+      ? location
+      : null;
+
+    if (!resolvedLocation) {
+      // The client didn't send usable coordinates — fall back to the
+      // customer's saved address, geocoding it if it doesn't have
+      // coordinates yet (e.g. an address saved before geocoding existed).
+      const customer = await Customer.findById(req.user._id);
+      const savedAddress =
+        customer?.addresses?.find((a) => a.isDefault) ||
+        customer?.addresses?.[0];
+
+      if (savedAddress) {
+        if (hasRealCoordinates(savedAddress.location?.coordinates)) {
+          resolvedLocation = {
+            type: "Point",
+            coordinates: savedAddress.location.coordinates,
+            address: savedAddress.address,
+          };
+        } else {
+          const coordinates = await geocodeAddress({
+            address: savedAddress.address,
+            city: savedAddress.city,
+          });
+          if (coordinates) {
+            resolvedLocation = {
+              type: "Point",
+              coordinates,
+              address: savedAddress.address,
+            };
+          }
+        }
+      }
+    }
+
+    if (!resolvedLocation) {
+      resolvedLocation = location?.address
+        ? { ...defaultLocation, address: location.address }
+        : defaultLocation;
+    }
+
     const jobPayload = {
       customerId: req.user._id,
       serviceType,
       description,
       images: images || [],
-      location: location && location.coordinates ? location : defaultLocation,
+      location: resolvedLocation,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : defaultScheduledDate,
       urgency: urgency || "Normal",
       pricing: {

@@ -10,6 +10,7 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 import { useRoadRoute } from "../../hooks/useRoadRoute";
+import { openGoogleMapsDirections } from "../../utils/openInMaps";
 
 export default function JobRouteScreen() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function JobRouteScreen() {
         );
         if (cancelled || !res?.success) return;
         const coords = res.data?.destination?.coordinates; // [lng, lat]
-        if (coords?.length === 2) {
+        if (coords?.length === 2 && (coords[0] !== 0 || coords[1] !== 0)) {
           setDestination({ longitude: coords[0], latitude: coords[1] });
         }
       } catch {
@@ -156,6 +157,15 @@ export default function JobRouteScreen() {
           height={320}
         />
 
+        <TouchableOpacity
+          style={[styles.mapsBtn, !destination && { opacity: 0.5 }]}
+          onPress={() => destination && openGoogleMapsDirections(destination)}
+          disabled={!destination}
+        >
+          <Ionicons name="map-outline" size={18} color={Colors.primary} />
+          <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
+        </TouchableOpacity>
+
         <View style={styles.infoCard}>
           <Ionicons name="navigate" size={18} color={Colors.primary} />
           <Text style={styles.infoText}>
@@ -209,6 +219,18 @@ const styles = StyleSheet.create({
     borderColor: "#90CAF9",
   },
   infoText: { flex: 1, fontSize: 13, color: "#1565C0", lineHeight: 18 },
+  mapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  mapsBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
   arrivedBtn: {
     flexDirection: "row",
     alignItems: "center",

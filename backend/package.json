@@ -11,6 +11,7 @@
     "db:schemas": "node showdb.js schemas",
     "db:sample": "node showdb.js sample",
     "db:all": "node showdb.js all",
+    "backfill:geocode": "node scripts/backfillGeocoding.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

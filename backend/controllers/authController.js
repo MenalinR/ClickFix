@@ -3,6 +3,7 @@ const Customer = require("../models/Customer");
 const Admin = require("../models/Admin");
 const HardwareShop = require("../models/HardwareShop");
 const { sendTokenResponse } = require("../utils/auth");
+const { geocodeAddress } = require("../utils/geocode");
 
 // @desc    Register Worker
 // @route   POST /api/auth/worker/register
@@ -277,6 +278,18 @@ exports.registerHardwareShop = async (req, res) => {
       city,
       licenseNumber,
     });
+
+    // Best-effort: give the shop an initial map location from their
+    // registered address until they set a precise one from their device GPS.
+    try {
+      const coordinates = await geocodeAddress({ address, city });
+      if (coordinates) {
+        shop.location = { type: "Point", coordinates };
+        await shop.save();
+      }
+    } catch {
+      // non-fatal
+    }
 
     sendTokenResponse(shop, 201, res, "hardwareShop");
   } catch (error) {

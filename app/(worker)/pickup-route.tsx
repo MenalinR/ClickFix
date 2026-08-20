@@ -9,6 +9,7 @@ import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 import { useRoadRoute } from "../../hooks/useRoadRoute";
+import { openGoogleMapsDirections } from "../../utils/openInMaps";
 
 export default function PickupRouteScreen() {
   const router = useRouter();
@@ -111,6 +112,15 @@ export default function PickupRouteScreen() {
           height={360}
         />
 
+        <TouchableOpacity
+          style={[styles.mapsBtn, !destination && { opacity: 0.5 }]}
+          onPress={() => destination && openGoogleMapsDirections(destination)}
+          disabled={!destination}
+        >
+          <Ionicons name="map-outline" size={18} color={Colors.primary} />
+          <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
+        </TouchableOpacity>
+
         {!destination && (
           <View style={styles.warnCard}>
             <Ionicons name="warning" size={18} color="#B26A00" />
@@ -160,6 +170,18 @@ const styles = StyleSheet.create({
     borderColor: "#FFCC80",
   },
   warnText: { flex: 1, fontSize: 13, color: "#8A5A00", lineHeight: 18 },
+  mapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  mapsBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
   infoCard: {
     flexDirection: "row",
     gap: 10,
