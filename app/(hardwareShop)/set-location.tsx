@@ -101,8 +101,13 @@ export default function SetShopLocationScreen() {
         token,
       );
       if (!res?.success) throw new Error(res?.message || "Could not save location");
-      setUser({ ...(user as any), location: res.data?.location });
-      Alert.alert("Saved", "Your shop location is set. Workers will be routed here.");
+      // The backend also refreshes address + city from the pin, so merge the
+      // whole returned shop to keep the profile rows in sync.
+      setUser({ ...(user as any), ...(res.data || {}) });
+      Alert.alert(
+        "Saved",
+        "Your shop location is set. Address and city were updated to match, and workers will be routed here.",
+      );
       router.back();
     } catch (e: any) {
       Alert.alert("Failed", e?.message || "Could not save location");

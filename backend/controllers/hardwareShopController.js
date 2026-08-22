@@ -1,5 +1,6 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const HardwareShop = require("../models/HardwareShop");
+const { reverseGeocode } = require("../utils/geocode");
 
 // @desc    Set the shop's map location from the shop device's GPS
 // @route   PUT /api/hardwareShop/location
@@ -13,17 +14,23 @@ exports.updateShopLocation = async (req, res) => {
         message: "latitude and longitude are required numbers",
       });
     }
-    const shop = await HardwareShop.findByIdAndUpdate(
-      req.user._id,
-      {
-        location: {
-          type: "Point",
-          coordinates: [longitude, latitude],
-          updatedAt: new Date(),
-        },
+    const updates = {
+      location: {
+        type: "Point",
+        coordinates: [longitude, latitude],
+        updatedAt: new Date(),
       },
-      { new: true },
-    ).select("-password");
+    };
+
+    // Keep the address + city rows in sync with the pin the shop just placed,
+    // so the displayed address matches where workers are actually routed.
+    const place = await reverseGeocode({ latitude, longitude });
+    if (place?.address) updates.address = place.address;
+    if (place?.city) updates.city = place.city;
+
+    const shop = await HardwareShop.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+    }).select("-password");
 
     res.status(200).json({ success: true, data: shop });
   } catch (error) {
