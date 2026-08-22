@@ -7,7 +7,7 @@ const { reverseGeocode } = require("../utils/geocode");
 // @access  Private (hardwareShop)
 exports.updateShopLocation = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body || {};
+    const { latitude, longitude, address, city } = req.body || {};
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return res.status(400).json({
         success: false,
@@ -23,10 +23,20 @@ exports.updateShopLocation = async (req, res) => {
     };
 
     // Keep the address + city rows in sync with the pin the shop just placed,
-    // so the displayed address matches where workers are actually routed.
-    const place = await reverseGeocode({ latitude, longitude });
-    if (place?.address) updates.address = place.address;
-    if (place?.city) updates.city = place.city;
+    // so the displayed address matches where workers are actually routed. The
+    // client resolves these on-device and sends them; fall back to a
+    // server-side reverse-geocode only if it didn't provide them.
+    if (typeof address === "string" && address.trim()) {
+      updates.address = address.trim();
+    }
+    if (typeof city === "string" && city.trim()) {
+      updates.city = city.trim();
+    }
+    if (!updates.address || !updates.city) {
+      const place = await reverseGeocode({ latitude, longitude });
+      if (!updates.address && place?.address) updates.address = place.address;
+      if (!updates.city && place?.city) updates.city = place.city;
+    }
 
     const shop = await HardwareShop.findByIdAndUpdate(req.user._id, updates, {
       new: true,

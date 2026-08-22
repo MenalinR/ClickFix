@@ -94,19 +94,51 @@ export default function SetShopLocationScreen() {
     }
     try {
       setSaving(true);
+
+      // Resolve the pin into a readable address + city on-device (uses the
+      // phone's OS geocoder, no billed Google API needed). Best-effort — if it
+      // fails we still save the coordinates.
+      let address: string | undefined;
+      let city: string | undefined;
+      try {
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+        });
+        if (place) {
+          const streetLine = [place.streetNumber, place.street]
+            .filter(Boolean)
+            .join(" ");
+          const parts = [place.name, streetLine, place.district].filter(
+            (p): p is string => !!p,
+          );
+          // Drop duplicates (e.g. name === street) while keeping order.
+          address =
+            (place as any).formattedAddress ||
+            [...new Set(parts)].join(", ") ||
+            undefined;
+          city =
+            place.city || place.subregion || place.region || undefined;
+        }
+      } catch {
+        // ignore — coordinates still get saved below
+      }
+
       const res = await apiCall(
         api.hardwareShop.setLocation,
         "PUT",
-        { latitude: pin.latitude, longitude: pin.longitude },
+        { latitude: pin.latitude, longitude: pin.longitude, address, city },
         token,
       );
       if (!res?.success) throw new Error(res?.message || "Could not save location");
-      // The backend also refreshes address + city from the pin, so merge the
-      // whole returned shop to keep the profile rows in sync.
+      // Merge the whole returned shop so the profile's address/city rows and
+      // the saved pin all stay in sync.
       setUser({ ...(user as any), ...(res.data || {}) });
       Alert.alert(
         "Saved",
-        "Your shop location is set. Address and city were updated to match, and workers will be routed here.",
+        address
+          ? "Your shop location is set. Address and city were updated to match, and workers will be routed here."
+          : "Your shop location is set and workers will be routed here. (Couldn't auto-fill the address for this spot — you can edit it manually in your profile.)",
       );
       router.back();
     } catch (e: any) {
