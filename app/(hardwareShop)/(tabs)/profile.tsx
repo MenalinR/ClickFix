@@ -3,7 +3,6 @@ import { Colors } from "@/constants/Colors";
 import { useStore } from "@/constants/Store";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -14,7 +13,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -132,55 +130,37 @@ export default function ProfileScreen() {
 
   const locationEnabled = (shop?.location?.coordinates?.length === 2);
 
-  const handleToggleLocation = async (enabled: boolean) => {
+  // Open the map picker so the shop can drop a fixed pin on their exact
+  // location. Workers navigate to this saved pin, not the phone's live GPS.
+  const openLocationPicker = () => {
+    router.push("/(hardwareShop)/set-location");
+  };
+
+  const handleClearLocation = () => {
     if (!token) return;
-    if (enabled) {
-      try {
-        setSavingLocation(true);
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert("Permission needed", "Allow location access to set your shop's map location.");
-          return;
-        }
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        const res = await apiCall(
-          api.hardwareShop.setLocation,
-          "PUT",
-          { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
-          token,
-        );
-        if (!res?.success) throw new Error(res?.message || "Could not save location");
-        setUser({ ...(user as any), location: res.data?.location });
-      } catch (e: any) {
-        Alert.alert("Failed", e?.message || "Could not set location");
-      } finally {
-        setSavingLocation(false);
-      }
-    } else {
-      Alert.alert(
-        "Disable map location?",
-        "Workers will no longer be routed to your shop.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Disable",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                setSavingLocation(true);
-                const res = await apiCall(api.hardwareShop.clearLocation, "DELETE", undefined, token);
-                if (!res?.success) throw new Error(res?.message || "Could not clear location");
-                setUser({ ...(user as any), location: undefined });
-              } catch (e: any) {
-                Alert.alert("Failed", e?.message || "Could not clear location");
-              } finally {
-                setSavingLocation(false);
-              }
-            },
+    Alert.alert(
+      "Remove map location?",
+      "Workers will no longer be routed to your shop until you set it again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSavingLocation(true);
+              const res = await apiCall(api.hardwareShop.clearLocation, "DELETE", undefined, token);
+              if (!res?.success) throw new Error(res?.message || "Could not clear location");
+              setUser({ ...(user as any), location: undefined });
+            } catch (e: any) {
+              Alert.alert("Failed", e?.message || "Could not clear location");
+            } finally {
+              setSavingLocation(false);
+            }
           },
-        ],
-      );
-    }
+        },
+      ],
+    );
   };
 
   const openEditModal = () => {
@@ -275,20 +255,41 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.locationToggleLabel}>Map location</Text>
               <Text style={styles.locationToggleSub}>
-                {locationEnabled ? "Workers can navigate to your shop" : "Enable so workers can find your shop"}
+                {locationEnabled
+                  ? "Fixed pin set — workers navigate here"
+                  : "Set a fixed pin so workers can find your shop"}
               </Text>
             </View>
-            {savingLocation ? (
+            {savingLocation && (
               <ActivityIndicator color={Colors.primary} size="small" />
-            ) : (
-              <Switch
-                value={locationEnabled}
-                onValueChange={handleToggleLocation}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor="white"
-              />
             )}
           </View>
+
+          <TouchableOpacity
+            style={styles.setLocationBtn}
+            onPress={openLocationPicker}
+            disabled={savingLocation}
+          >
+            <Ionicons
+              name={locationEnabled ? "create-outline" : "location-outline"}
+              size={18}
+              color="white"
+            />
+            <Text style={styles.setLocationBtnText}>
+              {locationEnabled ? "Edit location on map" : "Set location on map"}
+            </Text>
+          </TouchableOpacity>
+
+          {locationEnabled && (
+            <TouchableOpacity
+              style={styles.removeLocationBtn}
+              onPress={handleClearLocation}
+              disabled={savingLocation}
+            >
+              <Ionicons name="trash-outline" size={16} color="#C62828" />
+              <Text style={styles.removeLocationBtnText}>Remove location</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Actions */}
@@ -517,6 +518,26 @@ const styles = StyleSheet.create({
   },
   locationToggleLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
   locationToggleSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  setLocationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  setLocationBtnText: { color: "white", fontSize: 14, fontWeight: "700" },
+  removeLocationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  removeLocationBtnText: { color: "#C62828", fontSize: 13, fontWeight: "600" },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",

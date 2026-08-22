@@ -10,6 +10,7 @@ export default function HardwareShopLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="track-worker" />
+      <Stack.Screen name="set-location" />
     </Stack>
   );
 }

@@ -1,6 +1,5 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const HardwareShop = require("../models/HardwareShop");
-const { geocodeAddress } = require("../utils/geocode");
 
 // @desc    Set the shop's map location from the shop device's GPS
 // @route   PUT /api/hardwareShop/location
@@ -360,18 +359,9 @@ exports.updateShopProfile = async (req, res) => {
       }
     }
 
-    if (updates.address || updates.city) {
-      const existingShop = await HardwareShop.findById(req.user._id);
-      if (existingShop && !existingShop.location?.coordinates) {
-        const coordinates = await geocodeAddress({
-          address: updates.address ?? existingShop.address,
-          city: updates.city ?? existingShop.city,
-        });
-        if (coordinates) {
-          updates.location = { type: "Point", coordinates };
-        }
-      }
-    }
+    // Note: the shop's map location is set deliberately via the map picker
+    // (PUT /location), never derived from the typed address. Editing the
+    // address here must not create or change the saved pin.
 
     const shop = await HardwareShop.findByIdAndUpdate(req.user._id, updates, {
       new: true,
