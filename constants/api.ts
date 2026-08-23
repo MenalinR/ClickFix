@@ -168,6 +168,8 @@ export const api = {
       `${API_URL}/hardware/requests/${id}/delivered`,
     confirmComing: (id: string) =>
       `${API_URL}/hardware/requests/${id}/coming`,
+    confirmPickup: (id: string) =>
+      `${API_URL}/hardware/requests/${id}/pickup`,
   },
 
   // Hardware Shop

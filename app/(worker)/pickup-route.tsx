@@ -2,9 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
+import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
 import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
@@ -20,6 +28,9 @@ export default function PickupRouteScreen() {
     | string
     | undefined;
   const shopName = (params.shopName as string) || "Hardware shop";
+  const requestId = (Array.isArray(params.requestId)
+    ? params.requestId[0]
+    : params.requestId) as string | undefined;
   const shopLat = params.shopLat ? Number(params.shopLat) : NaN;
   const shopLng = params.shopLng ? Number(params.shopLng) : NaN;
   const destination: LatLng | null =
@@ -28,7 +39,43 @@ export default function PickupRouteScreen() {
       : null;
 
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
+  const [pickingUp, setPickingUp] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Worker confirms they've collected the items. Moves the order to
+  // "picked_up" and notifies the customer, then returns to the order list
+  // where the "On my way to customer" action appears.
+  const handlePickedUp = async () => {
+    if (!token || !requestId) {
+      Alert.alert(
+        "Can't confirm here",
+        "Open this pickup from the Hardware order list so it can be marked picked up.",
+      );
+      return;
+    }
+    try {
+      setPickingUp(true);
+      const res = await apiCall(
+        api.hardware.confirmPickup(requestId),
+        "PUT",
+        undefined,
+        token,
+      );
+      if (!res?.success) {
+        Alert.alert("Error", res?.message || "Couldn't mark as picked up");
+        return;
+      }
+      Alert.alert(
+        "Items picked up",
+        "The customer has been notified. Head to their location next.",
+      );
+      router.back();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Couldn't mark as picked up");
+    } finally {
+      setPickingUp(false);
+    }
+  };
 
   // Real road route from us to the shop.
   const { routeCoords, distanceText, durationText } = useRoadRoute(
@@ -113,6 +160,23 @@ export default function PickupRouteScreen() {
         />
 
         <TouchableOpacity
+          style={[styles.pickedUpBtn, pickingUp && { opacity: 0.6 }]}
+          onPress={handlePickedUp}
+          disabled={pickingUp}
+        >
+          {pickingUp ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <>
+              <Ionicons name="bag-check-outline" size={20} color="white" />
+              <Text style={styles.pickedUpBtnText}>
+                I&apos;ve picked up the items
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.mapsBtn, !destination && { opacity: 0.5 }]}
           onPress={() => destination && openGoogleMapsDirections(destination)}
           disabled={!destination}
@@ -182,6 +246,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mapsBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "700" },
+  pickedUpBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#2E7D32",
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  pickedUpBtnText: { color: "white", fontSize: 16, fontWeight: "700" },
   infoCard: {
     flexDirection: "row",
     gap: 10,

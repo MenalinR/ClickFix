@@ -9,6 +9,7 @@ const {
   updateRequestStatus,
   markAsDelivered,
   confirmComing,
+  confirmPickup,
   getAdminHardwareItems,
   createHardwareItem,
   updateHardwareItem,
@@ -51,6 +52,12 @@ router.put(
   protect,
   authorize("worker"),
   confirmComing,
+);
+router.put(
+  "/requests/:id/pickup",
+  protect,
+  authorize("worker"),
+  confirmPickup,
 );
 
 // ADMIN ROUTES - Hardware Management

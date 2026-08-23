@@ -535,6 +535,79 @@ exports.confirmComing = async (req, res) => {
   }
 };
 
+// @desc    Worker confirms they've collected the items from the shop
+// @route   PUT /api/hardware/requests/:id/pickup
+// @access  Private (worker)
+exports.confirmPickup = async (req, res) => {
+  try {
+    const request = await HardwareRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Hardware request not found",
+      });
+    }
+
+    if (request.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    if (request.status !== "coming") {
+      return res.status(400).json({
+        success: false,
+        message: "You can only mark items picked up after you're on the way to the shop",
+      });
+    }
+
+    request.status = "picked_up";
+    request.pickedUpAt = new Date();
+    await request.save();
+
+    const worker = await Worker.findById(request.workerId).select("name");
+    const orderRef = request._id.toString().slice(-6).toUpperCase();
+    const { createNotification } = require("./notificationController");
+
+    // Let the shop know the order has been collected.
+    if (request.shopId) {
+      try {
+        await createNotification({
+          recipient: request.shopId,
+          recipientModel: "HardwareShop",
+          type: "HARDWARE_ORDER",
+          title: "Order picked up",
+          message: `${worker?.name || "The worker"} collected order #${orderRef}.`,
+          data: { jobId: request.jobId, requestId: request._id },
+          actionUrl: "/(hardwareShop)/(tabs)/orders",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    // Let the customer know their materials are on the move.
+    if (request.customerId) {
+      try {
+        await createNotification({
+          recipient: request.customerId,
+          recipientModel: "Customer",
+          type: "HARDWARE_ORDER",
+          title: "Materials picked up",
+          message: `${worker?.name || "Your worker"} has picked up the hardware and will head to your location.`,
+          data: { jobId: request.jobId, requestId: request._id },
+          actionUrl: "/(customer)/job-tracking",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
+    res.status(200).json({ success: true, data: request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // ADMIN ENDPOINTS FOR HARDWARE MANAGEMENT
 
 // @desc    Get all hardware items (including out of stock) - Admin only

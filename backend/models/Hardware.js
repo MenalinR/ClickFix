@@ -90,6 +90,7 @@ const hardwareRequestSchema = new mongoose.Schema(
     },
     customerNote: String,
     workerNote: String,
+    pickedUpAt: Date,
     paymentStatus: {
       type: String,
       enum: ["unpaid", "paid", "failed"],

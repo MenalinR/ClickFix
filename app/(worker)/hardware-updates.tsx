@@ -199,6 +199,34 @@ export default function HardwareUpdatesScreen() {
     [router, updateJobStatus],
   );
 
+  // Worker confirms they've collected the items from the shop. Moves the order
+  // to "picked_up" and notifies the shop + customer, so the customer knows the
+  // materials are in hand before the worker heads to them.
+  const markPickedUp = useCallback(
+    async (item: HardwareRequest) => {
+      if (!token) return;
+      try {
+        setBusyId(item._id);
+        const res = await apiCall(
+          api.hardware.confirmPickup(item._id),
+          "PUT",
+          undefined,
+          token,
+        );
+        if (!res.success) {
+          Alert.alert("Error", res.message || "Couldn't update order");
+          return;
+        }
+        await fetchOrders();
+      } catch (e: any) {
+        Alert.alert("Error", e?.message || "Couldn't update order");
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token, fetchOrders],
+  );
+
   const renderItem = ({ item }: { item: HardwareRequest }) => {
     const status = item.status;
     const color = STATUS_COLOR[status] || Colors.textSecondary;
@@ -299,35 +327,53 @@ export default function HardwareUpdatesScreen() {
         )}
 
         {status === "coming" && (
-          <TouchableOpacity
-            style={styles.comingBtn}
-            onPress={() => {
-              const jobId =
-                (item.jobId as any)?._id ||
-                (typeof item.jobId === "string" ? item.jobId : "");
-              const coords = item.shopId?.location?.coordinates;
-              const shopName = item.shopId?.shopName || "Hardware shop";
-              if (!coords || coords.length !== 2) {
-                Alert.alert(
-                  "Shop location not set",
-                  `${shopName} hasn't set their map location yet. Contact the shop directly for directions.`,
-                );
-                return;
-              }
-              router.push({
-                pathname: "/pickup-route",
-                params: {
-                  jobId,
-                  shopName,
-                  shopLng: String(coords[0]),
-                  shopLat: String(coords[1]),
-                },
-              });
-            }}
-          >
-            <Ionicons name="map-outline" size={16} color="white" />
-            <Text style={styles.comingBtnText}>View route to shop</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.routeBtn]}
+              disabled={busyId === item._id}
+              onPress={() => {
+                const jobId =
+                  (item.jobId as any)?._id ||
+                  (typeof item.jobId === "string" ? item.jobId : "");
+                const coords = item.shopId?.location?.coordinates;
+                const shopName = item.shopId?.shopName || "Hardware shop";
+                if (!coords || coords.length !== 2) {
+                  Alert.alert(
+                    "Shop location not set",
+                    `${shopName} hasn't set their map location yet. Contact the shop directly for directions.`,
+                  );
+                  return;
+                }
+                router.push({
+                  pathname: "/pickup-route",
+                  params: {
+                    jobId,
+                    requestId: item._id,
+                    shopName,
+                    shopLng: String(coords[0]),
+                    shopLat: String(coords[1]),
+                  },
+                });
+              }}
+            >
+              <Ionicons name="map-outline" size={16} color={Colors.primary} />
+              <Text style={styles.routeBtnText}>Route to shop</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.pickedUpBtn]}
+              disabled={busyId === item._id}
+              onPress={() => markPickedUp(item)}
+            >
+              {busyId === item._id ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Ionicons name="bag-check-outline" size={16} color="white" />
+                  <Text style={styles.pickedUpBtnText}>Picked up</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         )}
 
         {status === "picked_up" && (
@@ -529,4 +575,22 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     marginTop: 12,
   },
+  actionRow: { flexDirection: "row", gap: 10, marginTop: 12 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 8,
+    paddingVertical: 11,
+  },
+  routeBtn: {
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  routeBtnText: { color: Colors.primary, fontWeight: "700", fontSize: 13 },
+  pickedUpBtn: { backgroundColor: "#2E7D32" },
+  pickedUpBtnText: { color: "white", fontWeight: "700", fontSize: 13 },
 });
