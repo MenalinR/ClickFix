@@ -45,6 +45,14 @@ export default function ProfileScreen() {
 
   const customerId = currentUser?._id || currentUser?.id;
 
+  // Whether a map pin has been set (default address, else the latest one).
+  const addressList = ((currentUser as any)?.addresses || []) as any[];
+  const primaryAddress =
+    addressList.find((a) => a.isDefault) ||
+    addressList[addressList.length - 1] ||
+    null;
+  const locationSet = primaryAddress?.location?.coordinates?.length === 2;
+
   useEffect(() => {
     if (!currentUser) return;
 
@@ -461,6 +469,33 @@ export default function ProfileScreen() {
           {renderEditableField("Mobile Number", "mobile", user.mobile)}
           {renderEditableField("Email Address", "email", user.email)}
           {renderEditableField("Address", "address", user.address)}
+
+          <View style={styles.locationRow}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="navigate-outline" size={20} color={Colors.primary} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Map location</Text>
+              <Text style={styles.infoValue}>
+                {locationSet ? "Set" : "Not set"}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.setLocationBtn}
+            onPress={() => router.push("/(customer)/set-location")}
+            disabled={saving}
+          >
+            <Ionicons
+              name={locationSet ? "create-outline" : "location-outline"}
+              size={18}
+              color="#FFF"
+            />
+            <Text style={styles.setLocationBtnText}>
+              {locationSet ? "Edit location on map" : "Set location on map"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.actions}>
@@ -525,6 +560,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  locationRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  setLocationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  setLocationBtnText: { color: "#FFF", fontSize: 14, fontWeight: "700" },
   iconContainer: {
     width: 40,
     height: 40,

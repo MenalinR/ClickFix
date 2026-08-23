@@ -123,11 +123,24 @@ exports.addAddress = async (req, res) => {
       }
     }
 
+    const makeDefault = req.body.makeDefault === true;
+
+    // When the address comes from the map picker it becomes the single
+    // canonical location: mark it default and clear the flag on the rest, so
+    // both the profile and job routing (which prefer the default address) use
+    // this pin.
+    if (makeDefault) {
+      customer.addresses.forEach((a) => {
+        a.isDefault = false;
+      });
+    }
+
     const address = {
       label: req.body.label,
       address: addressText,
       city: req.body.city,
       location,
+      isDefault: makeDefault,
     };
 
     customer.addresses.push(address);

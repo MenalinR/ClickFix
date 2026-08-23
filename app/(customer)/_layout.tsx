@@ -65,6 +65,13 @@ export default function CustomerLayout() {
           presentation: "modal",
         }}
       />
+      <Stack.Screen
+        name="set-location"
+        options={{
+          headerShown: false,
+          presentation: "card",
+        }}
+      />
     </Stack>
   );
 }
