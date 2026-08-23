@@ -140,23 +140,13 @@ export default function WorkerProfile() {
   }, [modalVisible, loadBusySlots]);
 
   const findConflictingSlot = React.useCallback(
-    (when: Date) => {
-      const SLOT_MS = 2 * 60 * 60 * 1000;
+    (when: Date, slots: typeof busySlots = busySlots) => {
       const wantStart = when.getTime();
-      const wantEnd = wantStart + SLOT_MS;
-      const BLOCKING_STATUSES = [
-        "worker accepted",
-        "accepted",
-        "negotiating",
-        "on the way",
-        "in progress",
-      ];
-      return busySlots.find((s) => {
+      const BLOCKING_STATUSES = ["accepted", "on the way", "in progress"];
+      return slots.find((s) => {
         const status = (s.status || "").toLowerCase();
         if (!BLOCKING_STATUSES.includes(status)) return false;
-        const bStart = new Date(s.start).getTime();
-        const bEnd = bStart + (s.durationMinutes || 120) * 60000;
-        return bStart < wantEnd && bEnd > wantStart;
+        return new Date(s.start).getTime() === wantStart;
       });
     },
     [busySlots],
@@ -185,7 +175,26 @@ export default function WorkerProfile() {
       Alert.alert("Invalid time", "Please pick a date and time in the future.");
       return;
     }
-    const conflict = findConflictingSlot(scheduledAt);
+    // Re-fetch busy slots right before submitting — the list shown while
+    // browsing the calendar can go stale if another booking gets accepted
+    // in the meantime, so re-check against live data instead of state.
+    let freshSlots = busySlots;
+    try {
+      const workerId = worker._id || worker.id;
+      const freshRes = await apiCall(
+        api.jobs.workerBusy(String(workerId)),
+        "GET",
+        undefined,
+        token || undefined,
+      );
+      if (freshRes?.data) {
+        freshSlots = freshRes.data;
+        setBusySlots(freshRes.data);
+      }
+    } catch {
+      // fall back to whatever was already loaded
+    }
+    const conflict = findConflictingSlot(scheduledAt, freshSlots);
     if (conflict) {
       const when = new Date(conflict.start).toLocaleString("en-GB", {
         day: "2-digit",
@@ -882,11 +891,16 @@ export default function WorkerProfile() {
                             d.getDate() === cell.getDate()
                           );
                         });
-                        const hasBusy = dayBusy.some(
-                          (s) => (s.status || "").toLowerCase() !== "pending",
+                        const hasBusy = dayBusy.some((s) =>
+                          ["accepted", "on the way", "in progress"].includes(
+                            (s.status || "").toLowerCase(),
+                          ),
                         );
                         const hasPending = dayBusy.some(
-                          (s) => (s.status || "").toLowerCase() === "pending",
+                          (s) =>
+                            !["accepted", "on the way", "in progress"].includes(
+                              (s.status || "").toLowerCase(),
+                            ),
                         );
                         return (
                           <TouchableOpacity
@@ -1020,8 +1034,11 @@ export default function WorkerProfile() {
               )
               .map((s, i) => {
                 const start = new Date(s.start);
-                const isPending =
-                  (s.status || "").toLowerCase() === "pending";
+                const isPending = ![
+                  "accepted",
+                  "on the way",
+                  "in progress",
+                ].includes((s.status || "").toLowerCase());
                 return (
                   <View
                     key={i}

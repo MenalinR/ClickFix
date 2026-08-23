@@ -105,20 +105,15 @@ exports.createJob = async (req, res) => {
     if (requestedWorkerId) {
       jobPayload.requestedWorkerId = requestedWorkerId;
 
-      const requestedTime = jobPayload.scheduledDate.getTime();
-      const SLOT_MS = 2 * 60 * 60 * 1000;
-      const windowStart = new Date(requestedTime - SLOT_MS);
-      const windowEnd = new Date(requestedTime + SLOT_MS);
-
       const conflict = await Job.findOne({
         $or: [
           { workerId: requestedWorkerId },
           { requestedWorkerId: requestedWorkerId },
         ],
         status: {
-          $in: ["Worker Accepted", "Accepted", "On the way", "In progress"],
+          $in: ["Accepted", "On the way", "In progress"],
         },
-        scheduledDate: { $gte: windowStart, $lte: windowEnd },
+        scheduledDate: jobPayload.scheduledDate,
       }).select("scheduledDate status");
 
       if (conflict) {
