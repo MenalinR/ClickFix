@@ -571,7 +571,7 @@ export default function JobRequestsPage() {
             const proposedPrice = j.pricing?.proposedPrice ?? acceptedPrice;
             const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
             const isOverdue =
-              (isAccepted || isOnTheWay) &&
+              isAccepted &&
               j.scheduledDate &&
               new Date(j.scheduledDate).getTime() < Date.now();
             const isReschedulePending =
