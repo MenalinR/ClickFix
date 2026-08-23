@@ -62,14 +62,28 @@ export default function JobTrackingPage() {
 
   const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
   const [destination, setDestination] = useState<LatLng | null>(null);
+  const [shopCoords, setShopCoords] = useState<LatLng | null>(null);
+  const [shopName, setShopName] = useState<string>("");
   const [trackingPhase, setTrackingPhase] = useState<string>("");
   const [paymentStatus, setPaymentStatus] = useState<string>("pending");
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const mapRef = useRef<MapView | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Real road route from the worker to the customer's location.
-  const { routeCoords, distanceText, durationText } = useRoadRoute(workerCoords, destination, token);
+  // While the worker is heading to the hardware shop ("coming" leg), route to
+  // the shop; otherwise route to the customer's own location.
+  const headingToShop = trackingPhase === "coming" && !!shopCoords;
+  const activeDestination = headingToShop ? shopCoords : destination;
+  const destinationLabel = headingToShop
+    ? shopName || "Hardware shop"
+    : "Your location";
+
+  // Real road route from the worker to the current destination.
+  const { routeCoords, distanceText, durationText } = useRoadRoute(
+    workerCoords,
+    activeDestination,
+    token,
+  );
 
   const id = Array.isArray(jobId) ? jobId[0] : jobId;
 
@@ -93,6 +107,13 @@ export default function JobTrackingPage() {
             longitude: d.destination.coordinates[0],
             latitude: d.destination.coordinates[1],
           });
+        }
+        if (d?.shop?.coordinates?.length === 2) {
+          setShopCoords({
+            longitude: d.shop.coordinates[0],
+            latitude: d.shop.coordinates[1],
+          });
+          if (d.shop.name) setShopName(d.shop.name);
         }
         if (d?.worker?.coordinates?.length === 2) {
           setWorkerCoords({
@@ -161,8 +182,8 @@ export default function JobTrackingPage() {
         edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
         animated: true,
       });
-    } else if (destination) {
-      mapRef.current.fitToCoordinates([workerCoords, destination], {
+    } else if (activeDestination) {
+      mapRef.current.fitToCoordinates([workerCoords, activeDestination], {
         edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
         animated: true,
       });
@@ -172,7 +193,7 @@ export default function JobTrackingPage() {
         500,
       );
     }
-  }, [workerCoords, destination, routeCoords]);
+  }, [workerCoords, activeDestination, routeCoords]);
 
   const statusStages: JobStatus[] = [
     "Waiting",
@@ -205,23 +226,23 @@ export default function JobTrackingPage() {
         </View>
 
         {/* Live Map */}
-        {id && (workerCoords || destination) ? (
+        {id && (workerCoords || activeDestination) ? (
           <View style={styles.mapWrap}>
             <MapView
               ref={mapRef}
               provider={PROVIDER_GOOGLE}
               style={styles.map}
               initialRegion={{
-                latitude: (workerCoords || destination)!.latitude,
-                longitude: (workerCoords || destination)!.longitude,
+                latitude: (workerCoords || activeDestination)!.latitude,
+                longitude: (workerCoords || activeDestination)!.longitude,
                 latitudeDelta: 0.02,
                 longitudeDelta: 0.02,
               }}
             >
-              {destination && (
+              {activeDestination && (
                 <Marker
-                  coordinate={destination}
-                  title="Your location"
+                  coordinate={activeDestination}
+                  title={destinationLabel}
                   pinColor={Colors.accent}
                 />
               )}

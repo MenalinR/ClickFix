@@ -1031,9 +1031,10 @@ exports.getJobLiveLocation = async (req, res) => {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
 
+    const { HardwareRequest } = require("../models/Hardware");
+
     let authorized = isJobParticipant(job, req);
     if (!authorized && req.userType === "hardwareShop") {
-      const HardwareRequest = require("../models/Hardware");
       const order = await HardwareRequest.findOne({
         jobId: job._id,
         shopId: req.user._id,
@@ -1044,11 +1045,34 @@ exports.getJobLiveLocation = async (req, res) => {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
+    // If there's an active pickup for this job, expose the shop's fixed
+    // location so trackers can show the worker heading to the shop during the
+    // "coming" (to-shop) leg — before the worker turns toward the customer.
+    let shop = null;
+    try {
+      const order = await HardwareRequest.findOne({
+        jobId: job._id,
+        status: { $in: ["approved", "packing", "ready", "coming"] },
+      })
+        .populate("shopId", "shopName location")
+        .sort({ updatedAt: -1 })
+        .lean();
+      if (order?.shopId?.location?.coordinates?.length === 2) {
+        shop = {
+          name: order.shopId.shopName,
+          coordinates: order.shopId.location.coordinates, // [lng, lat]
+        };
+      }
+    } catch {
+      // non-fatal — tracking still works without the shop pin
+    }
+
     res.status(200).json({
       success: true,
       data: {
         status: job.status,
         destination: job.location, // GeoJSON Point + address
+        shop, // { name, coordinates } while a pickup is active, else null
         worker: job.workerLiveLocation?.coordinates
           ? {
               coordinates: job.workerLiveLocation.coordinates,
