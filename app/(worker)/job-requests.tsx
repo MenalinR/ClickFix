@@ -150,9 +150,9 @@ export default function JobRequestsPage() {
               : filter === "rejected"
                 ? rejectedJobs
                 : [
+                    ...pendingJobs,
                     ...activeJobs,
                     ...negotiatingJobs,
-                    ...pendingJobs,
                     ...awaitingCustomerJobs,
                     ...acceptedJobs,
                     ...completedJobs,
@@ -567,7 +567,11 @@ export default function JobRequestsPage() {
               "Address to be confirmed";
             const requestedDate = formatDate(j.scheduledDate || j.createdAt);
             const acceptedPrice =
-              j.pricing?.totalAmount ?? j.pricing?.serviceCharge ?? 0;
+              j.pricing?.totalAmount ||
+              j.pricing?.serviceCharge ||
+              j.pricing?.negotiatedPrice ||
+              j.pricing?.proposedPrice ||
+              0;
             const proposedPrice = j.pricing?.proposedPrice ?? acceptedPrice;
             const negotiatedPrice = j.pricing?.negotiatedPrice ?? 0;
             const isOverdue =

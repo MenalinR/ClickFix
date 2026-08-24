@@ -175,9 +175,7 @@ export default function WorkerLayout() {
         name="earnings"
         options={{
           title: "Earnings",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="wallet-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
