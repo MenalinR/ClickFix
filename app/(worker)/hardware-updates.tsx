@@ -217,14 +217,16 @@ export default function HardwareUpdatesScreen() {
           Alert.alert("Error", res.message || "Couldn't update order");
           return;
         }
-        await fetchOrders();
+        // Head straight to the customer: set the job "On the way" and open the
+        // route-to-customer map.
+        await startJobAndNavigate(item);
       } catch (e: any) {
         Alert.alert("Error", e?.message || "Couldn't update order");
       } finally {
         setBusyId(null);
       }
     },
-    [token, fetchOrders],
+    [token, startJobAndNavigate],
   );
 
   const renderItem = ({ item }: { item: HardwareRequest }) => {

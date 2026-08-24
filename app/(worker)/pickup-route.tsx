@@ -65,11 +65,25 @@ export default function PickupRouteScreen() {
         Alert.alert("Error", res?.message || "Couldn't mark as picked up");
         return;
       }
-      Alert.alert(
-        "Items picked up",
-        "The customer has been notified. Head to their location next.",
-      );
-      router.back();
+
+      // Start the trip to the customer straight away: flip the job to
+      // "On the way" (so the customer sees "coming to your location") and open
+      // the route-to-customer map.
+      if (jobId) {
+        try {
+          await apiCall(
+            api.jobs.updateStatus(jobId),
+            "PUT",
+            { status: "On the way" },
+            token,
+          );
+        } catch {
+          // non-fatal — the worker can still start it from the order list
+        }
+        router.replace({ pathname: "/job-route", params: { jobId } });
+      } else {
+        router.back();
+      }
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Couldn't mark as picked up");
     } finally {
