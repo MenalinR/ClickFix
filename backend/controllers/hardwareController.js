@@ -3,6 +3,7 @@ const Job = require("../models/Job");
 const HardwareShop = require("../models/HardwareShop");
 const Worker = require("../models/Worker");
 const Message = require("../models/Message");
+const { applyTransportFee } = require("../utils/transportFee");
 
 // @desc    Get all hardware items
 // @route   GET /api/hardware/items
@@ -498,6 +499,15 @@ exports.confirmComing = async (req, res) => {
             timestamp: new Date(),
             note: "Worker heading to hardware shop for pickup",
           });
+          if (
+            req.body.location?.latitude != null &&
+            req.body.location?.longitude != null
+          ) {
+            await applyTransportFee(job, [
+              req.body.location.longitude,
+              req.body.location.latitude,
+            ]);
+          }
           await job.save();
         }
       } catch (e) {

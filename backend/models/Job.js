@@ -79,9 +79,22 @@ const jobSchema = new mongoose.Schema(
       serviceCharge: { type: Number, default: 0 },
       platformFee: { type: Number, default: 0 },
       hardwareCost: { type: Number, default: 0 },
+      transportFee: { type: Number, default: 0 },
       totalAmount: { type: Number, default: 0 },
       proposedPrice: { type: Number, default: 0 },
       negotiatedPrice: { type: Number, default: 0 },
+    },
+    // Snapshot of the worker's travel, taken the first time the job goes
+    // "On the way" — used to compute the distance-based transport fee.
+    // coordinates are [longitude, latitude] (GeoJSON convention).
+    travel: {
+      workerStartLocation: {
+        coordinates: { type: [Number], default: undefined },
+      },
+      viaHardwareShop: Boolean,
+      distanceKm: Number,
+      ratePerKm: Number,
+      computedAt: Date,
     },
     hardwareItems: [
       {

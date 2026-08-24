@@ -4,6 +4,7 @@ const Customer = require("../models/Customer");
 const Message = require("../models/Message");
 const { createNotification } = require("./notificationController");
 const { geocodeAddress } = require("../utils/geocode");
+const { applyTransportFee } = require("../utils/transportFee");
 
 const hasRealCoordinates = (coordinates) =>
   Array.isArray(coordinates) &&
@@ -904,6 +905,17 @@ exports.updateJobStatus = async (req, res) => {
 
     if (req.body.status === "In progress" && !job.actualStartTime) {
       job.actualStartTime = new Date();
+    }
+
+    if (
+      req.body.status === "On the way" &&
+      req.body.location?.latitude != null &&
+      req.body.location?.longitude != null
+    ) {
+      await applyTransportFee(job, [
+        req.body.location.longitude,
+        req.body.location.latitude,
+      ]);
     }
 
     // If completed, update worker's earnings

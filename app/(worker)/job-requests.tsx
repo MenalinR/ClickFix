@@ -2,6 +2,7 @@ import DateTimePicker, {
     DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -257,7 +258,22 @@ export default function JobRequestsPage() {
     if (startingId) return;
     try {
       setStartingId(id);
-      await updateJobStatus(id, "On the way");
+      let location: { latitude: number; longitude: number } | undefined;
+      try {
+        const perm = await Location.requestForegroundPermissionsAsync();
+        if (perm.granted) {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          location = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          };
+        }
+      } catch {
+        // Non-fatal — the job still starts, just without a transport fee.
+      }
+      await updateJobStatus(id, "On the way", location);
       router.push({
         pathname: "/job-route",
         params: { jobId: id, customerName },

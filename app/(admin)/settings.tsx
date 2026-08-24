@@ -58,6 +58,21 @@ export default function AdminSettings() {
   });
   const [prefsSaving, setPrefsSaving] = useState(false);
 
+  const [ratesOpen, setRatesOpen] = useState(false);
+  const [transportRate, setTransportRate] = useState("80");
+  const [ratesSaving, setRatesSaving] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    apiCall(api.settings.get, "GET", undefined, token)
+      .then((res) => {
+        if (res?.success && res.data?.transportRatePerKm != null) {
+          setTransportRate(String(res.data.transportRatePerKm));
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
   useEffect(() => {
     if (profileOpen) {
       setProfileForm({
@@ -89,6 +104,33 @@ export default function AdminSettings() {
         },
       },
     ]);
+  };
+
+  const handleSaveRates = async () => {
+    const rate = Number(transportRate);
+    if (!transportRate.trim() || isNaN(rate) || rate < 0) {
+      Alert.alert("Error", "Enter a valid, non-negative rate.");
+      return;
+    }
+    setRatesSaving(true);
+    try {
+      const res = await apiCall(
+        api.settings.update,
+        "PUT",
+        { transportRatePerKm: rate },
+        token,
+      );
+      if (res?.success) {
+        setRatesOpen(false);
+        Alert.alert("Saved", "Transport rate updated successfully.");
+      } else {
+        Alert.alert("Error", res?.message || "Failed to update rate.");
+      }
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Failed to update rate.");
+    } finally {
+      setRatesSaving(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -234,6 +276,19 @@ export default function AdminSettings() {
           </View>
         </View>
 
+        {/* Platform */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Platform</Text>
+          <View style={styles.sectionContent}>
+            <SettingLink
+              icon="car-outline"
+              label="Transport Rate"
+              hint={`Rs ${transportRate}/km`}
+              onPress={() => setRatesOpen(true)}
+            />
+          </View>
+        </View>
+
         {/* Session */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: "#FF6B6B" }]}>
@@ -338,6 +393,54 @@ export default function AdminSettings() {
               >
                 <Text style={styles.saveBtnText}>
                   {profileSaving ? "Saving…" : "Save"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Transport Rate Modal */}
+      <Modal
+        visible={ratesOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRatesOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Transport Rate</Text>
+              <TouchableOpacity onPress={() => setRatesOpen(false)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.fieldLabel}>Rate per km (LKR)</Text>
+            <TextInput
+              style={styles.input}
+              value={transportRate}
+              onChangeText={setTransportRate}
+              placeholder="80"
+              placeholderTextColor={Colors.textSecondary}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.cancelBtn]}
+                onPress={() => setRatesOpen(false)}
+                disabled={ratesSaving}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.saveBtn]}
+                onPress={handleSaveRates}
+                disabled={ratesSaving}
+              >
+                <Text style={styles.saveBtnText}>
+                  {ratesSaving ? "Saving…" : "Save"}
                 </Text>
               </TouchableOpacity>
             </View>

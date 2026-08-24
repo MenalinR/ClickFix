@@ -212,6 +212,12 @@ export const api = {
     payhereNotify: `${API_URL}/payments/payhere/notify`,
   },
 
+  // Platform settings (admin-configurable rates)
+  settings: {
+    get: `${API_URL}/settings`,
+    update: `${API_URL}/settings`,
+  },
+
   // Health
   health: `${API_URL}/health`,
 };

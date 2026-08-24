@@ -67,6 +67,8 @@ export default function PaymentPage() {
         sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
       0,
     );
+  const transportFee = Number(pricing.transportFee) || 0;
+  const travelDistanceKm = job?.travel?.distanceKm;
   const totalAmount =
     Number(pricing.totalAmount) ||
     serviceCost + hardwareCost ||
@@ -160,6 +162,17 @@ export default function PaymentPage() {
               <View style={styles.costRow}>
                 <Text style={styles.costLabel}>Hardware order</Text>
                 <Text style={styles.costValue}>{hardwareCost} LKR</Text>
+              </View>
+            ) : null}
+            {transportFee > 0 ? (
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>
+                  Transport fee
+                  {travelDistanceKm
+                    ? ` (${travelDistanceKm.toFixed(1)} km)`
+                    : ""}
+                </Text>
+                <Text style={styles.costValue}>{transportFee} LKR</Text>
               </View>
             ) : null}
             <View style={styles.divider} />

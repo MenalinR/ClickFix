@@ -101,7 +101,11 @@ interface StoreState {
     action: "accept" | "decline",
   ) => Promise<void>;
   finalizeJobPrice: (jobId: string, price: number) => Promise<void>;
-  updateJobStatus: (jobId: string, status: string) => Promise<void>;
+  updateJobStatus: (
+    jobId: string,
+    status: string,
+    location?: { latitude: number; longitude: number },
+  ) => Promise<void>;
   cancelJob: (jobId: string, reason?: string) => Promise<void>;
 
   // Unread cancellation notifications count (shared between tab layout and bookings screen)
@@ -606,7 +610,7 @@ export const useStore = create<StoreState>()(
     }
   },
 
-  updateJobStatus: async (jobId: string, status: string) => {
+  updateJobStatus: async (jobId: string, status: string, location) => {
     set({ loading: true, error: null });
     const { token, jobs } = get();
 
@@ -618,7 +622,7 @@ export const useStore = create<StoreState>()(
       const response = await apiCall(
         api.jobs.updateStatus(jobId),
         "PUT",
-        { status },
+        { status, location },
         token,
       );
 

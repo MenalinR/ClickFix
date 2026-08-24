@@ -79,4 +79,46 @@ async function reverseGeocode({ latitude, longitude }) {
   }
 }
 
-module.exports = { geocodeAddress, reverseGeocode };
+// Resolves the driving distance (in km) between two points using the Google
+// Directions API. Points are [longitude, latitude] (GeoJSON convention).
+// Returns null (never throws) when the key is missing or the request fails —
+// callers should treat this as best-effort and skip the fee rather than
+// block the caller's flow.
+async function getRoadDistanceKm(originCoords, destinationCoords) {
+  if (
+    !Array.isArray(originCoords) ||
+    !Array.isArray(destinationCoords) ||
+    originCoords.length !== 2 ||
+    destinationCoords.length !== 2
+  ) {
+    return null;
+  }
+
+  const key =
+    process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_DIRECTIONS_API_KEY;
+  if (!key) return null;
+
+  try {
+    const origin = `${originCoords[1]},${originCoords[0]}`;
+    const destination = `${destinationCoords[1]},${destinationCoords[0]}`;
+    const url =
+      "https://maps.googleapis.com/maps/api/directions/json" +
+      `?origin=${encodeURIComponent(origin)}` +
+      `&destination=${encodeURIComponent(destination)}` +
+      `&mode=driving&key=${key}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== "OK" || !data.routes || !data.routes.length) {
+      return null;
+    }
+
+    const leg = data.routes[0].legs && data.routes[0].legs[0];
+    const meters = leg?.distance?.value;
+    return typeof meters === "number" ? meters / 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { geocodeAddress, reverseGeocode, getRoadDistanceKm };

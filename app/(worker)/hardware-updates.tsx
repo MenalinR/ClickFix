@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -135,10 +136,25 @@ export default function HardwareUpdatesScreen() {
       if (!token) return;
       try {
         setBusyId(item._id);
+        let location: { latitude: number; longitude: number } | undefined;
+        try {
+          const perm = await Location.requestForegroundPermissionsAsync();
+          if (perm.granted) {
+            const pos = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            location = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            };
+          }
+        } catch {
+          // Non-fatal — pickup still proceeds, just without a transport fee.
+        }
         const res = await apiCall(
           api.hardware.confirmComing(item._id),
           "PUT",
-          undefined,
+          { location },
           token,
         );
         if (!res.success) {
@@ -147,7 +163,7 @@ export default function HardwareUpdatesScreen() {
         }
         await fetchOrders();
 
-        // Open the route-to-shop map. The job is now In progress and the
+        // Open the route-to-shop map. The job is now On the way and the
         // shop can see the live location.
         const jobId =
           (item.jobId as any)?._id ||
