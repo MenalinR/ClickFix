@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
     Image,
-    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -58,7 +57,6 @@ export default function JobTrackingPage() {
   const { workers, token } = useStore();
   const worker = workers.find((w) => w.id === workerId);
   const [jobStatus, setJobStatus] = useState<JobStatus>("Accepted");
-  const [showHardwareModal, setShowHardwareModal] = useState(false);
 
   const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
   const [destination, setDestination] = useState<LatLng | null>(null);
@@ -203,11 +201,6 @@ export default function JobTrackingPage() {
     "Completed",
   ];
   const currentStatusIndex = statusStages.indexOf(jobStatus);
-
-  const suggestedHardware = [
-    { id: "1", name: "PVC Pipe (1 inch)", price: 450, status: "suggested" },
-    { id: "2", name: "Pipe Fitting", price: 200, status: "approved" },
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -426,6 +419,7 @@ export default function JobTrackingPage() {
               ]}
             >
               <Text
+                numberOfLines={1}
                 style={[
                   styles.statusBadgeText,
                   jobStatus === "Accepted" && { color: "#1976D2" },
@@ -448,39 +442,6 @@ export default function JobTrackingPage() {
                   ? "Professional has arrived and started working on your issue."
                   : "Job completed! Please review and rate."}
           </Text>
-        </View>
-
-        {/* Hardware Suggestions */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.sectionTitle}>Hardware Needed</Text>
-            <TouchableOpacity onPress={() => setShowHardwareModal(true)}>
-              <Text style={styles.viewAllLink}>View Details</Text>
-            </TouchableOpacity>
-          </View>
-          {suggestedHardware.slice(0, 2).map((item) => (
-            <View key={item.id} style={styles.hardwareItem}>
-              <View>
-                <Text style={styles.hardwareName}>{item.name}</Text>
-                <Text style={styles.hardwarePrice}>{item.price} LKR</Text>
-              </View>
-              <View
-                style={[
-                  styles.approvalBadge,
-                  item.status === "approved" && styles.approvalBadgeApproved,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.approvalText,
-                    item.status === "approved" && styles.approvalTextApproved,
-                  ]}
-                >
-                  {item.status === "approved" ? "✓ Approved" : "⏳ Pending"}
-                </Text>
-              </View>
-            </View>
-          ))}
         </View>
 
         {/* Chat Section */}
@@ -515,57 +476,6 @@ export default function JobTrackingPage() {
           </Text>
         </View>
       </ScrollView>
-
-      {/* Hardware Modal */}
-      <Modal visible={showHardwareModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Hardware Items</Text>
-              <TouchableOpacity onPress={() => setShowHardwareModal(false)}>
-                <Ionicons name="close-outline" size={24} color={Colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {suggestedHardware.map((item) => (
-                <View key={item.id} style={styles.hardwareModalItem}>
-                  <View>
-                    <Text style={styles.hardwareName}>{item.name}</Text>
-                    <Text style={styles.hardwarePrice}>{item.price} LKR</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.approveButton,
-                      item.status === "approved" &&
-                        styles.approveButtonApproved,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.approveButtonText,
-                        item.status === "approved" &&
-                          styles.approveButtonTextApproved,
-                      ]}
-                    >
-                      {item.status === "approved" ? "✓ Approved" : "Approve"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowHardwareModal(false)}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -780,11 +690,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statusCardTitle: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: "bold",
     color: Colors.text,
   },
   statusBadge: {
+    flexShrink: 0,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
