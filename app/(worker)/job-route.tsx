@@ -14,7 +14,7 @@ import { openGoogleMapsDirections } from "../../utils/openInMaps";
 
 export default function JobRouteScreen() {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, updateJobStatus } = useStore();
   const params = useLocalSearchParams();
 
   const jobId = (Array.isArray(params.jobId) ? params.jobId[0] : params.jobId) as
@@ -112,16 +112,11 @@ export default function JobRouteScreen() {
     if (!jobId || !token) return;
     try {
       setArriving(true);
-      const res = await apiCall(
-        api.jobs.updateStatus(jobId),
-        "PUT",
-        { status: "In progress" },
-        token,
-      );
-      if (!res?.success) {
-        Alert.alert("Error", res?.message || "Could not update job status");
-        return;
-      }
+      // Go through the store action (not a raw apiCall) so the shared
+      // `jobs` list updates too — otherwise Job Requests keeps showing
+      // "On the way" after we navigate back, since it reads from the
+      // same store state.
+      await updateJobStatus(jobId, "In progress");
       // Go back to job details where the worker manages the active job.
       router.back();
     } catch (e: any) {
@@ -185,7 +180,7 @@ export default function JobRouteScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={20} color="white" />
-              <Text style={styles.arrivedBtnText}>I've Arrived — Start Job</Text>
+              <Text style={styles.arrivedBtnText}>I've Arrived</Text>
             </>
           )}
         </TouchableOpacity>
