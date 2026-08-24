@@ -249,13 +249,6 @@ export default function JobRequestsPage() {
     );
   };
 
-  const handleViewDetails = (id: string) => {
-    router.push({
-      pathname: "/job-details",
-      params: { jobId: id },
-    });
-  };
-
   const handleStartJob = async (id: string, customerName: string) => {
     if (hasPendingHardware(id)) {
       router.push({ pathname: "/hardware-updates" });
@@ -609,13 +602,12 @@ export default function JobRequestsPage() {
               badgeLabel = "✕ Cancelled";
             }
             return (
-              <TouchableOpacity
+              <View
                 key={id}
                 style={[
                   styles.jobCard,
                   isOverdue && styles.jobCardOverdue,
                 ]}
-                onPress={() => handleViewDetails(id)}
               >
                 <View style={styles.jobCardHeader}>
                   <View style={{ flex: 1, marginRight: 8 }}>
@@ -964,7 +956,7 @@ export default function JobRequestsPage() {
                     </TouchableOpacity>
                   </View>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           })
         )}
