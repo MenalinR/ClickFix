@@ -399,7 +399,7 @@ export default function JobTrackingPage() {
                   idx <= currentStatusIndex && styles.statusLabelActive,
                 ]}
               >
-                {status}
+                {status === "In progress" ? "Arrived" : status}
               </Text>
               {idx < statusStages.length - 1 && (
                 <View
@@ -435,7 +435,7 @@ export default function JobTrackingPage() {
               >
                 {jobStatus === "Accepted" && "✓ Accepted"}
                 {jobStatus === "On the way" && "🚗 On the way"}
-                {jobStatus === "In progress" && "🔧 In Progress"}
+                {jobStatus === "In progress" && "✅ Arrived"}
               </Text>
             </View>
           </View>

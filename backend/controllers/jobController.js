@@ -902,6 +902,10 @@ exports.updateJobStatus = async (req, res) => {
       note: req.body.note,
     });
 
+    if (req.body.status === "In progress" && !job.actualStartTime) {
+      job.actualStartTime = new Date();
+    }
+
     // If completed, update worker's earnings
     if (req.body.status === "Completed" && req.userType === "worker") {
       const worker = await Worker.findById(job.workerId);
@@ -911,6 +915,27 @@ exports.updateJobStatus = async (req, res) => {
     }
 
     await job.save();
+
+    // Notify the customer when the worker arrives and starts the job.
+    if (req.body.status === "In progress" && job.customerId) {
+      try {
+        const worker = await Worker.findById(job.workerId).select("name");
+        await createNotification({
+          recipient: job.customerId,
+          recipientModel: "Customer",
+          type: "JOB_IN_PROGRESS",
+          title: "Worker has arrived",
+          message: `${worker?.name || "Your worker"} has arrived and started your ${job.serviceType} job.`,
+          data: {
+            jobId: job._id.toString(),
+            workerId: job.workerId ? job.workerId.toString() : undefined,
+          },
+          actionUrl: `/(customer)/job-tracking?jobId=${job._id}`,
+        });
+      } catch (notifErr) {
+        console.error("Error creating in-progress notification:", notifErr);
+      }
+    }
 
     // Notify everyone tracking this job (customer, shop) of the new status.
     const io = req.app.get("io");

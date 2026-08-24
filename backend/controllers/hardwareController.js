@@ -481,16 +481,20 @@ exports.confirmComing = async (req, res) => {
     request.status = "coming";
     await request.save();
 
-    // Start the job at the same time — the worker heading to the shop marks
-    // the job as actively in progress.
+    // The worker is now traveling — first to the shop, then to the
+    // customer — so the job is "on the way", not yet actually in progress.
     if (request.jobId) {
       try {
         const job = await Job.findById(request.jobId);
-        if (job && job.status !== "In progress" && job.status !== "Completed") {
-          job.status = "In progress";
-          if (!job.actualStartTime) job.actualStartTime = new Date();
+        if (
+          job &&
+          job.status !== "On the way" &&
+          job.status !== "In progress" &&
+          job.status !== "Completed"
+        ) {
+          job.status = "On the way";
           job.timeline.push({
-            status: "In progress",
+            status: "On the way",
             timestamp: new Date(),
             note: "Worker heading to hardware shop for pickup",
           });
