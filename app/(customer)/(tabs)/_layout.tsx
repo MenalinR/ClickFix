@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { api, apiCall } from "../../../constants/api";
 import { Colors } from "../../../constants/Colors";
@@ -52,7 +52,8 @@ export default function CustomerTabsLayout() {
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const lastSeenCancelled = useStore((s) => s.lastSeenCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
-  const [unreadReschedule, setUnreadReschedule] = useState(0);
+  const unreadReschedule = useStore((s) => s.unreadReschedule);
+  const setUnreadReschedule = useStore((s) => s.setUnreadReschedule);
   const unreadBookings =
     Math.max(0, unreadCancelled - lastSeenCancelled) + unreadReschedule;
 

@@ -41,6 +41,8 @@ export default function BookingsScreen() {
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
   const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
+  const unreadReschedule = useStore((s) => s.unreadReschedule);
+  const setUnreadReschedule = useStore((s) => s.setUnreadReschedule);
 
   const fetchUnreadCancelled = useCallback(async () => {
     if (!token) return;
@@ -81,9 +83,32 @@ export default function BookingsScreen() {
     setLastSeenCancelled(unreadCancelled);
   }, [unreadCancelled, setLastSeenCancelled]);
 
+  const markRescheduleAsRead = useCallback(async () => {
+    if (!token || unreadReschedule === 0) return;
+    setUnreadReschedule(0);
+    try {
+      await apiCall(
+        `${api.notifications.markAllAsRead}?types=JOB_RESCHEDULE_PROPOSED`,
+        "PUT",
+        undefined,
+        token,
+      );
+    } catch {
+      // non-fatal
+    }
+  }, [token, unreadReschedule, setUnreadReschedule]);
+
   useEffect(() => {
     fetchUnreadCancelled();
   }, [fetchUnreadCancelled]);
+
+  const loadBookings = useCallback(() => {
+    if (!token) return;
+    setLoading(true);
+    fetchJobs().finally(() => setLoading(false));
+    dismissBookingsTabBadge();
+    markRescheduleAsRead();
+  }, [token, fetchJobs, dismissBookingsTabBadge, markRescheduleAsRead]);
 
   const handleApprove = async (jobId: string) => {
     await customerRespondToJob(jobId, "approve");
@@ -158,12 +183,8 @@ export default function BookingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (token) {
-        setLoading(true);
-        fetchJobs().finally(() => setLoading(false));
-        dismissBookingsTabBadge();
-      }
-    }, [token, fetchJobs, dismissBookingsTabBadge]),
+      loadBookings();
+    }, [loadBookings]),
   );
 
   const bookings = useMemo(() => (Array.isArray(jobs) ? jobs : []), [jobs]);
@@ -231,7 +252,9 @@ export default function BookingsScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.heading}>Booking History</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={loadBookings} disabled={loading}>
+            <Ionicons name="refresh" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Filter Tabs */}

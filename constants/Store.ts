@@ -124,6 +124,11 @@ interface StoreState {
   setUnreadDocuments: (count: number) => void;
   unreadHardware: number;
   setUnreadHardware: (count: number) => void;
+
+  // Customer bottom-tab unread reschedule-proposal count — same sharing
+  // pattern as the worker badges above.
+  unreadReschedule: number;
+  setUnreadReschedule: (count: number) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -148,6 +153,8 @@ export const useStore = create<StoreState>()(
   setUnreadDocuments: (count: number) => set({ unreadDocuments: count }),
   unreadHardware: 0,
   setUnreadHardware: (count: number) => set({ unreadHardware: count }),
+  unreadReschedule: 0,
+  setUnreadReschedule: (count: number) => set({ unreadReschedule: count }),
 
   // ============================================
   // AUTH ACTIONS

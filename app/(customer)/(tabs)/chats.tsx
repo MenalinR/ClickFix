@@ -15,7 +15,7 @@ import { ChatSummary, useChatList } from "../../../hooks/useChatList";
 
 export default function CustomerChatsScreen() {
   const router = useRouter();
-  const { chats, loading } = useChatList();
+  const { chats, loading, refresh } = useChatList();
 
   const renderItem = ({ item }: { item: ChatSummary }) => {
     const otherName = item.otherUser?.name || "Worker";
@@ -85,7 +85,9 @@ export default function CustomerChatsScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.heading}>Chats</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={refresh} disabled={loading}>
+          <Ionicons name="refresh" size={24} color={Colors.primary} />
+        </TouchableOpacity>
       </View>
       {loading && chats.length === 0 ? (
         <View style={styles.loadingWrap}>
