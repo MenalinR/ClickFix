@@ -39,7 +39,7 @@ const socketBaseURL = () => {
 const PHASE_LABEL: Record<string, string> = {
   coming: "Heading to the hardware shop",
   "On the way": "On the way to your location",
-  "In progress": "Working at your location",
+  "In progress": "Professional has arrived",
 };
 
 // Map the backend's full status enum onto the 5 timeline stages.
@@ -113,14 +113,23 @@ export default function JobTrackingPage() {
           });
           if (d.shop.name) setShopName(d.shop.name);
         }
+        const normalizedStatus = d?.status ? normalizeStatus(d.status) : null;
         if (d?.worker?.coordinates?.length === 2) {
           setWorkerCoords({
             longitude: d.worker.coordinates[0],
             latitude: d.worker.coordinates[1],
           });
-          if (d.worker.phase) setTrackingPhase(d.worker.phase);
+          // The worker's phase ping stops once they arrive (no more live
+          // movement to broadcast), so on a fresh mount it can still read
+          // the last-broadcast "On the way" even though the job itself has
+          // already moved on — trust the job's actual status over it.
+          if (normalizedStatus === "In progress") {
+            setTrackingPhase("In progress");
+          } else if (d.worker.phase) {
+            setTrackingPhase(d.worker.phase);
+          }
         }
-        if (d?.status) setJobStatus(normalizeStatus(d.status));
+        if (normalizedStatus) setJobStatus(normalizedStatus);
       } catch {
         // silent — the socket stream will fill in shortly
       }
