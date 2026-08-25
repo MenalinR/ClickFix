@@ -565,6 +565,7 @@ export default function JobRequestsPage() {
             const isAwaiting = status === "worker accepted";
             const isNegotiating = status === "negotiating";
             const isCancelled = status === "cancelled";
+            const isRejected = status === "rejected";
             const isOnTheWay = status === "on the way";
             const isInProgress = status === "in progress";
             const isCompleted = status === "completed";
@@ -616,6 +617,9 @@ export default function JobRequestsPage() {
             } else if (isCancelled) {
               badgeColor = "#C62828";
               badgeLabel = "✕ Cancelled";
+            } else if (isRejected) {
+              badgeColor = "#C62828";
+              badgeLabel = "✕ Rejected";
             }
             return (
               <View
@@ -725,6 +729,11 @@ export default function JobRequestsPage() {
                     <Text style={styles.priceValue}>
                       {(negotiatedPrice || proposedPrice) + " LKR"}
                     </Text>
+                  </View>
+                ) : isRejected ? (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.priceLabel}>Agreed Price:</Text>
+                    <Text style={styles.priceValue}>0 LKR</Text>
                   </View>
                 ) : (
                   <View style={styles.priceContainer}>
