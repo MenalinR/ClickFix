@@ -49,6 +49,8 @@ function getFilenameFromUri(uri: string): string {
 export default function DocumentsScreen() {
   const router = useRouter();
   const { user, token } = useStore();
+  const unreadDocuments = useStore((s) => s.unreadDocuments);
+  const setUnreadDocuments = useStore((s) => s.setUnreadDocuments);
   const [loading, setLoading] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<any>(null);
 
@@ -83,6 +85,17 @@ export default function DocumentsScreen() {
       console.error("Error fetching verification status:", error);
     } finally {
       setLoading(false);
+    }
+    if (unreadDocuments > 0) {
+      setUnreadDocuments(0);
+      apiCall(
+        `${api.notifications.markAllAsRead}?types=DOCUMENT_UPLOADED,DOCUMENT_VERIFIED,DOCUMENT_REJECTED`,
+        "PUT",
+        undefined,
+        token!,
+      ).catch(() => {
+        // non-fatal
+      });
     }
   };
 
@@ -229,7 +242,12 @@ export default function DocumentsScreen() {
                 <Ionicons name="arrow-back" size={24} color={Colors.primary} />
               </TouchableOpacity>
               <ThemedText style={styles.title}>Documents</ThemedText>
-              <View style={{ width: 40 }} />
+              <TouchableOpacity
+                onPress={fetchVerificationStatus}
+                disabled={loading}
+              >
+                <Ionicons name="refresh" size={24} color={Colors.primary} />
+              </TouchableOpacity>
             </View>
             <ThemedText style={styles.subtitle}>
               Upload your ID proof for verification.

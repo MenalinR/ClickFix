@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
@@ -30,9 +30,12 @@ export default function WorkerLayout() {
   const lastSeenCancelled = useStore((s) => s.lastSeenCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
   const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
-  const [unreadJobs, setUnreadJobs] = useState(0);
-  const [unreadDocuments, setUnreadDocuments] = useState(0);
-  const [unreadHardware, setUnreadHardware] = useState(0);
+  const unreadJobs = useStore((s) => s.unreadJobs);
+  const setUnreadJobs = useStore((s) => s.setUnreadJobs);
+  const unreadDocuments = useStore((s) => s.unreadDocuments);
+  const setUnreadDocuments = useStore((s) => s.setUnreadDocuments);
+  const unreadHardware = useStore((s) => s.unreadHardware);
+  const setUnreadHardware = useStore((s) => s.setUnreadHardware);
   const visibleCancelled = Math.max(0, unreadCancelled - lastSeenCancelled);
   const jobsBadgeCount = unreadJobs + visibleCancelled;
 

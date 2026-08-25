@@ -41,7 +41,18 @@ export default function JobRequestsPage() {
   const unreadCancelled = useStore((s) => s.unreadCancelled);
   const setUnreadCancelled = useStore((s) => s.setUnreadCancelled);
   const setLastSeenCancelled = useStore((s) => s.setLastSeenCancelled);
+  const unreadJobs = useStore((s) => s.unreadJobs);
+  const setUnreadJobs = useStore((s) => s.setUnreadJobs);
   const workerId = user?._id || (user as any)?.id;
+
+  const JOB_NOTIFICATION_TYPES = [
+    "JOB_ASSIGNED",
+    "JOB_REQUESTED",
+    "JOB_COMPLETED",
+    "REVIEW_RECEIVED",
+    "JOB_RESCHEDULE_RESPONDED",
+    "GENERAL",
+  ];
 
   const markCancelledAsRead = useCallback(async () => {
     if (!token || unreadCancelled === 0) return;
@@ -72,18 +83,33 @@ export default function JobRequestsPage() {
   const [showRescheduleTime, setShowRescheduleTime] = useState(false);
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
 
-  useEffect(() => {
-    if (token) {
-      setLoading(true);
-      fetchJobs().finally(() => setLoading(false));
-      apiCall(api.hardware.getRequests, "GET", undefined, token)
-        .then((res) => {
-          if (res.success) setHardwareRequests(res.data || []);
-        })
-        .catch(() => {
-          // non-fatal
-        });
+  const loadJobs = useCallback(() => {
+    if (!token) return;
+    setLoading(true);
+    fetchJobs().finally(() => setLoading(false));
+    apiCall(api.hardware.getRequests, "GET", undefined, token)
+      .then((res) => {
+        if (res.success) setHardwareRequests(res.data || []);
+      })
+      .catch(() => {
+        // non-fatal
+      });
+    setLastSeenCancelled(unreadCancelled);
+    if (unreadJobs > 0) {
+      setUnreadJobs(0);
+      apiCall(
+        `${api.notifications.markAllAsRead}?types=${JOB_NOTIFICATION_TYPES.join(",")}`,
+        "PUT",
+        undefined,
+        token,
+      ).catch(() => {
+        // non-fatal
+      });
     }
+  }, [token, unreadCancelled, unreadJobs]);
+
+  useEffect(() => {
+    loadJobs();
   }, [token]);
 
   // Most recent hardware request per job (backend returns newest first).
@@ -411,7 +437,9 @@ export default function JobRequestsPage() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.heading}>Job Requests</Text>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={loadJobs} disabled={loading}>
+            <Ionicons name="refresh" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Filter Tabs */}

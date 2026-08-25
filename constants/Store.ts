@@ -115,6 +115,15 @@ interface StoreState {
   // used to suppress the bottom-nav badge until NEW ones arrive.
   lastSeenCancelled: number;
   setLastSeenCancelled: (count: number) => void;
+
+  // Worker bottom-tab unread-notification badges — shared between the tab
+  // layout (renders them) and each screen (clears them on open/refresh).
+  unreadJobs: number;
+  setUnreadJobs: (count: number) => void;
+  unreadDocuments: number;
+  setUnreadDocuments: (count: number) => void;
+  unreadHardware: number;
+  setUnreadHardware: (count: number) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -133,6 +142,12 @@ export const useStore = create<StoreState>()(
   setUnreadCancelled: (count: number) => set({ unreadCancelled: count }),
   lastSeenCancelled: 0,
   setLastSeenCancelled: (count: number) => set({ lastSeenCancelled: count }),
+  unreadJobs: 0,
+  setUnreadJobs: (count: number) => set({ unreadJobs: count }),
+  unreadDocuments: 0,
+  setUnreadDocuments: (count: number) => set({ unreadDocuments: count }),
+  unreadHardware: 0,
+  setUnreadHardware: (count: number) => set({ unreadHardware: count }),
 
   // ============================================
   // AUTH ACTIONS

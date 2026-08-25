@@ -83,6 +83,8 @@ const STATUS_HINT: Record<OrderStatus, string> = {
 export default function HardwareUpdatesScreen() {
   const router = useRouter();
   const { token, updateJobStatus } = useStore();
+  const unreadHardware = useStore((s) => s.unreadHardware);
+  const setUnreadHardware = useStore((s) => s.setUnreadHardware);
   const [orders, setOrders] = useState<HardwareRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,7 +119,18 @@ export default function HardwareUpdatesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+    if (unreadHardware > 0) {
+      setUnreadHardware(0);
+      apiCall(
+        `${api.notifications.markAllAsRead}?types=HARDWARE_REQUEST,HARDWARE_ORDER`,
+        "PUT",
+        undefined,
+        token,
+      ).catch(() => {
+        // non-fatal
+      });
+    }
+  }, [token, unreadHardware]);
 
   useFocusEffect(
     useCallback(() => {
@@ -425,7 +438,9 @@ export default function HardwareUpdatesScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.heading}>Hardware</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={onRefresh} disabled={loading || refreshing}>
+            <Ionicons name="refresh" size={24} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
         <Text style={styles.subheading}>Order updates from shops</Text>
       </View>
