@@ -308,6 +308,22 @@ export default function AdminBookings() {
                     <Text style={styles.detailText}>
                       Amount: {amount || 0} LKR
                     </Text>
+                    {(booking.status || "").toLowerCase() === "completed" ? (
+                      booking.payment?.status === "completed" ? (
+                        <View style={styles.paidBadge}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={12}
+                            color="#2E7D32"
+                          />
+                          <Text style={styles.paidBadgeText}>Paid</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.unpaidBadge}>
+                          <Text style={styles.unpaidBadgeText}>Unpaid</Text>
+                        </View>
+                      )
+                    ) : null}
                   </View>
                 </View>
               </View>
@@ -460,6 +476,31 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     color: Colors.text,
+  },
+  paidBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#2E7D3220",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  paidBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2E7D32",
+  },
+  unpaidBadge: {
+    backgroundColor: "#C6282820",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  unpaidBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#C62828",
   },
   actions: {
     flexDirection: "row",
