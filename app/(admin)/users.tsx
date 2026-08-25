@@ -228,6 +228,7 @@ function UserDetail({ user }: { user: UserRow }) {
     const u = user.raw || {};
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const address =
+        u?.addresses?.find((a: any) => a.isDefault)?.address ||
         u?.addresses?.[0]?.address ||
         u?.location?.address ||
         u?.address ||

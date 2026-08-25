@@ -281,7 +281,11 @@ export default function AdminBookings() {
                   )}
                   {(() => {
                     const jobAddr = booking.location?.address;
-                    const customerAddr = booking.customerId?.addresses?.[0]?.address;
+                    const customerAddr =
+                      booking.customerId?.addresses?.find(
+                        (a: any) => a.isDefault,
+                      )?.address ||
+                      booking.customerId?.addresses?.[0]?.address;
                     const resolvedAddr =
                       jobAddr && jobAddr !== "Address to be confirmed"
                         ? jobAddr

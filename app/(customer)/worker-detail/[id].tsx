@@ -237,7 +237,10 @@ export default function WorkerProfile() {
         }
       }
 
-      const addressCoords = (user as any)?.addresses?.[0]?.location?.coordinates;
+      const defaultAddress =
+        (user as any)?.addresses?.find((a: any) => a.isDefault) ||
+        (user as any)?.addresses?.[0];
+      const addressCoords = defaultAddress?.location?.coordinates;
       const hasRealCoords =
         Array.isArray(addressCoords) &&
         addressCoords.length === 2 &&
@@ -252,7 +255,7 @@ export default function WorkerProfile() {
         location: {
           type: "Point",
           coordinates: hasRealCoords ? addressCoords : [79.8612, 6.9271],
-          address: (user as any)?.addresses?.[0]?.address || "",
+          address: defaultAddress?.address || "",
         },
       });
       setModalVisible(false);

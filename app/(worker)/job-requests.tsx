@@ -572,8 +572,10 @@ export default function JobRequestsPage() {
             const j = job as any;
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
-              j.customerId?.addresses?.[0]?.address ||
               j.location?.address ||
+              j.customerId?.addresses?.find((a: any) => a.isDefault)
+                ?.address ||
+              j.customerId?.addresses?.[0]?.address ||
               "Address to be confirmed";
             const requestedDate = formatDate(j.scheduledDate || j.createdAt);
             const acceptedPrice =
