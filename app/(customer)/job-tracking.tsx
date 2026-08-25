@@ -193,15 +193,6 @@ export default function JobTrackingPage() {
     }
   }, [workerCoords, activeDestination, routeCoords]);
 
-  const statusStages: JobStatus[] = [
-    "Waiting",
-    "Accepted",
-    "On the way",
-    "In progress",
-    "Completed",
-  ];
-  const currentStatusIndex = statusStages.indexOf(jobStatus);
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -357,54 +348,6 @@ export default function JobTrackingPage() {
             <Text style={styles.reviewBtnText}>Leave a Review for {worker.name}</Text>
           </TouchableOpacity>
         )}
-
-        {/* Job Status Timeline */}
-        <Text style={styles.sectionTitle}>Job Progress</Text>
-        <View style={styles.timeline}>
-          {statusStages.map((status, idx) => (
-            <View key={status} style={{ flex: 1, alignItems: "center" }}>
-              <View
-                style={[
-                  styles.statusCircle,
-                  idx <= currentStatusIndex && styles.statusCircleActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusIcon,
-                    idx <= currentStatusIndex && styles.statusIconActive,
-                  ]}
-                >
-                  {idx === 0
-                    ? "🔔"
-                    : idx === 1
-                      ? "✓"
-                      : idx === 2
-                        ? "🚗"
-                        : idx === 3
-                          ? "🔧"
-                          : "✅"}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.statusLabel,
-                  idx <= currentStatusIndex && styles.statusLabelActive,
-                ]}
-              >
-                {status === "In progress" ? "Arrived" : status}
-              </Text>
-              {idx < statusStages.length - 1 && (
-                <View
-                  style={[
-                    styles.progressLine,
-                    idx < currentStatusIndex && styles.progressLineActive,
-                  ]}
-                />
-              )}
-            </View>
-          ))}
-        </View>
 
         {/* Current Status Card */}
         <View style={styles.statusCard}>
