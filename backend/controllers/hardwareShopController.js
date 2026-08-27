@@ -1,6 +1,7 @@
 const { HardwareItem, HardwareRequest } = require("../models/Hardware");
 const HardwareShop = require("../models/HardwareShop");
 const { reverseGeocode } = require("../utils/geocode");
+const { uploadBufferToCloudinary } = require("../utils/upload");
 
 // @desc    Set the shop's map location from the shop device's GPS
 // @route   PUT /api/hardwareShop/location
@@ -335,12 +336,10 @@ exports.uploadShopImage = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+    const imageUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "shop-images",
+    );
 
     const shop = await HardwareShop.findByIdAndUpdate(
       req.user._id,
@@ -409,12 +408,10 @@ exports.uploadItemImage = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+    const imageUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "hardware-items",
+    );
 
     res.status(200).json({
       success: true,

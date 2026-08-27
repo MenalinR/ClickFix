@@ -1,5 +1,6 @@
 const Customer = require("../models/Customer");
 const { geocodeAddress } = require("../utils/geocode");
+const { uploadBufferToCloudinary } = require("../utils/upload");
 
 // @desc    List all customers (admin)
 // @route   GET /api/customers
@@ -295,12 +296,10 @@ exports.uploadProfileImage = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+    const imageUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "profile-images",
+    );
 
     customer.image = imageUrl;
     await customer.save();

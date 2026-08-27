@@ -5,6 +5,7 @@ const Message = require("../models/Message");
 const { createNotification } = require("./notificationController");
 const { geocodeAddress } = require("../utils/geocode");
 const { applyTransportFee } = require("../utils/transportFee");
+const { uploadBufferToCloudinary } = require("../utils/upload");
 
 const hasRealCoordinates = (coordinates) =>
   Array.isArray(coordinates) &&
@@ -811,12 +812,10 @@ exports.uploadJobImage = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+    const imageUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "job-images",
+    );
 
     res.status(200).json({
       success: true,

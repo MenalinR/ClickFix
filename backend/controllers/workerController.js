@@ -3,6 +3,7 @@ const Review = require("../models/Review");
 const Admin = require("../models/Admin");
 const path = require("path");
 const { createNotification } = require("./notificationController");
+const { uploadBufferToCloudinary } = require("../utils/upload");
 
 // @desc    Get all workers
 // @route   GET /api/workers
@@ -321,12 +322,10 @@ exports.uploadIDProof = async (req, res) => {
       });
     }
 
-    // Store a relative path; the client resolves it against the current API host.
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const fileUrl = `/uploads/${relativePath}`;
+    const fileUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "id-proofs",
+    );
 
     // Update ID proof with accessible file URL
     worker.idProof = {
@@ -440,11 +439,10 @@ exports.uploadExperienceDocument = async (req, res) => {
     let fileUrl = "";
 
     if (req.file) {
-      const relativePath = req.file.path
-        .split("uploads")[1]
-        .replace(/\\/g, "/")
-        .replace(/^\//, "");
-      fileUrl = `/uploads/${relativePath}`;
+      fileUrl = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "certificates",
+      );
     }
 
     // Add experience entry; certificate is optional
@@ -531,12 +529,10 @@ exports.uploadEducationDocument = async (req, res) => {
       });
     }
 
-    // Store a relative path; the client resolves it against the current API host.
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const fileUrl = `/uploads/${relativePath}`;
+    const fileUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "education-documents",
+    );
 
     // Add education document with accessible file URL
     const newDocument = {
@@ -631,11 +627,10 @@ exports.updateExperienceDocument = async (req, res) => {
 
     let fileUrl = document.url || "";
     if (req.file) {
-      const relativePath = req.file.path
-        .split("uploads")[1]
-        .replace(/\\/g, "/")
-        .replace(/^\//, "");
-      fileUrl = `/uploads/${relativePath}`;
+      fileUrl = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "certificates",
+      );
     }
 
     document.title = title.trim();
@@ -717,11 +712,10 @@ exports.updateEducationDocument = async (req, res) => {
 
     let fileUrl = document.url || "";
     if (req.file) {
-      const relativePath = req.file.path
-        .split("uploads")[1]
-        .replace(/\\/g, "/")
-        .replace(/^\//, "");
-      fileUrl = `/uploads/${relativePath}`;
+      fileUrl = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "education-documents",
+      );
     }
 
     document.name = documentName.trim();
@@ -1115,12 +1109,10 @@ exports.uploadProfileImage = async (req, res) => {
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const relativePath = req.file.path
-      .split("uploads")[1]
-      .replace(/\\/g, "/")
-      .replace(/^\//, "");
-    const imageUrl = `${baseUrl}/uploads/${relativePath}`;
+    const imageUrl = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "profile-images",
+    );
 
     worker.image = imageUrl;
     await worker.save();

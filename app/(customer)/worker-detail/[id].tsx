@@ -212,14 +212,26 @@ export default function WorkerProfile() {
     try {
       const workerId = worker._id || worker.id;
 
-      // Upload any selected photos, collect their URLs
+      // Upload any selected photos/videos, collect their URLs
+      const MIME_BY_EXT: Record<string, string> = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        mp4: "video/mp4",
+        mov: "video/quicktime",
+        avi: "video/x-msvideo",
+        webm: "video/webm",
+        mkv: "video/x-matroska",
+      };
       const imageUrls: string[] = [];
       for (const uri of media as string[]) {
         try {
           const filename = uri.split("/").pop() || `photo-${Date.now()}.jpg`;
           const match = /\.(\w+)$/.exec(filename);
           const ext = (match?.[1] || "jpg").toLowerCase();
-          const mime = ext === "png" ? "image/png" : "image/jpeg";
+          const mime = MIME_BY_EXT[ext] || "image/jpeg";
           const formData = new FormData();
           formData.append("document", {
             uri,

@@ -1,46 +1,35 @@
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const cloudinary = require("cloudinary").v2;
 
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure local storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = path.join(uploadDir, req.uploadFolder || "documents");
-    if (!fs.existsSync(folder)) {
-      fs.mkdirSync(folder, { recursive: true });
-    }
-    cb(null, folder);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
-    );
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Upload documents (ID proofs, certificates, etc)
+// Hold the file in memory rather than writing it to local disk — the
+// backend's filesystem is ephemeral in production (Render), so anything
+// written there is lost on every restart/redeploy. The buffer gets
+// forwarded to Cloudinary (see uploadBufferToCloudinary below) for
+// permanent storage instead.
+const storage = multer.memoryStorage();
+
+// Upload documents (ID proofs, certificates, job photos/videos, etc)
 exports.uploadDocument = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB — video clips need more room than photos
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
+    const allowedExt = /\.(jpe?g|png|gif|webp|pdf|mp4|mov|avi|webm|mkv)$/i;
+    const extname = allowedExt.test(file.originalname);
+    const mimetype =
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/") ||
+      file.mimetype === "application/pdf";
 
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error("Only images and PDF files are allowed!"));
+      cb(new Error("Only images, videos, and PDF files are allowed!"));
     }
   },
 }).single("document");
@@ -62,16 +51,18 @@ exports.optionalUploadDocument = (req, res, next) => {
   });
 };
 
-// Delete file from local storage
-exports.deleteFile = async (filePath) => {
-  try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error("Error deleting file:", error);
-    return false;
-  }
+// Uploads an in-memory file buffer (from the multer middleware above) to
+// Cloudinary and resolves with its permanent, secure URL. `folder` groups
+// uploads in the Cloudinary dashboard (e.g. "job-images", "documents").
+exports.uploadBufferToCloudinary = (fileBuffer, folder) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: `clickfix/${folder || "documents"}`, resource_type: "auto" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      },
+    );
+    uploadStream.end(fileBuffer);
+  });
 };
