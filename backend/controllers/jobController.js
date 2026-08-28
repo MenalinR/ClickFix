@@ -600,11 +600,20 @@ exports.proposeReschedule = async (req, res) => {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
 
-    if (!job.workerId || job.workerId.toString() !== req.user._id.toString()) {
+    const isAssigned =
+      job.workerId && job.workerId.toString() === req.user._id.toString();
+    const isRequested =
+      job.requestedWorkerId &&
+      job.requestedWorkerId.toString() === req.user._id.toString();
+    if (!isAssigned && !isRequested) {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
-    if (!["Accepted", "On the way"].includes(job.status)) {
+    if (
+      !["Pending", "Worker Accepted", "Negotiating", "Accepted", "On the way"].includes(
+        job.status,
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message: "This job can't be rescheduled right now",

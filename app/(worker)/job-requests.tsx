@@ -207,34 +207,8 @@ export default function JobRequestsPage() {
 
   const jobId = (j: any) => j._id || j.id;
 
-  const SLOT_MS = 2 * 60 * 60 * 1000;
-  const workerBusyTimes = [
-    ...negotiatingJobs,
-    ...awaitingCustomerJobs,
-    ...acceptedJobs,
-  ]
-    .filter((j: any) => j.scheduledDate)
-    .map((j: any) => new Date(j.scheduledDate).getTime());
-
-  const hasConflictWith = (job: any) => {
-    const t = job.scheduledDate
-      ? new Date(job.scheduledDate).getTime()
-      : null;
-    if (t == null) return false;
-    return workerBusyTimes.some(
-      (busy) => Math.abs(busy - t) < SLOT_MS,
-    );
-  };
-
   const handleAcceptJob = async (id: string, job: any) => {
     if (acceptingId) return;
-    if (hasConflictWith(job)) {
-      Alert.alert(
-        "Time slot already booked",
-        "You already accepted another job at this time. You can only accept one job per time slot.",
-      );
-      return;
-    }
     const raw = (priceInputs[id] || "").trim();
     const price = Number(raw);
     if (!raw || isNaN(price) || price <= 0) {
@@ -813,39 +787,63 @@ export default function JobRequestsPage() {
                 )}
 
                 {isPending && (
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.rejectButton]}
-                      onPress={() => handleRejectJob(id)}
-                    >
-                      <Ionicons
-                        name="close-circle-outline"
-                        size={20}
-                        color="#FF6B6B"
-                      />
-                      <Text style={styles.rejectButtonText}>Reject</Text>
-                    </TouchableOpacity>
+                  <>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={[styles.button, styles.rejectButton]}
+                        onPress={() => handleRejectJob(id)}
+                      >
+                        <Ionicons
+                          name="close-circle-outline"
+                          size={20}
+                          color="#FF6B6B"
+                        />
+                        <Text style={styles.rejectButtonText}>Reject</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.button,
+                          styles.acceptButton,
+                          acceptingId === id && { opacity: 0.5 },
+                        ]}
+                        onPress={() => handleAcceptJob(id, job)}
+                        disabled={acceptingId !== null}
+                      >
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={20}
+                          color="white"
+                        />
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
                       style={[
-                        styles.button,
-                        styles.acceptButton,
-                        (acceptingId === id || hasConflictWith(job)) && {
-                          opacity: 0.5,
-                        },
+                        styles.rescheduleButton,
+                        isReschedulePending && styles.rescheduleButtonDisabled,
                       ]}
-                      onPress={() => handleAcceptJob(id, job)}
-                      disabled={acceptingId !== null || hasConflictWith(job)}
+                      disabled={isReschedulePending}
+                      onPress={() => openRescheduleModal(id)}
                     >
                       <Ionicons
-                        name="checkmark-circle-outline"
-                        size={20}
-                        color="white"
+                        name={
+                          isReschedulePending ? "time-outline" : "calendar-outline"
+                        }
+                        size={18}
+                        color={isReschedulePending ? "#8D6E63" : Colors.primary}
                       />
-                      <Text style={styles.acceptButtonText}>
-                        {hasConflictWith(job) ? "Slot Taken" : "Accept"}
+                      <Text
+                        style={[
+                          styles.rescheduleButtonText,
+                          !isReschedulePending && { color: Colors.primary },
+                        ]}
+                      >
+                        {isReschedulePending
+                          ? "Time change requested"
+                          : "Can't make this time? Change it"}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  </>
                 )}
 
                 {(isAwaiting || isNegotiating) && (
