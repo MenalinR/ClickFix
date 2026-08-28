@@ -4,6 +4,7 @@ import DateTimePicker, {
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -20,9 +21,25 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { api, apiCall } from "../../constants/api";
+import { api, apiCall, isVideoUrl, videoPosterUrl } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
 import { useStore } from "../../constants/Store";
+
+// Plays a video inside the preview modal. Split out because useVideoPlayer
+// is a hook and the modal only knows the URL once a thumbnail is tapped.
+function VideoPreview({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (p) => {
+    p.play();
+  });
+  return (
+    <VideoView
+      player={player}
+      style={styles.imagePreviewFull}
+      contentFit="contain"
+      nativeControls
+    />
+  );
+}
 
 const { width } = Dimensions.get("window");
 
@@ -714,17 +731,31 @@ export default function JobRequestsPage() {
 
                 {job.images && job.images.length > 0 && (
                   <View style={styles.imagesContainer}>
-                    {job.images.slice(0, 2).map((image: string, idx: number) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => setPreviewImageUrl(image)}
-                      >
-                        <Image
-                          source={{ uri: image }}
-                          style={styles.jobImage}
-                        />
-                      </TouchableOpacity>
-                    ))}
+                    {job.images.slice(0, 2).map((image: string, idx: number) => {
+                      const isVideo = isVideoUrl(image);
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => setPreviewImageUrl(image)}
+                        >
+                          <Image
+                            source={{
+                              uri: isVideo ? videoPosterUrl(image) : image,
+                            }}
+                            style={styles.jobImage}
+                          />
+                          {isVideo && (
+                            <View style={styles.videoPlayBadge}>
+                              <Ionicons
+                                name="play"
+                                size={14}
+                                color="white"
+                              />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
                     {job.images.length > 2 && (
                       <View style={styles.moreImages}>
                         <Text style={styles.moreImagesText}>
@@ -1130,13 +1161,16 @@ export default function JobRequestsPage() {
           >
             <Ionicons name="close-circle" size={32} color="white" />
           </TouchableOpacity>
-          {previewImageUrl && (
-            <Image
-              source={{ uri: previewImageUrl }}
-              style={styles.imagePreviewFull}
-              resizeMode="contain"
-            />
-          )}
+          {previewImageUrl &&
+            (isVideoUrl(previewImageUrl) ? (
+              <VideoPreview uri={previewImageUrl} />
+            ) : (
+              <Image
+                source={{ uri: previewImageUrl }}
+                style={styles.imagePreviewFull}
+                resizeMode="contain"
+              />
+            ))}
         </View>
       </Modal>
     </SafeAreaView>
@@ -1308,6 +1342,17 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
+  },
+  videoPlayBadge: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   moreImages: {
     width: 60,

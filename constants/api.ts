@@ -25,6 +25,23 @@ export const isPdfUrl = (url?: string | null): boolean => {
   return url.toLowerCase().split("?")[0].endsWith(".pdf");
 };
 
+export const isVideoUrl = (url?: string | null): boolean => {
+  if (!url) return false;
+  if (url.includes("/video/upload/")) return true;
+  return /\.(mp4|mov|avi|webm|mkv)(\?|$)/i.test(url);
+};
+
+// Derives a poster-frame JPG from a Cloudinary video URL (frame at 0s) —
+// used to render a static thumbnail without needing a video player.
+// Returns the original URL unchanged for non-Cloudinary video URLs, since
+// there's no equivalent transformation available for those.
+export const videoPosterUrl = (url: string): string => {
+  if (!url.includes("/video/upload/")) return url;
+  return url
+    .replace("/video/upload/", "/video/upload/so_0/")
+    .replace(/\.\w+(\?.*)?$/, ".jpg$1");
+};
+
 export const api = {
   // Authentication
   auth: {
