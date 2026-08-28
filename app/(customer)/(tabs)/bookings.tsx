@@ -344,6 +344,11 @@ export default function BookingsScreen() {
                 const canTrack = ["on the way", "in progress"].includes(
                   status.toLowerCase(),
                 );
+                const canChat =
+                  !!job.workerId &&
+                  ["accepted", "on the way", "in progress"].includes(
+                    status.toLowerCase(),
+                  );
                 const isCompleted = status.toLowerCase() === "completed";
                 const isTappable =
                   needsReview || needsRescheduleReview || canCancel;
@@ -419,6 +424,31 @@ export default function BookingsScreen() {
                         {amount(job) ? `${amount(job)} LKR` : "—"}
                       </Text>
                       <View style={styles.actionIconsRow}>
+                        {canChat ? (
+                          <TouchableOpacity
+                            style={styles.chatIconBtn}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/(customer)/chat",
+                                params: {
+                                  jobId: id,
+                                  workerId:
+                                    (job.workerId as any)?._id ||
+                                    (job.workerId as any) ||
+                                    "",
+                                  workerName: workerName(job),
+                                },
+                              })
+                            }
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons
+                              name="chatbubble-outline"
+                              size={20}
+                              color={Colors.primary}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
                         {canTrack ? (
                           <TouchableOpacity
                             style={styles.trackIconBtn}
@@ -1010,6 +1040,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   trackIconBtn: {
+    padding: 2,
+  },
+  chatIconBtn: {
     padding: 2,
   },
   reviewIconBtn: {
