@@ -58,6 +58,7 @@ export default function CustomerChatPage() {
     loading,
     sending,
     typing,
+    isChatLocked,
     sendMessage,
     respondToCart,
     emitTyping,
@@ -257,30 +258,39 @@ export default function CustomerChatPage() {
         />
       )}
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          placeholderTextColor={Colors.textSecondary}
-          value={text}
-          onChangeText={(t) => {
-            setText(t);
-            emitTyping();
-          }}
-          multiline
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={text.trim() ? Colors.primary : Colors.border}
+      {isChatLocked ? (
+        <View style={styles.chatLockedBanner}>
+          <Ionicons name="checkmark-circle" size={18} color="#388E3C" />
+          <Text style={styles.chatLockedText}>
+            This job is completed and paid. This chat is now closed.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Type your message..."
+            placeholderTextColor={Colors.textSecondary}
+            value={text}
+            onChangeText={(t) => {
+              setText(t);
+              emitTyping();
+            }}
+            multiline
           />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSend}
+            disabled={!text.trim() || sending}
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color={text.trim() ? Colors.primary : Colors.border}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -337,6 +347,22 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  chatLockedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 14,
+    backgroundColor: "#E8F5E9",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  chatLockedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2E7D32",
+    textAlign: "center",
   },
   input: {
     flex: 1,

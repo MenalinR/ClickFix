@@ -68,6 +68,7 @@ export default function WorkerChatPage() {
     loading,
     sending,
     typing,
+    isChatLocked,
     sendMessage,
     sendHardwareCart,
     emitTyping,
@@ -284,6 +285,14 @@ export default function WorkerChatPage() {
           />
         )}
 
+        {isChatLocked ? (
+          <View style={styles.chatLockedBanner}>
+            <Ionicons name="checkmark-circle" size={18} color="#388E3C" />
+            <Text style={styles.chatLockedText}>
+              This job is completed and paid. This chat is now closed.
+            </Text>
+          </View>
+        ) : (
         <View style={styles.inputContainer}>
           <TouchableOpacity
             style={styles.cartButton}
@@ -315,6 +324,7 @@ export default function WorkerChatPage() {
             />
           </TouchableOpacity>
         </View>
+        )}
       </KeyboardAvoidingView>
 
       <Modal
@@ -444,6 +454,22 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  chatLockedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 14,
+    backgroundColor: "#E8F5E9",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  chatLockedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2E7D32",
+    textAlign: "center",
   },
   cartButton: {
     width: 40,

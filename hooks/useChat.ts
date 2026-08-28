@@ -52,6 +52,7 @@ export function useChat({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [isChatLocked, setIsChatLocked] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const chatId = jobId || "";
 
@@ -69,6 +70,22 @@ export function useChat({
       setLoading(false);
     }
   }, [chatId, token]);
+
+  // A job that's completed AND paid closes its chat — check on load/focus so
+  // the input disables and the "chat closed" banner shows even if the
+  // customer paid while this screen wasn't open.
+  const fetchJobLockState = useCallback(async () => {
+    if (!jobId || !token) return;
+    try {
+      const res = await apiCall(api.jobs.getById(jobId), "GET", undefined, token);
+      const job = res?.data;
+      setIsChatLocked(
+        job?.status === "Completed" && job?.payment?.status === "completed",
+      );
+    } catch (e) {
+      // silent
+    }
+  }, [jobId, token]);
 
   const markAsRead = useCallback(async () => {
     if (!chatId || !token) return;
@@ -90,8 +107,9 @@ export function useChat({
       if (chatId && token) {
         fetchMessages();
         markAsRead();
+        fetchJobLockState();
       }
-    }, [chatId, token, fetchMessages, markAsRead]),
+    }, [chatId, token, fetchMessages, markAsRead, fetchJobLockState]),
   );
 
   useEffect(() => {
@@ -129,7 +147,8 @@ export function useChat({
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content.trim() || !chatId || !token || !otherUserId) return;
+      if (!content.trim() || !chatId || !token || !otherUserId || isChatLocked)
+        return;
       setSending(true);
       try {
         const res = await apiCall(
@@ -156,12 +175,13 @@ export function useChat({
         setSending(false);
       }
     },
-    [chatId, token, otherUserId, otherUserModel, jobId],
+    [chatId, token, otherUserId, otherUserModel, jobId, isChatLocked],
   );
 
   const sendHardwareCart = useCallback(
     async (items: Omit<CartItem, "status" | "_id">[]) => {
-      if (!chatId || !token || !otherUserId || !items?.length) return;
+      if (!chatId || !token || !otherUserId || !items?.length || isChatLocked)
+        return;
       const summary = `Suggested ${items.length} hardware item${
         items.length > 1 ? "s" : ""
       } — pricing from shop`;
@@ -192,7 +212,7 @@ export function useChat({
         setSending(false);
       }
     },
-    [chatId, token, otherUserId, otherUserModel, jobId],
+    [chatId, token, otherUserId, otherUserModel, jobId, isChatLocked],
   );
 
   const respondToCart = useCallback(
@@ -229,6 +249,7 @@ export function useChat({
     loading,
     sending,
     typing,
+    isChatLocked,
     sendMessage,
     sendHardwareCart,
     respondToCart,

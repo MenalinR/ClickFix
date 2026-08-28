@@ -1,4 +1,5 @@
 const Message = require("../models/Message");
+const Job = require("../models/Job");
 
 // @desc    Get messages for a chat
 // @route   GET /api/chat/:chatId
@@ -37,6 +38,16 @@ exports.sendMessage = async (req, res) => {
       content,
       cartItems,
     } = req.body;
+
+    if (jobId) {
+      const job = await Job.findById(jobId).select("status payment");
+      if (job && job.status === "Completed" && job.payment?.status === "completed") {
+        return res.status(400).json({
+          success: false,
+          message: "This job is completed and paid. The chat is now closed.",
+        });
+      }
+    }
 
     const messagePayload = {
       chatId,
