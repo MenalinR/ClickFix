@@ -229,7 +229,7 @@ export default function BookingsScreen() {
   const workerName = (job: any) =>
     job?.workerId?.name || job?.requestedWorkerId?.name || "—";
   const workerImage = (job: any) =>
-    job?.workerId?.image || job?.requestedWorkerId?.image || "https://via.placeholder.com/40";
+    job?.workerId?.image || job?.requestedWorkerId?.image || "";
   const amount = (job: any) => {
     const status = (job?.status || "").toLowerCase();
     const p = job?.pricing || {};
@@ -258,11 +258,7 @@ export default function BookingsScreen() {
         </View>
 
         {/* Filter Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
-        >
+        <View style={styles.filterContainer}>
           {(
             [
               "All",
@@ -303,7 +299,7 @@ export default function BookingsScreen() {
               </TouchableOpacity>
             ),
           )}
-        </ScrollView>
+        </View>
 
         {/* Summary Stats */}
         {selectedFilter === "All" && !loading && (
@@ -321,27 +317,13 @@ export default function BookingsScreen() {
           </View>
         )}
 
-        {/* Bookings Table */}
+        {/* Bookings List */}
         {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         ) : filteredBookings.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.horizontalScroll}>
-            <View style={styles.tableWrap}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.colDate]}>Date</Text>
-                <Text style={[styles.tableHeaderText, styles.colWorker]}>Worker</Text>
-                <Text style={[styles.tableHeaderText, styles.colService]}>Service</Text>
-                <Text style={[styles.tableHeaderText, styles.colIssue]}>Issue</Text>
-                <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
-                <Text style={[styles.tableHeaderText, styles.colStatus]}>Status</Text>
-              </View>
-              <ScrollView
-                style={styles.tableBody}
-                nestedScrollEnabled
-                showsVerticalScrollIndicator
-              >
+          <View style={styles.bookingsList}>
               {filteredBookings.map((job) => {
                 const id = job._id || job.id;
                 const status = (job.status || "Pending") as string;
@@ -376,53 +358,66 @@ export default function BookingsScreen() {
                 return (
                   <RowWrap
                     key={id}
-                    style={styles.tableRow}
+                    style={styles.bookingCard}
                     onPress={onRowPress}
                   >
-                    <Text style={[styles.tableCell, styles.colDate]}>
-                      {formatDate((job as any).scheduledDate || (job as any).createdAt)}
-                    </Text>
-                    <View style={[styles.colWorker, styles.cellWorker]}>
-                      <Image
-                        source={{ uri: workerImage(job) }}
-                        style={styles.tableWorkerImage}
-                      />
-                      <Text style={styles.tableCell}>
-                        {workerName(job)}
-                      </Text>
-                    </View>
-                    <Text style={[styles.tableCell, styles.colService]}>
-                      {job.serviceType || "—"}
-                    </Text>
-                    <Text
-                      style={[styles.tableCell, styles.colIssue]}
-                      numberOfLines={2}
-                    >
-                      {(job as any).description || "—"}
-                    </Text>
-                    <Text
-                      style={[styles.tableCell, styles.colAmount, styles.amountCell]}
-                    >
-                      {amount(job) ? `${amount(job)} LKR` : "—"}
-                    </Text>
-                    <View style={styles.statusActionsCell}>
+                    <View style={styles.bookingCardHeader}>
+                      {workerImage(job) ? (
+                        <Image
+                          source={{ uri: workerImage(job) }}
+                          style={styles.bookingCardWorkerImage}
+                        />
+                      ) : (
+                        <View style={styles.bookingCardWorkerImagePlaceholder}>
+                          <Ionicons
+                            name="person"
+                            size={20}
+                            color={Colors.textSecondary}
+                          />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.bookingCardWorkerName}>
+                          {workerName(job)}
+                        </Text>
+                        <Text style={styles.bookingCardService}>
+                          {job.serviceType || "—"}
+                        </Text>
+                      </View>
                       <View style={[styles.statusBadge, { backgroundColor: colors.background }]}>
                         <Text style={[styles.statusText, { color: colors.text }]}>
                           {getStatusLabel(status)}
                         </Text>
                       </View>
-                      {needsRescheduleReview && (
-                        <View style={styles.rescheduleBadge}>
-                          <Ionicons
-                            name="calendar-outline"
-                            size={12}
-                            color="#8D6E63"
-                          />
-                          <Text style={styles.rescheduleBadgeText}>
-                            New time requested
-                          </Text>
-                        </View>
-                      )}
+                    </View>
+
+                    <Text style={styles.bookingCardDate}>
+                      {formatDate((job as any).scheduledDate || (job as any).createdAt)}
+                    </Text>
+
+                    {!!(job as any).description && (
+                      <Text style={styles.bookingCardIssue} numberOfLines={2}>
+                        {(job as any).description}
+                      </Text>
+                    )}
+
+                    {needsRescheduleReview && (
+                      <View style={styles.rescheduleBadge}>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={12}
+                          color="#8D6E63"
+                        />
+                        <Text style={styles.rescheduleBadgeText}>
+                          New time requested
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.bookingCardFooter}>
+                      <Text style={styles.bookingCardAmount}>
+                        {amount(job) ? `${amount(job)} LKR` : "—"}
+                      </Text>
                       <View style={styles.actionIconsRow}>
                         {canTrack ? (
                           <TouchableOpacity
@@ -533,9 +528,7 @@ export default function BookingsScreen() {
                   </RowWrap>
                 );
               })}
-              </ScrollView>
-            </View>
-          </ScrollView>
+          </View>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={48} color={Colors.border} />
@@ -701,6 +694,7 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 20,
   },
@@ -760,13 +754,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: Colors.primary,
-  },
-  bookingCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   cardContent: {
     flexDirection: "row",
@@ -954,55 +941,70 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     alignItems: "center",
   },
-  horizontalScroll: {
-    marginHorizontal: -16,
+  bookingsList: {
+    gap: 12,
   },
-  tableWrap: {
+  bookingCard: {
     backgroundColor: "white",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
-    overflow: "hidden",
-    minWidth: "100%",
+    padding: 14,
+    gap: 8,
   },
-  tableBody: {
-    maxHeight: 680,
+  bookingCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
-  tableHeader: {
+  bookingCardWorkerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    flexShrink: 0,
+  },
+  bookingCardWorkerImagePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    flexShrink: 0,
+    backgroundColor: Colors.lightBackground,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bookingCardWorkerName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  bookingCardService: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  bookingCardDate: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  bookingCardIssue: {
+    fontSize: 13,
+    color: Colors.text,
+    lineHeight: 18,
+  },
+  bookingCardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.lightBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    marginTop: 4,
   },
-  tableHeaderText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.textSecondary,
-  },
-  colDate: { width: 150, justifyContent: "center" },
-  colWorker: { width: 140, justifyContent: "center" },
-  colService: { width: 110, justifyContent: "center" },
-  colAmount: { width: 100, justifyContent: "center" },
-  amountCell: {
+  bookingCardAmount: {
+    fontSize: 14,
     fontWeight: "700",
     color: Colors.primary,
-  },
-  colIssue: { width: 160, justifyContent: "center" },
-  colStatus: { width: 140, justifyContent: "center", alignItems: "flex-start" },
-  statusActionsCell: {
-    width: 140,
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: 6,
   },
   actionIconsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
   },
   cancelIconBtn: {
     padding: 2,
@@ -1018,31 +1020,6 @@ const styles = StyleSheet.create({
   },
   complaintIconBtn: {
     padding: 2,
-  },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  tableCell: {
-    fontSize: 12,
-    color: Colors.text,
-    lineHeight: 18,
-    flexWrap: "wrap",
-  },
-  cellWorker: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  tableWorkerImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    flexShrink: 0,
   },
   rescheduleBadge: {
     flexDirection: "row",

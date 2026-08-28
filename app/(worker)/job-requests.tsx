@@ -435,7 +435,7 @@ export default function JobRequestsPage() {
         </View>
 
         {/* Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        <View style={styles.filterRow}>
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -558,7 +558,7 @@ export default function JobRequestsPage() {
               Rejected ({rejectedJobs.length})
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
 
         {loading ? (
           <View style={styles.emptyContainer}>
@@ -1201,6 +1201,7 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 16,
     gap: 8,
   },
