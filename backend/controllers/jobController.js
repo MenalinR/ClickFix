@@ -347,28 +347,6 @@ exports.assignWorker = async (req, res) => {
       });
     }
 
-    const requestedTime = new Date(job.scheduledDate).getTime();
-    const SLOT_MS = 2 * 60 * 60 * 1000;
-    const windowStart = new Date(requestedTime - SLOT_MS);
-    const windowEnd = new Date(requestedTime + SLOT_MS);
-
-    const conflict = await Job.findOne({
-      _id: { $ne: job._id },
-      workerId: req.user._id,
-      status: {
-        $in: ["Worker Accepted", "Accepted", "On the way", "In progress"],
-      },
-      scheduledDate: { $gte: windowStart, $lte: windowEnd },
-    }).select("scheduledDate status");
-
-    if (conflict) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "You already accepted another job at this time. You cannot accept two jobs in the same time slot.",
-      });
-    }
-
     const { price } = req.body || {};
     const priceNum = Number(price);
     if (price == null || isNaN(priceNum) || priceNum <= 0) {
