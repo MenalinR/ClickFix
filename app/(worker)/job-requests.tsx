@@ -82,6 +82,7 @@ export default function JobRequestsPage() {
   const [showRescheduleDate, setShowRescheduleDate] = useState(false);
   const [showRescheduleTime, setShowRescheduleTime] = useState(false);
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const loadJobs = useCallback(() => {
     if (!token) return;
@@ -714,11 +715,15 @@ export default function JobRequestsPage() {
                 {job.images && job.images.length > 0 && (
                   <View style={styles.imagesContainer}>
                     {job.images.slice(0, 2).map((image: string, idx: number) => (
-                      <Image
+                      <TouchableOpacity
                         key={idx}
-                        source={{ uri: image }}
-                        style={styles.jobImage}
-                      />
+                        onPress={() => setPreviewImageUrl(image)}
+                      >
+                        <Image
+                          source={{ uri: image }}
+                          style={styles.jobImage}
+                        />
+                      </TouchableOpacity>
                     ))}
                     {job.images.length > 2 && (
                       <View style={styles.moreImages}>
@@ -1110,6 +1115,30 @@ export default function JobRequestsPage() {
           </View>
         </View>
       </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={!!previewImageUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUrl(null)}
+      >
+        <View style={styles.imagePreviewOverlay}>
+          <TouchableOpacity
+            style={styles.imagePreviewClose}
+            onPress={() => setPreviewImageUrl(null)}
+          >
+            <Ionicons name="close-circle" size={32} color="white" />
+          </TouchableOpacity>
+          {previewImageUrl && (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.imagePreviewFull}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1257,6 +1286,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginBottom: 12,
+  },
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreviewClose: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  imagePreviewFull: {
+    width: width,
+    height: "80%",
   },
   jobImage: {
     width: 60,
