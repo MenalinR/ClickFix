@@ -350,16 +350,13 @@ export default function BookingsScreen() {
                     status.toLowerCase(),
                   );
                 const isCompleted = status.toLowerCase() === "completed";
-                const isTappable =
-                  needsReview || needsRescheduleReview || canCancel;
+                const isTappable = needsReview || needsRescheduleReview;
                 const RowWrap: any = isTappable ? TouchableOpacity : View;
                 const onRowPress = needsRescheduleReview
                   ? () => setRescheduleReviewJob(job)
                   : needsReview
                     ? () => setReviewJob(job)
-                    : canCancel
-                      ? () => handleCancel(id)
-                      : undefined;
+                    : undefined;
                 return (
                   <RowWrap
                     key={id}
