@@ -59,7 +59,12 @@ exports.uploadBufferToCloudinary = (fileBuffer, folder) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { folder: `clickfix/${folder || "documents"}`, resource_type: "auto" },
       (error, result) => {
-        if (error) return reject(error);
+        if (error) {
+          console.error("Cloudinary upload failed:", error);
+          return reject(
+            new Error(error?.message || "Cloudinary upload failed"),
+          );
+        }
         resolve(result.secure_url);
       },
     );
