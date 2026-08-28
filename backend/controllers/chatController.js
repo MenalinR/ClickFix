@@ -130,7 +130,7 @@ exports.getChats = async (req, res) => {
     })
       .populate("senderId", "name")
       .populate("receiverId", "name")
-      .populate("jobId", "serviceType status")
+      .populate("jobId", "serviceType status scheduledDate description")
       .sort("-createdAt");
 
     // Group by chatId and get last message

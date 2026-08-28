@@ -65,8 +65,12 @@ export default function WorkerChatsScreen() {
             )}
           </View>
           {!!item.job?.serviceType && (
-            <Text style={styles.sub}>
-              {item.job.serviceType} · {item.job.status}
+            <Text style={styles.sub} numberOfLines={1}>
+              {item.job.serviceType}
+              {item.job.scheduledDate
+                ? ` · ${new Date(item.job.scheduledDate).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                : ""}
+              {item.job.description ? ` · ${item.job.description}` : ""}
             </Text>
           )}
         </View>
