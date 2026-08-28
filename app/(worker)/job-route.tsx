@@ -21,6 +21,11 @@ export default function JobRouteScreen() {
     | string
     | undefined;
   const customerName = (params.customerName as string) || "the customer";
+  const from = Array.isArray(params.from) ? params.from[0] : params.from;
+  const backTarget =
+    from === "hardware-updates"
+      ? "/(worker)/hardware-updates"
+      : "/(worker)/job-requests";
 
   const [destination, setDestination] = useState<LatLng | null>(null);
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
@@ -118,7 +123,7 @@ export default function JobRouteScreen() {
       // same store state.
       await updateJobStatus(jobId, "In progress");
       // Go back to job details where the worker manages the active job.
-      router.back();
+      router.replace("/(worker)/job-requests");
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Could not update job status");
     } finally {
@@ -129,7 +134,10 @@ export default function JobRouteScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity
+          onPress={() => router.replace(backTarget)}
+          style={styles.back}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>On the way to customer</Text>

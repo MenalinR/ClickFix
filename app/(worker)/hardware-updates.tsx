@@ -223,7 +223,10 @@ export default function HardwareUpdatesScreen() {
       } finally {
         setBusyId(null);
       }
-      router.push({ pathname: "/job-route", params: { jobId } });
+      router.push({
+        pathname: "/job-route",
+        params: { jobId, from: "hardware-updates" },
+      });
     },
     [router, updateJobStatus],
   );

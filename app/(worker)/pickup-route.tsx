@@ -80,9 +80,12 @@ export default function PickupRouteScreen() {
         } catch {
           // non-fatal — the worker can still start it from the order list
         }
-        router.replace({ pathname: "/job-route", params: { jobId } });
+        router.replace({
+          pathname: "/job-route",
+          params: { jobId, from: "hardware-updates" },
+        });
       } else {
-        router.back();
+        router.replace("/(worker)/hardware-updates");
       }
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Couldn't mark as picked up");
@@ -150,7 +153,10 @@ export default function PickupRouteScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(worker)/hardware-updates")}
+          style={styles.back}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>On the way to shop</Text>

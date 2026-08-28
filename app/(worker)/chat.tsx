@@ -253,7 +253,7 @@ export default function WorkerChatPage() {
       >
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace("/(worker)/chats")}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
