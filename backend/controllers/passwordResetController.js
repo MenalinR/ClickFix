@@ -48,6 +48,7 @@ exports.forgotPassword = async (req, res) => {
         html: `<p>Your password reset code is:</p><h2 style="letter-spacing:4px;">${otp}</h2><p>This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>`,
       });
     } catch (mailError) {
+      console.error("sendEmail failed:", mailError.message);
       user.resetPasswordOTP = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
