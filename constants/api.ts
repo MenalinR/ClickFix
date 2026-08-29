@@ -56,6 +56,8 @@ export const api = {
     adminUpdateProfile: `${API_URL}/auth/admin/profile`,
     adminChangePassword: `${API_URL}/auth/admin/password`,
     adminNotificationPreferences: `${API_URL}/auth/admin/notification-preferences`,
+    forgotPassword: `${API_URL}/auth/forgot-password`,
+    resetPassword: `${API_URL}/auth/reset-password`,
   },
 
   // Workers

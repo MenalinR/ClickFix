@@ -185,6 +185,19 @@ export default function HardwareShopLoginScreen() {
                 </View>
               </View>
 
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/(auth)/forgot-password",
+                    params: { role: "hardwareShop" },
+                  })
+                }
+                disabled={loading}
+                style={styles.forgotBtn}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
               <Pressable
                 style={({ pressed }) => [
                   styles.loginButton,
@@ -478,6 +491,15 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  forgotBtn: {
+    alignSelf: "flex-end",
+    marginTop: -8,
+  },
+  forgotText: {
+    color: Colors.primary,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
 });

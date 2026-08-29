@@ -66,6 +66,14 @@ const hardwareShopSchema = new mongoose.Schema(
     lastOrdersViewedAt: {
       type: Date,
     },
+    resetPasswordOTP: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpire: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,

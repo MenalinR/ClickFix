@@ -43,6 +43,14 @@ const adminSchema = new mongoose.Schema(
       newBookings: { type: Boolean, default: true },
       newShops: { type: Boolean, default: true },
     },
+    resetPasswordOTP: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpire: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
