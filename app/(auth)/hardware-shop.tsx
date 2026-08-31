@@ -51,7 +51,6 @@ export default function HardwareShopLoginScreen() {
     setLoading(true);
     try {
       await loginHardwareShop(loginEmail.trim(), loginPassword.trim());
-      Alert.alert("Success", "Logged in to Hardware Shop!");
       router.replace("/(hardwareShop)/(tabs)/" as any);
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid credentials");
