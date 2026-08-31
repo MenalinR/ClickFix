@@ -125,22 +125,22 @@ export default function WorkerDashboard() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push("/earnings")}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: "#E8F5E9" }]}>
-              <Ionicons name="wallet-outline" size={28} color="#4CAF50" />
-            </View>
-            <Text style={styles.actionLabel}>Earnings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
             onPress={() => router.navigate("/schedule")}
           >
             <View style={[styles.actionIcon, { backgroundColor: "#FFF3E0" }]}>
               <Ionicons name="calendar-outline" size={28} color="#FF9800" />
             </View>
             <Text style={styles.actionLabel}>Schedule</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => router.push("/(worker)/hardware-updates" as any)}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: "#E8F5E9" }]}>
+              <Ionicons name="cube-outline" size={28} color="#4CAF50" />
+            </View>
+            <Text style={styles.actionLabel}>Hardware</Text>
           </TouchableOpacity>
         </View>
 
