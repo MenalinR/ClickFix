@@ -681,10 +681,11 @@ exports.respondReschedule = async (req, res) => {
 
     await job.save();
 
-    if (job.workerId) {
+    const notifyWorkerId = job.workerId || job.requestedWorkerId;
+    if (notifyWorkerId) {
       try {
         await createNotification({
-          recipient: job.workerId,
+          recipient: notifyWorkerId,
           recipientModel: "Worker",
           type: "JOB_RESCHEDULE_RESPONDED",
           title:
