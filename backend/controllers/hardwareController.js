@@ -224,7 +224,8 @@ exports.createOrderFromJob = async (req, res) => {
     }));
     job.pricing.hardwareCost = totalCost;
     const serviceCharge = job.pricing.serviceCharge || 0;
-    job.pricing.totalAmount = serviceCharge + totalCost;
+    const transportFee = job.pricing.transportFee || 0;
+    job.pricing.totalAmount = serviceCharge + totalCost + transportFee;
     job.timeline.push({
       status: job.status,
       timestamp: new Date(),
