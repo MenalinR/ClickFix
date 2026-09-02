@@ -592,6 +592,7 @@ export default function JobRequestsPage() {
             const isInProgress = status === "in progress";
             const isCompleted = status === "completed";
             const j = job as any;
+            const isPaid = j.payment?.status === "completed";
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
               j.location?.address ||
@@ -785,6 +786,13 @@ export default function JobRequestsPage() {
                   <View style={styles.priceContainer}>
                     <Text style={styles.priceLabel}>Agreed Price:</Text>
                     <Text style={styles.priceValue}>{acceptedPrice} LKR</Text>
+                  </View>
+                )}
+
+                {isCompleted && isPaid && (
+                  <View style={styles.paidBadge}>
+                    <Ionicons name="checkmark-circle" size={16} color="white" />
+                    <Text style={styles.paidBadgeText}>Paid</Text>
                   </View>
                 )}
 
@@ -1387,6 +1395,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: Colors.primary,
+  },
+  paidBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    backgroundColor: "#2E7D32",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  paidBadgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "white",
   },
   priceInputWrap: {
     flexDirection: "row",
