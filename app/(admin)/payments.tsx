@@ -19,6 +19,12 @@ const methodIcon = (method: string): keyof typeof Ionicons.glyphMap => {
   return "cash-outline";
 };
 
+const methodLabel = (method: string) => {
+  if (method === "card" || method === "online") return "Card";
+  if (method === "wallet") return "Wallet";
+  return "Cash";
+};
+
 const dayKey = (d: Date) =>
   d.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -152,9 +158,14 @@ export default function AdminPayments() {
                           {job.serviceType || "—"} · {timeStr(paidAt)}
                         </Text>
                       </View>
-                      <Text style={styles.amountText}>
-                        {amount.toLocaleString()} LKR
-                      </Text>
+                      <View style={styles.amountCol}>
+                        <Text style={styles.amountText}>
+                          {amount.toLocaleString()} LKR
+                        </Text>
+                        <Text style={styles.methodText}>
+                          {methodLabel(job.payment?.method)}
+                        </Text>
+                      </View>
                     </View>
                   );
                 })}
@@ -274,9 +285,17 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
+  amountCol: {
+    alignItems: "flex-end",
+  },
   amountText: {
     fontSize: 15,
     fontWeight: "700",
     color: Colors.text,
+  },
+  methodText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });
