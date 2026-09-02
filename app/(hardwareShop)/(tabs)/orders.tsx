@@ -367,7 +367,17 @@ export default function OrdersScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>Orders</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={styles.backButton}
+            disabled={refreshing || loading}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Ionicons name="refresh" size={22} color={Colors.primary} />
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
