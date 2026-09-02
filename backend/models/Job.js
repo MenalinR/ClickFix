@@ -176,7 +176,9 @@ jobSchema.pre("save", function (next) {
       const serviceTotal =
         (this.pricing.hourlyRate || 0) * (this.pricing.estimatedHours || 2);
       this.pricing.totalAmount =
-        serviceTotal + (this.pricing.hardwareCost || 0);
+        serviceTotal +
+        (this.pricing.hardwareCost || 0) +
+        (this.pricing.transportFee || 0);
     }
   }
   next();
