@@ -3,9 +3,9 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -126,9 +126,11 @@ export default function JobRequestsPage() {
     }
   }, [token, unreadCancelled, unreadJobs]);
 
-  useEffect(() => {
-    loadJobs();
-  }, [token]);
+  useFocusEffect(
+    useCallback(() => {
+      loadJobs();
+    }, [loadJobs]),
+  );
 
   // Most recent hardware request per job (backend returns newest first).
   const hardwareByJob: Record<string, any> = {};
