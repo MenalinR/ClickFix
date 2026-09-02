@@ -122,10 +122,18 @@ export function useChat({
     socket.emit("join-chat", chatId);
 
     socket.on("receive-message", (msg: ChatMessage) => {
-      // Only append messages from the OTHER user — ours are added on send
+      // Only handle messages from the OTHER user — ours are added on send.
+      // Upsert by _id so a cart-status update pushed for a message we
+      // already have (e.g. hardware-cart approve/reject) replaces it in
+      // place instead of being silently dropped as a "duplicate".
       if (String((msg as any).senderId?._id || msg.senderId) !== String(myId)) {
         setMessages((prev) => {
-          if (prev.some((m) => m._id === msg._id)) return prev;
+          const idx = prev.findIndex((m) => m._id === msg._id);
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...msg };
+            return next;
+          }
           return [...prev, msg];
         });
         markAsRead();

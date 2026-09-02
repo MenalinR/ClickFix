@@ -66,6 +66,14 @@ io.on("connection", (socket) => {
 
   socket.on("send-message", (data) => {
     io.to(data.chatId).emit("receive-message", data);
+
+    // Also relay to the receiver's personal room (joined via join-chat(userId)
+    // by useChatList) so their Chats-tab badge/list updates instantly even
+    // when they don't have this specific chat screen open.
+    const receiverId = data?.receiverId?._id || data?.receiverId;
+    if (receiverId) {
+      io.to(String(receiverId)).emit("receive-message", data);
+    }
   });
 
   socket.on("typing", (data) => {

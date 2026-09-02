@@ -1309,9 +1309,10 @@ exports.respondHardwareCart = async (req, res) => {
     // Post a follow-up chat message so the worker sees the response inline
     // in the chat thread (and the Chats tab badge increments via the unread
     // count) instead of getting a separate Hardware-tab notification.
+    let followUpMessage = null;
     if (message.chatId && message.senderId) {
       try {
-        await Message.create({
+        followUpMessage = await Message.create({
           chatId: message.chatId,
           senderId: req.user._id,
           senderModel: "Customer",
@@ -1325,9 +1326,32 @@ exports.respondHardwareCart = async (req, res) => {
               : "❌ I declined the hardware cart.",
           status: "sent",
         });
+        await followUpMessage.populate("senderId", "name");
+        await followUpMessage.populate("receiverId", "name");
       } catch (e) {
         // non-fatal — the cart status update above is the source of truth
       }
+    }
+
+    // Push the cart-status change and the follow-up message to the worker in
+    // real time — they may have the chat screen open, or just be elsewhere
+    // in the app watching the Chats-tab badge (mirrors the receiverId-room
+    // relay used for regular messages in server.js).
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        await message.populate("senderId", "name");
+        await message.populate("receiverId", "name");
+        const workerId = message.senderId?._id || message.senderId;
+        io.to(String(message.chatId)).emit("receive-message", message);
+        io.to(String(workerId)).emit("receive-message", message);
+        if (followUpMessage) {
+          io.to(String(followUpMessage.chatId)).emit("receive-message", followUpMessage);
+          io.to(String(workerId)).emit("receive-message", followUpMessage);
+        }
+      }
+    } catch (e) {
+      // non-fatal — real-time push is best-effort
     }
 
     res.status(200).json({
