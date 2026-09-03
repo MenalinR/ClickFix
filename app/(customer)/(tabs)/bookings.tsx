@@ -474,7 +474,8 @@ export default function BookingsScreen() {
                             />
                           </TouchableOpacity>
                         ) : null}
-                        {isCompleted && job.payment?.status !== "completed" ? (
+                        {isCompleted &&
+                        (!job.payment?.status || job.payment.status === "pending") ? (
                           <TouchableOpacity
                             style={styles.payIconBtn}
                             onPress={() =>
@@ -491,6 +492,15 @@ export default function BookingsScreen() {
                           >
                             <Ionicons name="card" size={20} color={Colors.primary} />
                           </TouchableOpacity>
+                        ) : null}
+                        {isCompleted &&
+                        job.payment?.status === "awaiting_confirmation" ? (
+                          <View
+                            style={styles.payIconBtn}
+                            accessibilityLabel="Waiting for worker to confirm cash payment"
+                          >
+                            <Ionicons name="time-outline" size={20} color="#B26A00" />
+                          </View>
                         ) : null}
                         {isCompleted ? (
                           <>

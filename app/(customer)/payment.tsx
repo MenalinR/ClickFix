@@ -107,10 +107,13 @@ export default function PaymentPage() {
       setSubmitting(true);
       await apiCall(api.jobs.pay(jobId), "PUT", { method: selectedMethod }, token);
       setShowSuccessModal(true);
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        router.replace("/(customer)/(tabs)/bookings");
-      }, 2000);
+      setTimeout(
+        () => {
+          setShowSuccessModal(false);
+          router.replace("/(customer)/(tabs)/bookings");
+        },
+        selectedMethod === "cash" ? 3500 : 2000,
+      );
     } catch (e: any) {
       Alert.alert("Payment failed", e?.message || "Please try again.");
     } finally {
@@ -268,15 +271,22 @@ export default function PaymentPage() {
           <View style={styles.successModal}>
             <View style={styles.successIcon}>
               <Ionicons
-                name="checkmark-circle"
+                name={
+                  selectedMethod === "cash" ? "time-outline" : "checkmark-circle"
+                }
                 size={60}
                 color={Colors.primary}
               />
             </View>
-            <Text style={styles.successTitle}>Payment Successful!</Text>
+            <Text style={styles.successTitle}>
+              {selectedMethod === "cash"
+                ? "Payment marked as cash"
+                : "Payment Successful!"}
+            </Text>
             <Text style={styles.successMessage}>
-              Your booking has been confirmed with{" "}
-              {workerName || "the professional"}.
+              {selectedMethod === "cash"
+                ? `Waiting for ${workerName || "the professional"} to confirm they've received the cash.`
+                : `Your booking has been confirmed with ${workerName || "the professional"}.`}
             </Text>
             <Text style={styles.successSubmessage}>
               Redirecting to your bookings...

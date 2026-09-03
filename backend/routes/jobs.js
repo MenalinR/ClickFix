@@ -19,6 +19,7 @@ const {
   updateJobLiveLocation,
   getDirections,
   payJobBooking,
+  confirmCashPayment,
 } = require("../controllers/jobController");
 const { protect, authorize } = require("../middleware/auth");
 const { uploadDocument } = require("../utils/upload");
@@ -66,6 +67,12 @@ router.put(
 );
 router.put("/:id/status", protect, updateJobStatus);
 router.put("/:id/payment", protect, authorize("customer"), payJobBooking);
+router.put(
+  "/:id/confirm-payment",
+  protect,
+  authorize("worker"),
+  confirmCashPayment,
+);
 router.put("/:id/cancel", protect, cancelJob);
 router.get("/:id/live-location", protect, getJobLiveLocation);
 router.put(

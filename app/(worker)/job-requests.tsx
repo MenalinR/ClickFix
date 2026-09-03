@@ -100,6 +100,9 @@ export default function JobRequestsPage() {
   const [showRescheduleTime, setShowRescheduleTime] = useState(false);
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [confirmingPaymentId, setConfirmingPaymentId] = useState<string | null>(
+    null,
+  );
 
   const loadJobs = useCallback(() => {
     if (!token) return;
@@ -246,6 +249,24 @@ export default function JobRequestsPage() {
   const handleRejectJob = (id: string) => {
     updateJobStatus(id, "Rejected");
     Alert.alert("Job Rejected", "This job request has been rejected.");
+  };
+
+  const handleConfirmPayment = async (id: string) => {
+    if (confirmingPaymentId) return;
+    try {
+      setConfirmingPaymentId(id);
+      const res = await apiCall(api.jobs.confirmPayment(id), "PUT", undefined, token);
+      if (!res?.success) {
+        Alert.alert("Error", res?.message || "Couldn't confirm payment.");
+        return;
+      }
+      Alert.alert("Payment confirmed", "This job is now marked as paid.");
+      loadJobs();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Couldn't confirm payment.");
+    } finally {
+      setConfirmingPaymentId(null);
+    }
   };
 
   const handleCancelJob = (id: string) => {
@@ -593,6 +614,8 @@ export default function JobRequestsPage() {
             const isCompleted = status === "completed";
             const j = job as any;
             const isPaid = j.payment?.status === "completed";
+            const isAwaitingPaymentConfirmation =
+              j.payment?.status === "awaiting_confirmation";
             const customerName = j.customerId?.name || "Customer";
             const customerAddress =
               j.location?.address ||
@@ -794,6 +817,28 @@ export default function JobRequestsPage() {
                     <Ionicons name="checkmark-circle" size={16} color="white" />
                     <Text style={styles.paidBadgeText}>Paid</Text>
                   </View>
+                )}
+
+                {isCompleted && isAwaitingPaymentConfirmation && (
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmPaymentBtn,
+                      confirmingPaymentId === id && { opacity: 0.6 },
+                    ]}
+                    onPress={() => handleConfirmPayment(id)}
+                    disabled={confirmingPaymentId !== null}
+                  >
+                    {confirmingPaymentId === id ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="cash-outline" size={18} color="white" />
+                        <Text style={styles.confirmPaymentBtnText}>
+                          Confirm cash payment received
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
 
                 {isPending && (
@@ -1411,6 +1456,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     color: "white",
+  },
+  confirmPaymentBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#F57C00",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  confirmPaymentBtnText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "700",
   },
   priceInputWrap: {
     flexDirection: "row",

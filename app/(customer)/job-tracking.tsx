@@ -314,7 +314,7 @@ export default function JobTrackingPage() {
         )}
 
         {/* Payment prompt when job is done and not yet paid */}
-        {jobStatus === "Completed" && worker && paymentStatus !== "completed" && (
+        {jobStatus === "Completed" && worker && paymentStatus === "pending" && (
           <TouchableOpacity
             style={styles.payBtn}
             onPress={() =>
@@ -335,6 +335,19 @@ export default function JobTrackingPage() {
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Cash payment submitted but the worker hasn't confirmed receiving it yet */}
+        {jobStatus === "Completed" &&
+          worker &&
+          paymentStatus === "awaiting_confirmation" && (
+            <View style={styles.awaitingPayBanner}>
+              <Ionicons name="time-outline" size={20} color="#B26A00" />
+              <Text style={styles.awaitingPayText}>
+                Waiting for {worker.name} to confirm they've received the cash
+                payment.
+              </Text>
+            </View>
+          )}
 
         {/* Review prompt when job is done */}
         {jobStatus === "Completed" && worker && (
@@ -849,5 +862,22 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 15,
     fontWeight: "700",
+  },
+  awaitingPayBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#FFF3E0",
+    borderWidth: 1,
+    borderColor: "#FFCC80",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  awaitingPayText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#8A5A00",
+    lineHeight: 18,
   },
 });

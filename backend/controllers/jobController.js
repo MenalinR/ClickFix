@@ -993,6 +993,12 @@ exports.payJobBooking = async (req, res) => {
     if (job.payment.status === "completed") {
       return res.status(400).json({ success: false, message: "Job is already paid" });
     }
+    if (job.payment.status === "awaiting_confirmation") {
+      return res.status(400).json({
+        success: false,
+        message: "Waiting for the worker to confirm this cash payment",
+      });
+    }
 
     const { method, transactionId } = req.body;
     const allowedMethods = ["cash", "card", "wallet", "online"];
@@ -1010,10 +1016,38 @@ exports.payJobBooking = async (req, res) => {
     const computedAmount = serviceCost + (p.hardwareCost || 0) + (p.transportFee || 0);
 
     job.payment.method = method;
-    job.payment.status = "completed";
     job.payment.amount = computedAmount || p.totalAmount || 0;
-    job.payment.paidAt = new Date();
     if (transactionId) job.payment.transactionId = transactionId;
+
+    // Cash can't be verified electronically — hold it as awaiting the
+    // worker's in-person confirmation instead of marking it paid outright,
+    // so a customer can't falsely mark a job paid without the worker
+    // actually having received the money.
+    if (method === "cash") {
+      job.payment.status = "awaiting_confirmation";
+      await job.save();
+
+      if (job.workerId) {
+        try {
+          await createNotification({
+            recipient: job.workerId,
+            recipientModel: "Worker",
+            type: "PAYMENT_RECEIVED",
+            title: "Confirm cash payment",
+            message: `The customer marked the ${job.serviceType} job as paid in cash (${job.payment.amount} LKR). Confirm once you've received it.`,
+            data: { jobId: job._id, amount: job.payment.amount },
+            actionUrl: "/job-requests",
+          });
+        } catch (e) {
+          // non-fatal
+        }
+      }
+
+      return res.status(200).json({ success: true, data: job });
+    }
+
+    job.payment.status = "completed";
+    job.payment.paidAt = new Date();
     await job.save();
 
     if (job.workerId) {
@@ -1023,8 +1057,8 @@ exports.payJobBooking = async (req, res) => {
           recipientModel: "Worker",
           type: "PAYMENT_RECEIVED",
           title: "Payment received",
-          message: `You've been paid ${job.payment.method === "cash" ? "in cash" : `${job.pricing.totalAmount} LKR`} for the ${job.serviceType} job.`,
-          data: { jobId: job._id, amount: job.pricing.totalAmount },
+          message: `You've been paid ${job.payment.amount} LKR for the ${job.serviceType} job.`,
+          data: { jobId: job._id, amount: job.payment.amount },
           actionUrl: "/earnings",
         });
       } catch (e) {
@@ -1036,7 +1070,64 @@ exports.payJobBooking = async (req, res) => {
         io.to(`track:${job._id}`).emit("payment-received", {
           jobId: job._id.toString(),
           workerId: job.workerId.toString(),
-          amount: job.pricing.totalAmount,
+          amount: job.payment.amount,
+          method: job.payment.method,
+          paidAt: job.payment.paidAt,
+        });
+      }
+    }
+
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Worker confirms a cash payment they physically received
+// @route   PUT /api/jobs/:id/confirm-payment
+// @access  Private (Worker only)
+exports.confirmCashPayment = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (!job.workerId || job.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+    if (job.payment.status !== "awaiting_confirmation") {
+      return res.status(400).json({
+        success: false,
+        message: "There's no cash payment awaiting your confirmation on this job",
+      });
+    }
+
+    job.payment.status = "completed";
+    job.payment.paidAt = new Date();
+    await job.save();
+
+    if (job.customerId) {
+      try {
+        await createNotification({
+          recipient: job.customerId,
+          recipientModel: "Customer",
+          type: "PAYMENT_RECEIVED",
+          title: "Payment confirmed",
+          message: `Your worker confirmed receiving ${job.payment.amount} LKR in cash for the ${job.serviceType} job.`,
+          data: { jobId: job._id, amount: job.payment.amount },
+          actionUrl: "/(customer)/(tabs)/bookings",
+        });
+      } catch (e) {
+        // non-fatal
+      }
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`track:${job._id}`).emit("payment-received", {
+          jobId: job._id.toString(),
+          workerId: job.workerId.toString(),
+          amount: job.payment.amount,
           method: job.payment.method,
           paidAt: job.payment.paidAt,
         });

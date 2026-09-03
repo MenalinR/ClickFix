@@ -116,7 +116,7 @@ const jobSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["pending", "completed", "refunded"],
+        enum: ["pending", "awaiting_confirmation", "completed", "refunded"],
         default: "pending",
       },
       amount: Number,
