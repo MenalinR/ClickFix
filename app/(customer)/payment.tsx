@@ -69,9 +69,14 @@ export default function PaymentPage() {
     );
   const transportFee = Number(pricing.transportFee) || 0;
   const travelDistanceKm = job?.travel?.distanceKm;
+  // Derive the total from the exact rows shown in the breakdown above,
+  // rather than trusting pricing.totalAmount on its own — several backend
+  // code paths update hardwareCost/transportFee independently and don't
+  // always keep totalAmount in sync, which made this total silently drop
+  // the transport fee (or hardware cost) for some jobs.
   const totalAmount =
+    serviceCost + hardwareCost + transportFee ||
     Number(pricing.totalAmount) ||
-    serviceCost + hardwareCost ||
     fallbackAmount;
 
   const paymentMethods = [

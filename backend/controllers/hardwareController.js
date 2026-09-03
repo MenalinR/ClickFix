@@ -386,10 +386,15 @@ exports.updateRequestStatus = async (req, res) => {
     if (req.body.status === "approved") {
       request.approvedAt = new Date();
 
-      // Update job hardware cost
+      // Update job hardware cost and keep totalAmount in sync — this
+      // approval flow is separate from createOrderFromJob and was
+      // previously leaving totalAmount stale (missing the hardware cost).
       const job = await Job.findById(request.jobId);
       if (job) {
         job.pricing.hardwareCost = request.totalCost;
+        const serviceCharge = job.pricing.serviceCharge || 0;
+        const transportFee = job.pricing.transportFee || 0;
+        job.pricing.totalAmount = serviceCharge + request.totalCost + transportFee;
         await job.save();
       }
     }
