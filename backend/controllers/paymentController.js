@@ -92,16 +92,19 @@ exports.payhereNotify = async (req, res) => {
     if (String(order_id).startsWith("JOBPAY-")) {
       const jobId = order_id.replace(/^JOBPAY-/, "");
       if (String(status_code) === "2") {
-        const job = await Job.findByIdAndUpdate(
-          jobId,
-          {
-            "payment.status": "completed",
-            "payment.method": "online",
-            "payment.paidAt": new Date(),
-            "payment.transactionId": payment_id,
-          },
-          { new: true },
-        );
+        const update = {
+          "payment.status": "completed",
+          "payment.method": "online",
+          "payment.paidAt": new Date(),
+          "payment.transactionId": payment_id,
+        };
+        // payhere_amount is what PayHere actually confirmed charging — the
+        // most authoritative record of the paid amount, immune to any
+        // later drift in pricing.totalAmount.
+        const confirmedAmount = Number(payhere_amount);
+        if (confirmedAmount > 0) update["payment.amount"] = confirmedAmount;
+
+        const job = await Job.findByIdAndUpdate(jobId, update, { new: true });
 
         if (job?.workerId) {
           try {

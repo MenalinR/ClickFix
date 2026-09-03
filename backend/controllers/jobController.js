@@ -905,10 +905,21 @@ exports.updateJobStatus = async (req, res) => {
       ]);
     }
 
-    // If completed, update worker's earnings
+    // If completed, update worker's earnings. Derive from the individual
+    // pricing components rather than trusting pricing.totalAmount alone —
+    // several handlers update that aggregate via a non-atomic load-mutate-
+    // save, and a race between two of them can leave it stuck at a stale
+    // or zero value even though serviceCharge/hardwareCost/transportFee
+    // are each individually correct.
     if (req.body.status === "Completed" && req.userType === "worker") {
       const worker = await Worker.findById(job.workerId);
-      worker.earnings.totalEarned += job.pricing.totalAmount;
+      const p = job.pricing || {};
+      const serviceCost = p.serviceCharge || p.negotiatedPrice || p.proposedPrice || 0;
+      const earnedAmount =
+        serviceCost + (p.hardwareCost || 0) + (p.transportFee || 0) ||
+        p.totalAmount ||
+        0;
+      worker.earnings.totalEarned += earnedAmount;
       worker.earnings.completedJobs += 1;
       await worker.save();
     }
@@ -989,8 +1000,18 @@ exports.payJobBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid payment method" });
     }
 
+    // Capture the amount actually owed at the moment of payment, derived
+    // from the same components the customer's bill breakdown shows —
+    // rather than trusting pricing.totalAmount alone, which some backend
+    // code paths have historically left out of sync with hardwareCost/
+    // transportFee. This is the immutable record of what was paid.
+    const p = job.pricing || {};
+    const serviceCost = p.serviceCharge || p.negotiatedPrice || p.proposedPrice || 0;
+    const computedAmount = serviceCost + (p.hardwareCost || 0) + (p.transportFee || 0);
+
     job.payment.method = method;
     job.payment.status = "completed";
+    job.payment.amount = computedAmount || p.totalAmount || 0;
     job.payment.paidAt = new Date();
     if (transactionId) job.payment.transactionId = transactionId;
     await job.save();

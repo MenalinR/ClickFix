@@ -35,12 +35,22 @@ const dayKey = (d: Date) =>
 const timeStr = (d: Date) =>
   d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-const amountOf = (job: any) =>
-  job?.pricing?.totalAmount ||
-  job?.pricing?.serviceCharge ||
-  job?.pricing?.negotiatedPrice ||
-  job?.pricing?.proposedPrice ||
-  0;
+// payment.amount is captured at the moment of payment (see payJobBooking /
+// payhereNotify) and is the authoritative record of what was actually
+// charged — prefer it. For jobs paid before that field existed, don't trust
+// pricing.totalAmount on its own: several backend handlers update it via a
+// non-atomic load-mutate-save, and a race between two of them (e.g. a
+// hardware order landing while the transport fee is being computed) can
+// leave it stuck at a stale/zero value even though the individual
+// serviceCharge/hardwareCost/transportFee fields are all correct. Deriving
+// the total from those parts is more reliable than trusting the aggregate.
+const amountOf = (job: any) => {
+  if (job?.payment?.amount) return job.payment.amount;
+  const p = job?.pricing || {};
+  const serviceCost = p.serviceCharge || p.negotiatedPrice || p.proposedPrice || 0;
+  const derived = serviceCost + (p.hardwareCost || 0) + (p.transportFee || 0);
+  return derived || p.totalAmount || 0;
+};
 
 export default function AdminPayments() {
   const router = useRouter();

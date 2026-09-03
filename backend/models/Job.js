@@ -119,6 +119,7 @@ const jobSchema = new mongoose.Schema(
         enum: ["pending", "completed", "refunded"],
         default: "pending",
       },
+      amount: Number,
       paidAt: Date,
       transactionId: String,
     },
