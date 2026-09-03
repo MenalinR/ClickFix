@@ -37,6 +37,7 @@ export default function TrackWorkerScreen() {
       : null;
 
   const [workerCoords, setWorkerCoords] = useState<LatLng | null>(null);
+  const [arrived, setArrived] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   // Real road route from the worker's live position to the shop.
@@ -78,6 +79,7 @@ export default function TrackWorkerScreen() {
         longitude: payload.coords.longitude,
       });
     });
+    socket.on("worker-arrived", () => setArrived(true));
     return () => {
       cancelled = true;
       socket.emit("leave-job-tracking", jobId);
@@ -104,24 +106,28 @@ export default function TrackWorkerScreen() {
           workerLabel={workerName}
           destinationLabel="Your shop"
           bannerText={
-            durationText
-              ? `${workerName} · ${durationText} away${
-                  distanceText ? ` · ${distanceText}` : ""
-                }`
-              : workerCoords
-                ? `${workerName} is on the way`
-                : undefined
+            arrived
+              ? `${workerName} has arrived`
+              : durationText
+                ? `${workerName} · ${durationText} away${
+                    distanceText ? ` · ${distanceText}` : ""
+                  }`
+                : workerCoords
+                  ? `${workerName} is on the way`
+                  : undefined
           }
           emptyText={`Waiting for ${workerName} to share their location…`}
           height={360}
         />
 
         <View style={styles.infoCard}>
-          <Ionicons name="walk" size={18} color={Colors.primary} />
+          <Ionicons name={arrived ? "checkmark-circle" : "walk"} size={18} color={Colors.primary} />
           <Text style={styles.infoText}>
-            {workerCoords
-              ? "The worker is on the way to pick up the order. Their marker updates live."
-              : "Live location will appear as soon as the worker starts moving toward your shop."}
+            {arrived
+              ? `${workerName} has arrived at your shop and is collecting the order.`
+              : workerCoords
+                ? "The worker is on the way to pick up the order. Their marker updates live."
+                : "Live location will appear as soon as the worker starts moving toward your shop."}
           </Text>
         </View>
 

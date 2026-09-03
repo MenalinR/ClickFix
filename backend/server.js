@@ -90,6 +90,14 @@ io.on("connection", (socket) => {
     if (jobId) socket.leave(`track:${jobId}`);
   });
 
+  // Worker confirms they've reached the hardware shop (before confirming
+  // pickup) — let whoever is tracking this job know right away.
+  socket.on("worker-arrived", (data) => {
+    const { jobId } = data || {};
+    if (!jobId) return;
+    io.to(`track:${jobId}`).emit("worker-arrived", { jobId, at: Date.now() });
+  });
+
   // Worker streams its position. We relay every ping live to everyone in the
   // room, but only persist to the DB every PERSIST_INTERVAL ms so a customer
   // who opens the screen late still sees the last known position.

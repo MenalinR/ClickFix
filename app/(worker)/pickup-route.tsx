@@ -11,13 +11,20 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { io } from "socket.io-client";
 import LiveTrackingMap, { LatLng } from "../../components/LiveTrackingMap";
 import { api, apiCall } from "../../constants/api";
 import { Colors } from "../../constants/Colors";
+import { config } from "../../constants/config";
 import { useStore } from "../../constants/Store";
 import { useLocationBroadcast } from "../../hooks/useLocationBroadcast";
 import { useRoadRoute } from "../../hooks/useRoadRoute";
 import { openGoogleMapsDirections } from "../../utils/openInMaps";
+
+const socketBaseURL = () => {
+  const base = config.api.baseURL || "";
+  return base.replace(/\/api\/?$/, "");
+};
 
 export default function PickupRouteScreen() {
   const router = useRouter();
@@ -40,7 +47,20 @@ export default function PickupRouteScreen() {
 
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
   const [pickingUp, setPickingUp] = useState(false);
+  const [arrived, setArrived] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Let the shop's tracking screen know the moment the worker confirms
+  // they've reached the shop — a short-lived socket just for this one event.
+  const handleArrived = () => {
+    setArrived(true);
+    if (!jobId) return;
+    const socket = io(socketBaseURL(), { transports: ["websocket"] });
+    socket.on("connect", () => {
+      socket.emit("worker-arrived", { jobId });
+      setTimeout(() => socket.disconnect(), 300);
+    });
+  };
 
   // Worker confirms they've collected the items. Moves the order to
   // "picked_up" and notifies the customer, then returns to the order list
@@ -159,7 +179,9 @@ export default function PickupRouteScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>On the way to shop</Text>
+        <Text style={styles.title}>
+          {arrived ? "At the shop" : "On the way to shop"}
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -171,30 +193,39 @@ export default function PickupRouteScreen() {
           workerLabel="You"
           destinationLabel={shopName}
           bannerText={
-            durationText
-              ? `${durationText} away${distanceText ? ` · ${distanceText}` : ""}`
-              : `Heading to ${shopName}`
+            arrived
+              ? `You've arrived at ${shopName}`
+              : durationText
+                ? `${durationText} away${distanceText ? ` · ${distanceText}` : ""}`
+                : `Heading to ${shopName}`
           }
           emptyText="Getting your location…"
           height={360}
         />
 
-        <TouchableOpacity
-          style={[styles.pickedUpBtn, pickingUp && { opacity: 0.6 }]}
-          onPress={handlePickedUp}
-          disabled={pickingUp}
-        >
-          {pickingUp ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <>
-              <Ionicons name="bag-check-outline" size={20} color="white" />
-              <Text style={styles.pickedUpBtnText}>
-                I&apos;ve picked up the items
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {!arrived ? (
+          <TouchableOpacity style={styles.pickedUpBtn} onPress={handleArrived}>
+            <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+            <Text style={styles.pickedUpBtnText}>Yes, I&apos;ve arrived</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.pickedUpBtn, pickingUp && { opacity: 0.6 }]}
+            onPress={handlePickedUp}
+            disabled={pickingUp}
+          >
+            {pickingUp ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <Ionicons name="bag-check-outline" size={20} color="white" />
+                <Text style={styles.pickedUpBtnText}>
+                  I&apos;ve picked up the items
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.mapsBtn, !destination && { opacity: 0.5 }]}
@@ -219,9 +250,11 @@ export default function PickupRouteScreen() {
         <View style={styles.infoCard}>
           <Ionicons name="navigate" size={18} color={Colors.primary} />
           <Text style={styles.infoText}>
-            {destination
-              ? `Follow the route to ${shopName}. The shop can see your live location while you're on the way.`
-              : `Your live location is still being shared with ${shopName} even without a route.`}
+            {arrived
+              ? "Once you've collected the items, confirm pickup to start the trip to the customer."
+              : destination
+                ? `Follow the route to ${shopName}. The shop can see your live location while you're on the way.`
+                : `Your live location is still being shared with ${shopName} even without a route.`}
           </Text>
         </View>
       </View>
