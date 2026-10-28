@@ -81,6 +81,32 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account and personal data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(api.auth.deleteMe, "DELETE", undefined, token);
+              logout();
+              setTimeout(() => {
+                router.dismissAll();
+                router.replace("/");
+              }, 0);
+            } catch (e: any) {
+              Alert.alert("Could not delete account", e?.message || "Please try again");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -304,6 +330,15 @@ export default function ProfileScreen() {
           >
             <Ionicons name="log-out" size={20} color="white" />
             <Text style={styles.logoutButtonText}>Logout</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.deleteAccountButton,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={handleDeleteAccount}
+          >
+            <Text style={styles.deleteAccountText}>Delete account</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -581,6 +616,16 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: "#f44336",
+  },
+  deleteAccountButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  deleteAccountText: {
+    color: "#f44336",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   logoutButtonText: {
     color: "white",

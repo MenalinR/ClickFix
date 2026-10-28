@@ -378,6 +378,32 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account and personal data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiCall(api.auth.deleteMe, "DELETE", undefined, token);
+              logout();
+              setTimeout(() => {
+                router.dismissAll();
+                router.replace("/");
+              }, 0);
+            } catch (e: any) {
+              Alert.alert("Could not delete account", e?.message || "Please try again");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -506,6 +532,14 @@ export default function ProfileScreen() {
             style={{ borderColor: Colors.error, borderWidth: 1 }}
             textStyle={{ color: Colors.error }}
           />
+          <TouchableOpacity
+            onPress={handleDeleteAccount}
+            style={{ alignItems: "center", paddingVertical: 12, marginTop: 8 }}
+          >
+            <Text style={{ color: Colors.error, fontSize: 14 }}>
+              Delete account
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

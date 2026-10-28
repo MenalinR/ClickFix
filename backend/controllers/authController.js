@@ -502,3 +502,57 @@ exports.getMe = async (req, res) => {
     });
   }
 };
+
+// @desc    Permanently delete the logged in user's account
+// @route   DELETE /api/auth/me
+// @access  Private (worker, customer, hardwareShop)
+exports.deleteMe = async (req, res) => {
+  try {
+    const Job = require("../models/Job");
+    const Notification = require("../models/Notification");
+
+    const models = {
+      worker: { model: Worker, name: "Worker" },
+      customer: { model: Customer, name: "Customer" },
+      hardwareShop: { model: HardwareShop, name: "HardwareShop" },
+    };
+    const entry = models[req.userType];
+    if (!entry) {
+      return res.status(403).json({
+        success: false,
+        message: "This account type cannot be deleted from the app",
+      });
+    }
+
+    // Don't leave the other party stranded mid-job
+    if (req.userType === "worker" || req.userType === "customer") {
+      const field = req.userType === "worker" ? "workerId" : "customerId";
+      const activeJob = await Job.findOne({
+        [field]: req.user._id,
+        status: {
+          $in: ["Worker Accepted", "Negotiating", "Accepted", "On the way", "In progress"],
+        },
+      });
+      if (activeJob) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "You have an active job. Please complete or cancel it before deleting your account.",
+        });
+      }
+    }
+
+    await Notification.deleteMany({
+      recipient: req.user._id,
+      recipientModel: entry.name,
+    });
+    await entry.model.findByIdAndDelete(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: "Your account has been deleted",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

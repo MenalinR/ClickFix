@@ -8,6 +8,7 @@ const {
   registerHardwareShop,
   loginHardwareShop,
   getMe,
+  deleteMe,
   updateAdminProfile,
   changeAdminPassword,
   updateAdminNotificationPreferences,
@@ -28,6 +29,7 @@ router.post("/admin/login", loginAdmin);
 router.post("/hardwareShop/register", registerHardwareShop);
 router.post("/hardwareShop/login", loginHardwareShop);
 router.get("/me", protect, getMe);
+router.delete("/me", protect, deleteMe);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 

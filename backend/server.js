@@ -146,6 +146,14 @@ const lastLocationPersist = new Map();
 app.set("io", io);
 
 // Routes
+// Public pages required by the App Store / Play Store listings
+app.get("/privacy", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "privacy.html")),
+);
+app.get("/delete-account", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "delete-account.html")),
+);
+
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/workers", require("./routes/workers"));
 app.use("/api/customers", require("./routes/customers"));
